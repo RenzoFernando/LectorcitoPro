@@ -39,8 +39,11 @@ COLOR_TEXTO_CLARO  = "#000000"
 COLOR_TEXTO_OSCURO = "#FFFFFF"
 
 COLOR_BOTON_AZUL   = "#3B8ED0"
+
 COLOR_BOTON_VERDE  = "#3BD056"
+COLOR_BOTON_VERDE_DARK = "#2FA047"   # verde más oscuro al pasar el mouse
 COLOR_BOTON_ROJO   = "#D03B3D"
+COLOR_BOTON_ROJO_DARK  = "#A03031"   # rojo más oscuro al pasar el mouse
 
 EXTENSIONES_TEXTO  = ['.txt', '.py', '.html', '.java', '.md', '.css']
 CARPETAS_EXCLUIDAS = ['__pycache__', 'venv', '.venv', 'migrations', '.git']
@@ -51,7 +54,7 @@ class LectorcitoApp(ctk.CTk):
         super().__init__()
         self.title("Lectorcito Pro")
         self.resizable(False, False)
-        self.geometry("700x500")
+        self.geometry("625x425")
 
         # -------------- Variables de ruta --------------
         self.folder_to_read = None       # Carpeta que se va a leer
@@ -172,6 +175,9 @@ class LectorcitoApp(ctk.CTk):
             self,
             text="Abrir último archivo generado",
             width=220,
+            fg_color=COLOR_BOTON_VERDE,
+            hover_color=COLOR_BOTON_VERDE_DARK,
+            text_color="#FFFFFF",
             command=self.abrir_archivo_generado
         )
         self.btn_abrir_ultimo_archivo.pack(pady=5)
@@ -180,6 +186,9 @@ class LectorcitoApp(ctk.CTk):
             self,
             text="Eliminar todas las Lecturas",
             width=220,
+            fg_color=COLOR_BOTON_ROJO,
+            hover_color=COLOR_BOTON_ROJO_DARK,
+            text_color="#FFFFFF",
             command=self.eliminar_todas_lecturas
         )
         self.btn_eliminar_lecturas.pack(pady=5)
@@ -200,7 +209,6 @@ class LectorcitoApp(ctk.CTk):
 
         # ----------------- Créditos y link -----------------
         self.frame_footer = ctk.CTkFrame(self, corner_radius=0)
-        # Ajusta este pady si quieres aún menos (o nada) de espacio vertical
         self.frame_footer.pack(side="bottom", fill="x", pady=0)
 
         font_footer_bold    = ("Segoe UI", 10, "bold")
