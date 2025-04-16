@@ -1,0 +1,28 @@
+Versión 2
+1. Botón de elegir la ruta de las Lecturas, cuando la elija en esa ruta crear la carpeta "Lecturas"
+2. Modo oscuro y claro con iconos
+3. Que funcione el link de mi git en la vista del .exe
+4. Que la imagen funcione
+5. Botón de eliminar todas las lecturas
+6. Mejorar el cosito de copyright
+7. Mejorar aun mas la parte visual (tal vez uso de css)
+8. A la barra de estado dejarla siempre visible y a esta añadirle porcentaje que siempre estar en 0% y cuando lea cambien según sea hasta 100%
+9. Mensaje de alertas pop up, no mostrar la ruta de donde se guardo pues ya esta el botón, solo decir que se guardo
+"🔔 ¡Listo!
+El contenido fue guardado correctamente.
+⚠️ Atención
+Primero debe generar un archivo para poder abrirlo.
+❗ Error
+Ocurrió un error durante el análisis. Intente con otra carpeta."
+10. Que el enlace a git se pueda redireccionar por url
+"Lectorcito Pro v*.*
+Desarrollado por: Renzo Fernando Mosquera Daza y ChatGPT Plus
+https://github.com/RenzoFernando/LectorcitoPro.git[URL]
+
+© 2025 github.com/RenzoFernando - All Rights Reserved."
+
+
+
+Versión 3
+1. Redes sociales
+2. 

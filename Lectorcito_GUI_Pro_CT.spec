@@ -5,7 +5,7 @@ a = Analysis(
     ['Lectorcito_GUI_Pro_CT.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('recursos', 'recursos')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['lector.ico'],
+    icon=['recursos\\lector.ico'],
 )

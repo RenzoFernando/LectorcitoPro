@@ -1,8 +1,0 @@
-1. Botón de elegir la ruta de las Lecturas
-2. Modo oscuro y claro
-3. Que funcione el link de mi git en la vista del .exe
-4. Que la imagen funcione
-5. Botón de eliminar todas las lecturas
-6. Mejorar el cosito de copyright
-7. Mejorar aun mas la parte visual (tal vez uso de css)
-8. Barra de estado añadirle porcentaje
