@@ -1,0 +1,24 @@
+# Archivos y directorios generados por PyInstaller
+dist/
+build/
+*.spec
+
+# Archivos Python compilados
+__pycache__/
+*.pyc
+*.pyo
+
+# Entornos virtuales (si usas virtualenv o venv)
+env/
+venv/
+.venv/
+
+# Archivos de configuración de IDEs/editors
+.idea/
+.vscode/
+
+# Archivos temporales o de caché
+*.log
+
+# Carpeta de reportes - SI deseas que no se suba esta carpeta al repositorio
+Lecturas/
