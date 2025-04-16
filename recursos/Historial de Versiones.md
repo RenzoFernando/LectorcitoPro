@@ -42,3 +42,4 @@
 4. Alineación y espaciado del pie de página optimizados.
 5. Que guarde las preferencias antes utilizadas en rutas.
 6. Solucionar error de Seleccionar carpeta a leer cuando se acabade de eliminar la carpeta de lecturas
+7. Libertad de elejir que EXTENSIONES_TEXTO puede reconocer y cuales no, asi mismo tambien con CARPETAS_EXCLUIDAS
