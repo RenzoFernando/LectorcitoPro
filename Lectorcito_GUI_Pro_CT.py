@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import threading
 import ctypes
@@ -6,6 +7,23 @@ import webbrowser
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from PIL import Image
+
+# --------------------------------------------------------------------------------
+#                          FUNCIÓN PARA CARGAR RECURSOS
+# --------------------------------------------------------------------------------
+def get_resource_path(relative_path):
+    """
+    Devuelve la ruta absoluta del recurso, tanto si se está ejecutando
+    como script normal como si se ha empaquetado con PyInstaller.
+    """
+    try:
+        # Si se ha empaquetado con PyInstaller, _MEIPASS es donde están los recursos
+        base_path = sys._MEIPASS
+    except Exception:
+        # Caso normal: ruta al directorio actual del script
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
 
 # DPI AWARENESS PARA WINDOWS
 if os.name == 'nt':
@@ -27,12 +45,13 @@ COLOR_BOTON_ROJO   = "#D03B3D"
 EXTENSIONES_TEXTO  = ['.txt', '.py', '.html', '.java', '.md', '.css']
 CARPETAS_EXCLUIDAS = ['__pycache__', 'venv', '.venv', 'migrations', '.git']
 
+
 class LectorcitoApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Lectorcito Pro")
         self.resizable(False, False)
-        self.geometry("600x400")
+        self.geometry("700x500")
 
         # -------------- Variables de ruta --------------
         self.folder_to_read = None       # Carpeta que se va a leer
@@ -41,9 +60,8 @@ class LectorcitoApp(ctk.CTk):
         self.current_mode = "light"     # Modo inicial (light/dark)
 
         # -------------- Cargar íconos --------------
-        # Icono de la ventana (arriba a la izquierda)
-        icon_path_ico = os.path.join("recursos", "lector.ico")
-        icon_path_png = os.path.join("recursos", "lector.png")
+        icon_path_ico = get_resource_path("recursos/lector.ico")
+        icon_path_png = get_resource_path("recursos/lector.png")
 
         if os.path.exists(icon_path_ico):
             try:
@@ -51,34 +69,33 @@ class LectorcitoApp(ctk.CTk):
             except Exception:
                 pass
 
-        # Si se encuentra la imagen lector.png se usa como icono extendido
-        # (No es estrictamente necesario, pero lo dejamos por compatibilidad)
-        if os.path.exists(icon_path_png):
-            try:
-                # Convertimos con PIL a PhotoImage si se desea;
-                # CustomTkinter puede manejar directam. PIL images
-                pass
-            except Exception as e:
-                print(f"Error al asignar iconphoto: {e}")
-
         # Íconos para modo (sol y luna)
-        # - Usamos PIL para abrir las imágenes y luego ctk.CTkImage
+        sun_png  = get_resource_path("recursos/sol.png")
+        moon_png = get_resource_path("recursos/luna.png")
+
         self.img_sun  = None
         self.img_moon = None
-        sun_png  = os.path.join("recursos", "sol.png")
-        moon_png = os.path.join("recursos", "luna.png")
+
         if os.path.exists(sun_png) and os.path.exists(moon_png):
-            self.img_sun  = ctk.CTkImage(light_image=Image.open(sun_png),
-                                         dark_image=Image.open(sun_png),
-                                         size=(28, 28))
-            self.img_moon = ctk.CTkImage(light_image=Image.open(moon_png),
-                                         dark_image=Image.open(moon_png),
-                                         size=(28, 28))
+            try:
+                self.img_sun = ctk.CTkImage(
+                    light_image=Image.open(sun_png),
+                    dark_image=Image.open(sun_png),
+                    size=(28, 28)
+                )
+                self.img_moon = ctk.CTkImage(
+                    light_image=Image.open(moon_png),
+                    dark_image=Image.open(moon_png),
+                    size=(28, 28)
+                )
+            except Exception as e:
+                print(f"Error cargando imágenes sol/luna: {e}")
 
         # -------------- Configurar y crear widgets --------------
         self.configure_gui()
         self.create_widgets()
         self.apply_theme(self.current_mode)
+
 
     # --------------------------------------------------------------------
     # ------------------------ CONFIGURAR VENTANA -------------------------
@@ -88,6 +105,7 @@ class LectorcitoApp(ctk.CTk):
         ctk.set_appearance_mode("light")  # Por defecto
         ctk.set_default_color_theme("blue")
 
+
     # --------------------------------------------------------------------
     # ------------------------- CREAR WIDGETS ----------------------------
     # --------------------------------------------------------------------
@@ -96,9 +114,11 @@ class LectorcitoApp(ctk.CTk):
         self.frame_top = ctk.CTkFrame(self, corner_radius=0)
         self.frame_top.pack(side="top", fill="x", pady=5)
 
-        self.label_title = ctk.CTkLabel(self.frame_top,
-                                        text="Lectorcito Pro",
-                                        font=("Segoe UI", 18, "bold"))
+        self.label_title = ctk.CTkLabel(
+            self.frame_top,
+            text="Lectorcito Pro",
+            font=("Segoe UI", 18, "bold")
+        )
         self.label_title.pack(side="left", padx=10)
 
         # Botón modo (sol/luna) en la esquina superior derecha
@@ -106,32 +126,24 @@ class LectorcitoApp(ctk.CTk):
             self.frame_top,
             text="",
             width=40,
-            fg_color="transparent",
-            hover_color="#AAAAAA",
+            fg_color="#3B8ED0",  # valor inicial; será reasignado en apply_theme
+            hover_color="#3B8ED0",
             command=self.toggle_mode
         )
-        # Le ponemos la imagen actual
+        # Imagen inicial (icono de luna si empezamos en modo claro)
         if self.img_moon:
             self.btn_mode_toggle.configure(image=self.img_moon)
         self.btn_mode_toggle.pack(side="right", padx=10)
 
         # Etiqueta de bienvenida
-        self.label_welcome = ctk.CTkLabel(self,
-                                         text="Bienvenid@, por favor seleccione una opción a realizar",
-                                         font=("Segoe UI", 14, "bold"))
+        self.label_welcome = ctk.CTkLabel(
+            self,
+            text="Bienvenid@, por favor seleccione una opción a realizar",
+            font=("Segoe UI", 14, "bold")
+        )
         self.label_welcome.pack(pady=(10, 10))
 
         # ------------------- Botones principales -------------------
-        # 1) Elegir Carpeta a Leer
-        self.btn_elegir_carpeta = ctk.CTkButton(
-            self,
-            text="Elegir Carpeta a Leer",
-            width=220,
-            command=self.seleccionar_carpeta_leer
-        )
-        self.btn_elegir_carpeta.pack(pady=5)
-
-        # 2) Seleccionar Ruta de Lecturas
         self.btn_seleccionar_lecturas = ctk.CTkButton(
             self,
             text="Seleccionar Ruta de Lecturas",
@@ -140,7 +152,14 @@ class LectorcitoApp(ctk.CTk):
         )
         self.btn_seleccionar_lecturas.pack(pady=5)
 
-        # 3) Abrir archivo Lecturas (abrir carpeta Lecturas)
+        self.btn_elegir_carpeta = ctk.CTkButton(
+            self,
+            text="Elegir Carpeta a Leer",
+            width=220,
+            command=self.seleccionar_carpeta_leer
+        )
+        self.btn_elegir_carpeta.pack(pady=5)
+
         self.btn_abrir_lecturas = ctk.CTkButton(
             self,
             text="Abrir archivo Lecturas",
@@ -149,7 +168,6 @@ class LectorcitoApp(ctk.CTk):
         )
         self.btn_abrir_lecturas.pack(pady=5)
 
-        # 4) Abrir último archivo generado
         self.btn_abrir_ultimo_archivo = ctk.CTkButton(
             self,
             text="Abrir último archivo generado",
@@ -158,7 +176,6 @@ class LectorcitoApp(ctk.CTk):
         )
         self.btn_abrir_ultimo_archivo.pack(pady=5)
 
-        # 5) Eliminar todas las Lecturas
         self.btn_eliminar_lecturas = ctk.CTkButton(
             self,
             text="Eliminar todas las Lecturas",
@@ -183,29 +200,42 @@ class LectorcitoApp(ctk.CTk):
 
         # ----------------- Créditos y link -----------------
         self.frame_footer = ctk.CTkFrame(self, corner_radius=0)
-        self.frame_footer.pack(side="bottom", fill="x", pady=(10, 5))
+        # Ajusta este pady si quieres aún menos (o nada) de espacio vertical
+        self.frame_footer.pack(side="bottom", fill="x", pady=0)
 
-        # Texto con copyright y versión
-        self.label_footer = ctk.CTkLabel(
+        font_footer_bold    = ("Segoe UI", 10, "bold")
+        font_footer_regular = ("Segoe UI", 10)
+
+        self.label_footer_1 = ctk.CTkLabel(
             self.frame_footer,
-            text=(
-                "Lectorcito Pro v2.0\n"
-                "Desarrollado por: Renzo Fernando Mosquera Daza y ChatGPT Plus\n"
-                "© 2025 github.com/RenzoFernando – All Rights Reserved."
-            ),
-            font=("Segoe UI", 10)
+            text="Lectorcito Pro v2.2",
+            font=font_footer_bold
         )
-        self.label_footer.pack(side="left", padx=10)
+        self.label_footer_1.pack(anchor="center", pady=0)
 
-        # Link a GitHub (clicable)
-        self.label_link = ctk.CTkLabel(
+        self.label_footer_2 = ctk.CTkLabel(
+            self.frame_footer,
+            text="Desarrollado por: Renzo Fernando Mosquera Daza y ChatGPT Plus",
+            font=font_footer_regular
+        )
+        self.label_footer_2.pack(anchor="center", pady=0)
+
+        self.label_footer_link = ctk.CTkLabel(
             self.frame_footer,
             text="https://github.com/RenzoFernando/LectorcitoPro.git",
             font=("Segoe UI", 10, "underline"),
             cursor="hand2"
         )
-        self.label_link.bind("<Button-1>", self.open_github_link)
-        self.label_link.pack(side="right", padx=10)
+        self.label_footer_link.bind("<Button-1>", self.open_github_link)
+        self.label_footer_link.pack(anchor="center", pady=0)
+
+        self.label_footer_3 = ctk.CTkLabel(
+            self.frame_footer,
+            text="© 2025 github.com/RenzoFernando - All Rights Reserved.",
+            font=font_footer_regular
+        )
+        self.label_footer_3.pack(anchor="center", pady=0)
+
 
     # --------------------------------------------------------------------
     # --------------------- APLICAR TEMA (MODO) --------------------------
@@ -218,11 +248,17 @@ class LectorcitoApp(ctk.CTk):
         if mode == "light":
             bg_color = COLOR_FONDO_CLARO
             text_color = COLOR_TEXTO_CLARO
-            mode_icon = self.img_moon  # Mostrar luna para alternar a oscuro
+            # Botón de modo oscuro => color #1A1E22, ícono = luna
+            self.btn_mode_toggle.configure(fg_color="#1A1E22", hover_color="#1A1E22")
+            if self.img_moon:
+                self.btn_mode_toggle.configure(image=self.img_moon)
         else:
             bg_color = COLOR_FONDO_OSCURO
             text_color = COLOR_TEXTO_OSCURO
-            mode_icon = self.img_sun   # Mostrar sol para alternar a claro
+            # Botón de modo claro => color #EBEBEB, ícono = sol
+            self.btn_mode_toggle.configure(fg_color="#EBEBEB", hover_color="#EBEBEB")
+            if self.img_sun:
+                self.btn_mode_toggle.configure(image=self.img_sun)
 
         # Fondo principal
         self.configure(fg_color=bg_color)
@@ -230,18 +266,18 @@ class LectorcitoApp(ctk.CTk):
         self.frame_footer.configure(fg_color=bg_color)
         self.frame_progress.configure(fg_color=bg_color)
 
-        # Texto
+        # Texto (títulos, labels)
         self.label_title.configure(text_color=text_color)
         self.label_welcome.configure(text_color=text_color)
-        self.label_footer.configure(text_color=text_color)
-        self.label_link.configure(text_color=text_color)
+
+        self.label_footer_1.configure(text_color=text_color)
+        self.label_footer_2.configure(text_color=text_color)
+        self.label_footer_link.configure(text_color=text_color)
+        self.label_footer_3.configure(text_color=text_color)
+
         self.label_progress_percent.configure(text_color=text_color)
 
-        # Botón modo
-        if mode_icon:
-            self.btn_mode_toggle.configure(image=mode_icon)
-
-        # Botones (colores fijos según tu requerimiento)
+        # Botones principales
         self.btn_elegir_carpeta.configure(fg_color=COLOR_BOTON_AZUL,
                                           text_color="#FFFFFF")
         self.btn_seleccionar_lecturas.configure(fg_color=COLOR_BOTON_AZUL,
@@ -253,16 +289,12 @@ class LectorcitoApp(ctk.CTk):
         self.btn_eliminar_lecturas.configure(fg_color=COLOR_BOTON_ROJO,
                                              text_color="#FFFFFF")
 
-        # Ajustar barra de progreso (CustomTkinter maneja el color con su theme)
-        # Pero si quieres forzar manualmente un color, habría que usar .configure() 
-        # con bg_color o progress_color, etc. Dependiendo la versión de CTk.
-        # Aquí solo la dejamos con el color "theme" que se ajuste algo al modo.
-
-        # Forzamos color del hueco y la barra
+        # Ajustar barra de progreso
         self.progress_bar.configure(
             progress_color=COLOR_BOTON_AZUL,  # color de la barra
             fg_color="#CCCCCC" if mode == "light" else "#333333"  # color del fondo de la barra
         )
+
 
     # --------------------------------------------------------------------
     # ------------------- TOGGLE MODO CLARO/OSCURO -----------------------
@@ -277,21 +309,10 @@ class LectorcitoApp(ctk.CTk):
             ctk.set_appearance_mode("light")
         self.apply_theme(self.current_mode)
 
+
     # --------------------------------------------------------------------
     # ------------------- MANEJO DE CARPETAS Y ARCHIVOS ------------------
     # --------------------------------------------------------------------
-    def seleccionar_carpeta_leer(self):
-        """Selecciona la carpeta a leer y, si ya se ha establecido la ruta de Lecturas, inicia el procesamiento."""
-        carpeta = filedialog.askdirectory(title="Seleccione la carpeta a analizar")
-        if carpeta:
-            self.folder_to_read = carpeta
-            # Si ya se ha seleccionado la ruta de Lecturas, se inicia el procesamiento
-            if self.lecturas_path:
-                self.start_processing()
-            else:
-                messagebox.showwarning("⚠️ Atención", "Primero debe seleccionar la ruta de Lecturas.")
-
-
     def seleccionar_ruta_lecturas(self):
         """Selecciona la ruta donde se creará (o existe) la carpeta 'Lecturas'."""
         ruta = filedialog.askdirectory(title="Seleccione la ruta donde se creará la carpeta Lecturas")
@@ -303,6 +324,16 @@ class LectorcitoApp(ctk.CTk):
                     os.makedirs(self.lecturas_path)
                 except Exception as e:
                     messagebox.showerror("❗ Error", f"No se pudo crear la carpeta Lecturas:\n{e}")
+
+    def seleccionar_carpeta_leer(self):
+        """Selecciona la carpeta a leer y, si ya se ha establecido la ruta de Lecturas, inicia el procesamiento."""
+        carpeta = filedialog.askdirectory(title="Seleccione la carpeta a analizar")
+        if carpeta:
+            self.folder_to_read = carpeta
+            if self.lecturas_path:
+                self.start_processing()
+            else:
+                messagebox.showwarning("⚠️ Atención", "Primero debe seleccionar la ruta de Lecturas.")
 
     def eliminar_todas_lecturas(self):
         """Elimina la carpeta Lecturas con todo su contenido."""
@@ -338,14 +369,12 @@ class LectorcitoApp(ctk.CTk):
         except Exception as e:
             messagebox.showerror("❗ Error", f"No se pudo abrir el archivo:\n{e}")
 
+
     # --------------------------------------------------------------------
     # ----------------------- PROCESAR LECTURAS --------------------------
     # --------------------------------------------------------------------
     def start_processing(self):
-        """
-        Inicia el proceso de lectura de la carpeta seleccionada y
-        guarda el contenido en la carpeta Lecturas.
-        """
+        """Inicia el proceso de lectura de la carpeta seleccionada y guarda el contenido en la carpeta Lecturas."""
         if not self.folder_to_read:
             messagebox.showwarning("⚠️ Atención", "Primero seleccione la carpeta a leer.")
             return
@@ -353,41 +382,32 @@ class LectorcitoApp(ctk.CTk):
             messagebox.showwarning("⚠️ Atención", "Primero seleccione la ruta de Lecturas.")
             return
 
-        # Hilo para no congelar la GUI
         threading.Thread(target=self.procesar_lecturas, daemon=True).start()
 
     def procesar_lecturas(self):
         """Procesa la carpeta, leyendo archivos de texto y guardándolos."""
         self.bloquear_interfaz()
 
-        # Reseteamos barra de progreso
         self.progress_bar.set(0)
         self.label_progress_percent.configure(text="0%")
 
-        # Contar cuántos archivos se leerán
         total_files = self.contar_archivos(self.folder_to_read)
-        if total_files == 0:
-            # Aun así generamos un reporte vacío, si deseas.
-            pass
-
-        # Generar nombre de archivo en la carpeta Lecturas
         self.archivo_generado = self.crear_nombre_archivo_salida(self.folder_to_read)
+
         try:
             actual = 0
             with open(self.archivo_generado, "w", encoding="utf-8") as salida:
                 salida.write(f"REPORTE DE ARCHIVOS EN: {self.folder_to_read}\n\n")
-                # Leer y escribir contenido
+
                 for root, dirs, files in os.walk(self.folder_to_read):
                     # Filtrar carpetas excluidas
                     dirs[:] = [d for d in dirs if d.lower() not in [ex.lower() for ex in CARPETAS_EXCLUIDAS]]
 
-                    # Escribimos la carpeta actual relativa
                     rel_folder = os.path.relpath(root, self.folder_to_read)
                     salida.write(f"Carpeta: {rel_folder}\n")
                     for file_ in sorted(files):
                         ext = os.path.splitext(file_)[1].lower()
                         if ext in EXTENSIONES_TEXTO:
-                            # Escribir contenido de archivo
                             archivo_path = os.path.join(root, file_)
                             rel_path = os.path.relpath(archivo_path, self.folder_to_read)
                             salida.write(f"    Archivo: {rel_path} ({ext})\n")
@@ -400,18 +420,18 @@ class LectorcitoApp(ctk.CTk):
                                 salida.write(f"    Error leyendo {file_}: {e}\n")
                             salida.write("    -------- FIN --------\n\n")
 
-                            # Actualizar progreso
                             actual += 1
-                            porcentaje = (actual / total_files) * 100 if total_files else 0
-                            self.update_progress(porcentaje)
-            
-            # Al finalizar
+                            if total_files > 0:
+                                porcentaje = (actual / total_files) * 100
+                                self.update_progress(porcentaje)
+
             messagebox.showinfo("🔔 ¡Listo!", "El contenido fue guardado correctamente.")
 
         except Exception:
             messagebox.showerror("❗ Error", "Ocurrió un error durante el análisis. Intente con otra carpeta.")
 
         self.desbloquear_interfaz()
+
 
     def bloquear_interfaz(self):
         """Bloquea botones para evitar múltiples procesos simultáneos."""
@@ -439,7 +459,6 @@ class LectorcitoApp(ctk.CTk):
         """Cuenta la cantidad total de archivos con EXTENSIONES_TEXTO, ignorando CARPETAS_EXCLUIDAS."""
         contador = 0
         for root, dirs, files in os.walk(folder):
-            # Excluir carpetas
             dirs[:] = [d for d in dirs if d.lower() not in [ex.lower() for ex in CARPETAS_EXCLUIDAS]]
             for file_ in files:
                 ext = os.path.splitext(file_)[1].lower()
@@ -458,6 +477,7 @@ class LectorcitoApp(ctk.CTk):
                 return ruta_salida
             version += 1
 
+
     # --------------------------------------------------------------------
     # ------------------------- ABRIR LINK GITHUB -------------------------
     # --------------------------------------------------------------------
@@ -465,6 +485,7 @@ class LectorcitoApp(ctk.CTk):
         """Abre el repositorio en el navegador."""
         url = "https://github.com/RenzoFernando/LectorcitoPro.git"
         webbrowser.open_new(url)
+
 
 # ------------------------------------------------------------------------
 # ----------------------- EJECUCIÓN PRINCIPAL ----------------------------
