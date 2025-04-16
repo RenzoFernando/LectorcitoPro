@@ -11,10 +11,14 @@ if os.name == 'nt':
     except Exception:
         pass
 
-# Constantes
+# Establecer la ruta base según la ubicación del script (o .exe)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# La carpeta de destino se define en la misma carpeta del proyecto, en una subcarpeta "Lecturas"
+CARPETA_DESTINO = os.path.join(BASE_DIR, "Lecturas")
+
+# Constantes de archivos a procesar y carpetas a excluir
 EXTENSIONES_TEXTO = ['.txt', '.py', '.html', '.java', '.md', '.css']
 CARPETAS_EXCLUIDAS = ['__pycache__', 'venv', '.venv', 'migrations', '.git', '.venv']
-CARPETA_DESTINO = r"C:\Users\renzi\Documents\PROYECTO INTEGRADOR I\Lecturas"
 
 class LectorcitoApp(ctk.CTk):
     def __init__(self):
@@ -24,14 +28,14 @@ class LectorcitoApp(ctk.CTk):
         self.resizable(False, False)
         self.archivo_generado = None
 
-        # Verifica y crea la carpeta Lecturas si no existe (solo una vez al iniciar)
+        # Verifica y crea la carpeta Lecturas si no existe (una sola vez al iniciar)
         if not os.path.exists(CARPETA_DESTINO):
             try:
                 os.makedirs(CARPETA_DESTINO)
             except Exception as e:
                 print(f"Error al crear la carpeta Lecturas: {e}")
 
-        # Icono del ejecutable + posible icono de ventana
+        # Cargar iconos: primero se intenta con lector.ico para el icono del ejecutable y luego con lector.png para la ventana
         if os.path.exists("lector.ico"):
             try:
                 self.iconbitmap("lector.ico")
@@ -91,12 +95,12 @@ class LectorcitoApp(ctk.CTk):
         # Etiqueta de información y créditos
         self.label_info = ctk.CTkLabel(
             self,
-            text="Lectorcito Pro v1.5\nDesarrollado por: Renzo Fernando Mosquera Daza, ChatGPT-o3-mini-high y ChatGPT-4o\n2025",
+            text="Lectorcito Pro v1.6\nDesarrollado por: Renzo Fernando Mosquera Daza, ChatGPT-o3-mini-high y ChatGPT-4o\nhttps://github.com/RenzoFernando/LectorcitoPro.git\n2025",
             font=("Segoe UI", 10)
         )
         self.label_info.pack(side="bottom", pady=(5, 10))
 
-        # Etiqueta para resultados/mensajes
+        # Etiqueta para mostrar resultados/mensajes
         self.label_result = ctk.CTkLabel(self, text="", wraplength=500, justify="center")
         self.label_result.pack(pady=10)
 
@@ -149,6 +153,7 @@ class LectorcitoApp(ctk.CTk):
 
         with open(ruta_salida, "w", encoding="utf-8") as salida:
             salida.write(f"REPORTE DE ARCHIVOS EN: {carpeta}\n\n")
+            # Calcula la ruta relativa para cada archivo con respecto a la carpeta seleccionada
             self.recorrer_carpeta(carpeta, salida, carpeta)
         return ruta_salida
 
@@ -175,7 +180,6 @@ class LectorcitoApp(ctk.CTk):
                         salida.write(f"{indent}    -------- CONTENIDO --------\n")
                         with open(ruta_item, "r", encoding="utf-8") as f:
                             contenido = f.read()
-                        # ❌ SIN LÍMITE DE LÍNEAS:
                         for linea in contenido.splitlines():
                             salida.write(f"{indent}    {linea}\n")
                         salida.write(f"{indent}    -------- FIN --------\n\n")

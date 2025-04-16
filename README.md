@@ -1,6 +1,8 @@
 # Lectorcito Pro
 
-**Lectorcito Pro** es una aplicación de escritorio desarrollada en Python que utiliza la librería [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) para ofrecer una interfaz gráfica moderna y limpia. La aplicación permite seleccionar una carpeta, recorrer y leer el contenido de archivos de código/texto (con extensiones configurables) y guardar la información en un archivo de reporte que se almacena en una carpeta de salida especificada.
+**Lectorcito Pro** es una aplicación de escritorio desarrollada en Python que utiliza la librería [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) para ofrecer una interfaz gráfica moderna y limpia. La aplicación permite seleccionar una carpeta, recorrer y leer el contenido de archivos de código/texto (con extensiones configurables) y guardar la información en un archivo de reporte que se almacena en una carpeta de salida especificada. 
+
+Perfecta y pensada para enviarle en formato .txt o texto normal a cualquier intérprete de IA para leer código sin tener que hacer el proceso de copiar y pegar de los múltiples archivos manualmente
 
 ## Funcionalidades
 
@@ -55,20 +57,14 @@ python -m pip install customtkinter pillow pyinstaller
    python Lectorcito_GUI_Pro_CT.py
    ```
 2. **Compilar a ejecutable** con PyInstaller. Desde PowerShell o CMD, en la raíz del proyecto ejecuta:
-
-   ```powershell
-   & C:\Users\renzi\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\Scripts\pyinstaller.exe --onefile --noconsole --icon=lector.ico Lectorcito_GUI_Pro_CT.py
-   ```
-
-   ó
    
    ```powershell
-   python -m pyinstaller --onefile --noconsole --icon=lector.ico Lectorcito_GUI_Pro_CT.py
+   python -m PyInstaller --onefile --noconsole --icon=lector.ico Lectorcito_GUI_Pro_CT.py
    ```
    Esto generará el ejecutable en la carpeta `dist/`.
 
 3. **Ejecutar el ejecutable**:
-   - Al abrir, la aplicación se mostrará en **modo claro**.
+   - Al abrir, la aplicación se mostrará en **modo claro**, proximamente cambio a modo oscuro.
    - Selecciona una carpeta a analizar.
    - Se generará un reporte completo (con todas las líneas de cada archivo) en la carpeta `Lecturas/`.
    - Usa los botones para abrir el reporte o la carpeta de salida.
