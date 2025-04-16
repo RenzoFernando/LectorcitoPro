@@ -55,6 +55,13 @@ python -m pip install customtkinter pillow pyinstaller
    python Lectorcito_GUI_Pro_CT.py
    ```
 2. **Compilar a ejecutable** con PyInstaller. Desde PowerShell o CMD, en la raíz del proyecto ejecuta:
+
+   ```powershell
+   & C:\Users\renzi\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\Scripts\pyinstaller.exe --onefile --noconsole --icon=lector.ico Lectorcito_GUI_Pro_CT.py
+   ```
+
+   ó
+   
    ```powershell
    python -m pyinstaller --onefile --noconsole --icon=lector.ico Lectorcito_GUI_Pro_CT.py
    ```
