@@ -208,7 +208,7 @@ class LectorcitoApp(ctk.CTk):
 
         self.label_footer_1 = ctk.CTkLabel(
             self.frame_footer,
-            text="Lectorcito Pro v2.2",
+            text="Lectorcito Pro v2.3",
             font=font_footer_bold
         )
         self.label_footer_1.pack(anchor="center", pady=0)
@@ -323,7 +323,7 @@ class LectorcitoApp(ctk.CTk):
                 try:
                     os.makedirs(self.lecturas_path)
                 except Exception as e:
-                    messagebox.showerror("❗ Error", f"No se pudo crear la carpeta Lecturas:\n{e}")
+                    messagebox.showerror("Error", f"No se pudo crear la carpeta Lecturas:\n{e}")
 
     def seleccionar_carpeta_leer(self):
         """Selecciona la carpeta a leer y, si ya se ha establecido la ruta de Lecturas, inicia el procesamiento."""
@@ -333,41 +333,41 @@ class LectorcitoApp(ctk.CTk):
             if self.lecturas_path:
                 self.start_processing()
             else:
-                messagebox.showwarning("⚠️ Atención", "Primero debe seleccionar la ruta de Lecturas.")
+                messagebox.showwarning("Atención", "Primero debe seleccionar la ruta de Lecturas.")
 
     def eliminar_todas_lecturas(self):
         """Elimina la carpeta Lecturas con todo su contenido."""
         if not self.lecturas_path or not os.path.exists(self.lecturas_path):
-            messagebox.showinfo("⚠️ Atención", "No hay carpeta Lecturas para eliminar.")
+            messagebox.showinfo("Atención", "No hay carpeta Lecturas para eliminar.")
             return
 
         resp = messagebox.askyesno("Confirmación", "¿Está seguro de eliminar la carpeta Lecturas y todo su contenido?")
         if resp:
             try:
                 shutil.rmtree(self.lecturas_path)
-                messagebox.showinfo("🔔 ¡Listo!", "Se han eliminado todas las lecturas correctamente.")
+                messagebox.showinfo("¡Listo!", "Se han eliminado todas las lecturas correctamente.")
             except Exception as e:
                 messagebox.showerror("❗ Error", f"No se pudo eliminar la carpeta:\n{e}")
 
     def abrir_carpeta_lecturas(self):
         """Abre la carpeta Lecturas en el explorador de archivos."""
         if not self.lecturas_path or not os.path.exists(self.lecturas_path):
-            messagebox.showwarning("⚠️ Atención", "No existe carpeta 'Lecturas' aún.")
+            messagebox.showwarning("Atención", "No existe carpeta 'Lecturas' aún.")
             return
         try:
             os.startfile(self.lecturas_path)
         except Exception as e:
-            messagebox.showerror("❗ Error", f"No se pudo abrir la carpeta Lecturas:\n{e}")
+            messagebox.showerror("Error", f"No se pudo abrir la carpeta Lecturas:\n{e}")
 
     def abrir_archivo_generado(self):
         """Abre el último archivo generado en la carpeta Lecturas."""
         if not self.archivo_generado or not os.path.exists(self.archivo_generado):
-            messagebox.showwarning("⚠️ Atención", "Primero debe generar un archivo para poder abrirlo.")
+            messagebox.showwarning("Atención", "Primero debe generar un archivo para poder abrirlo.")
             return
         try:
             os.startfile(self.archivo_generado)
         except Exception as e:
-            messagebox.showerror("❗ Error", f"No se pudo abrir el archivo:\n{e}")
+            messagebox.showerror("Error", f"No se pudo abrir el archivo:\n{e}")
 
 
     # --------------------------------------------------------------------
@@ -376,10 +376,10 @@ class LectorcitoApp(ctk.CTk):
     def start_processing(self):
         """Inicia el proceso de lectura de la carpeta seleccionada y guarda el contenido en la carpeta Lecturas."""
         if not self.folder_to_read:
-            messagebox.showwarning("⚠️ Atención", "Primero seleccione la carpeta a leer.")
+            messagebox.showwarning("Atención", "Primero seleccione la carpeta a leer.")
             return
         if not self.lecturas_path:
-            messagebox.showwarning("⚠️ Atención", "Primero seleccione la ruta de Lecturas.")
+            messagebox.showwarning("Atención", "Primero seleccione la ruta de Lecturas.")
             return
 
         threading.Thread(target=self.procesar_lecturas, daemon=True).start()
@@ -425,10 +425,10 @@ class LectorcitoApp(ctk.CTk):
                                 porcentaje = (actual / total_files) * 100
                                 self.update_progress(porcentaje)
 
-            messagebox.showinfo("🔔 ¡Listo!", "El contenido fue guardado correctamente.")
+            messagebox.showinfo("¡Listo!", "El contenido fue guardado correctamente.")
 
         except Exception:
-            messagebox.showerror("❗ Error", "Ocurrió un error durante el análisis. Intente con otra carpeta.")
+            messagebox.showerror("Error", "Ocurrió un error durante el análisis. Intente con otra carpeta.")
 
         self.desbloquear_interfaz()
 

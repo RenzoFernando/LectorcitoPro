@@ -156,7 +156,7 @@ Para compilar la aplicación a un ejecutable (.exe) utilizando PyInstaller:
 2. **Desde la raíz del proyecto, ejecuta el siguiente comando en CMD o PowerShell:**
 
    ```powershell
-   python -m PyInstaller --onefile --noconsole --icon=lector.ico Lectorcito_GUI_Pro_CT.py
+   python -m PyInstaller --onefile --windowed --icon=recursos\lector.ico --add-data "recursos;recursos" Lectorcito_GUI_Pro_CT.py
    ```
 
    Esto generará una carpeta `dist/` en la que se encontrará el ejecutable `Lectorcito_GUI_Pro_CT.exe`.
