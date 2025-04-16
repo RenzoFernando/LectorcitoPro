@@ -1,18 +1,16 @@
 # Historial de Versiones
 
 ## Versión 0
-1.  Lectorcito.py (script original)
-2.  Lectura recursiva de archivos de texto (`.txt`, `.py`, etc.).
-3.  Concatenación de contenido en un único archivo de salida.
-4.  Nombre básico del reporte sin interfaz gráfica.
+1. Lectura recursiva de archivos de texto (`.txt`, `.py`, etc.).
+2. Concatenación de contenido en un único archivo de salida.
+3. Nombre básico del reporte sin interfaz gráfica.
 
 ## Versión 1
-1. Interfaz gráfica inicial con CustomTkinter
-2.  Ventana simple con botón "Elegir carpeta".
-3.  Generación de reporte en carpeta `Lecturas` dentro de la misma ruta.
-4.  Nombres de archivo con formato `carpeta_vN.txt`.
-5.  Inclusión de icono `lector.ico`.
-6.  Barra de progreso indeterminada.
+1. Ventana simple con botón "Elegir carpeta".
+2. Generación de reporte en carpeta `Lecturas` dentro de la misma ruta.
+3. Nombres de archivo con formato `carpeta_vN.txt`.
+4. Inclusión de icono `lector.ico`.
+5. Barra de progreso indeterminada.
 
 ## Versión 2
 1. Botón "Seleccionar Ruta de Lecturas": permite elegir dónde crear la carpeta `Lecturas`.  
