@@ -16,9 +16,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # La carpeta de destino se define en la misma carpeta del proyecto, en una subcarpeta "Lecturas"
 CARPETA_DESTINO = os.path.join(BASE_DIR, "Lecturas")
 
-# Constantes de archivos a procesar y carpetas a excluir
+# Constantes de archivos a procesar y carpetas a excluir (todo en minúsculas para hacer comparaciones)
 EXTENSIONES_TEXTO = ['.txt', '.py', '.html', '.java', '.md', '.css']
-CARPETAS_EXCLUIDAS = ['__pycache__', 'venv', '.venv', 'migrations', '.git', '.venv']
+CARPETAS_EXCLUIDAS = ['__pycache__', 'venv', '.venv', 'migrations', '.git']
 
 class LectorcitoApp(ctk.CTk):
     def __init__(self):
@@ -28,7 +28,7 @@ class LectorcitoApp(ctk.CTk):
         self.resizable(False, False)
         self.archivo_generado = None
 
-        # Verifica y crea la carpeta Lecturas si no existe (una sola vez al iniciar)
+        # Verifica y crea la carpeta Lecturas si no existe (solo una vez al iniciar)
         if not os.path.exists(CARPETA_DESTINO):
             try:
                 os.makedirs(CARPETA_DESTINO)
@@ -95,12 +95,12 @@ class LectorcitoApp(ctk.CTk):
         # Etiqueta de información y créditos
         self.label_info = ctk.CTkLabel(
             self,
-            text="Lectorcito Pro v1.6\nDesarrollado por: Renzo Fernando Mosquera Daza, ChatGPT-o3-mini-high y ChatGPT-4o\nhttps://github.com/RenzoFernando/LectorcitoPro.git\n2025",
+            text="Lectorcito Pro v1.7\nDesarrollado por: Renzo Fernando Mosquera Daza, ChatGPT-o3-mini-high y ChatGPT-4o\nhttps://github.com/RenzoFernando/LectorcitoPro.git\n2025",
             font=("Segoe UI", 10)
         )
         self.label_info.pack(side="bottom", pady=(5, 10))
 
-        # Etiqueta para mostrar resultados/mensajes
+        # Etiqueta para resultados/mensajes
         self.label_result = ctk.CTkLabel(self, text="", wraplength=500, justify="center")
         self.label_result.pack(pady=10)
 
@@ -153,12 +153,17 @@ class LectorcitoApp(ctk.CTk):
 
         with open(ruta_salida, "w", encoding="utf-8") as salida:
             salida.write(f"REPORTE DE ARCHIVOS EN: {carpeta}\n\n")
-            # Calcula la ruta relativa para cada archivo con respecto a la carpeta seleccionada
             self.recorrer_carpeta(carpeta, salida, carpeta)
         return ruta_salida
 
     def recorrer_carpeta(self, folder, salida, raiz, nivel=0):
         indent = " " * nivel
+        # Comprobar si el nombre de la carpeta actual está en la lista de exclusión
+        nombre_carpeta = os.path.basename(folder).lower()
+        if nombre_carpeta in [ex.lower() for ex in CARPETAS_EXCLUIDAS]:
+            salida.write(f"{indent}Carpeta ignorada: {os.path.basename(folder)}\n")
+            return
+
         rel_folder = os.path.relpath(folder, raiz)
         salida.write(f"{indent}Carpeta: {rel_folder}\n")
         try:
