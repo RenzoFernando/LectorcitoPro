@@ -41,3 +41,4 @@
 5. Que guarde las preferencias antes utilizadas en rutas.
 6. Solucionar error de Seleccionar carpeta a leer cuando se acabade de eliminar la carpeta de lecturas
 7. Libertad de elejir que EXTENSIONES_TEXTO puede reconocer y cuales no, asi mismo tambien con CARPETAS_EXCLUIDAS
+8. Cambiar y actualizar README
