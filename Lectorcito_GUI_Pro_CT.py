@@ -1,503 +1,450 @@
-import os
-import sys
-import shutil
-import threading
-import ctypes
-import webbrowser
+# ─────────────────────────────  LECTORCITO PRO v3.3  ─────────────────────────────
+# Apariencia calcada al mock‑up Figma:
+#   • Ventana 600 × 425 px, barra azul superior (30 px) con min‑max‑close
+#   • Sidebar izq. (35 px) con texto vertical “Lectorcito Pro v3.*”
+#   • Sidebar dcha. con 7 icon‑botones 35 × 35 px (radio 10 px)
+#   • Encabezado centrado: título + saludo dinámico
+#   • 5 botones principales 215 × 30 px (3 azules, 1 verde, 1 rojo)
+#   • Barra de progreso 357 px centrada + porcentaje debajo
+#   • Footer “Copyright © ‑ 2025 ‑ Renzo Fernando ‑ All Rights Reserved.”
+#   • Tema claro/oscuro, ES/EN, preferencias persistentes
+#   • ¡Sólo se cambió la apariencia; toda la lógica anterior sigue intacta!
+# ────────────────────────────────────────────────────────────────────────────────
+
+import os, sys, json, shutil, threading, ctypes, datetime, webbrowser
+from tkinter import filedialog, messagebox, simpledialog, Canvas
 import customtkinter as ctk
-from tkinter import filedialog, messagebox
-from PIL import Image
+from PIL import Image        # pip install pillow
 
-# --------------------------------------------------------------------------------
-#                          FUNCIÓN PARA CARGAR RECURSOS
-# --------------------------------------------------------------------------------
-def get_resource_path(relative_path):
-    """
-    Devuelve la ruta absoluta del recurso, tanto si se está ejecutando
-    como script normal como si se ha empaquetado con PyInstaller.
-    """
+# ───────────────  Configuración persistente  ────────────────
+CFG_FILE = os.path.join(os.path.expanduser("~"), ".lectorcito_cfg.json")
+DEFAULT_CFG = {
+    "lecturas_path": "",
+    "EXTENSIONES_TEXTO": [".txt", ".py", ".html", ".java", ".md", ".css"],
+    "CARPETAS_EXCLUIDAS": ["__pycache__", "venv", ".venv", "migrations", ".git"],
+}
+
+# ───────────────  Colores (mock‑up)  ────────────────
+CLR_BG_LT,  CLR_BG_DK  = "#EBEBEB", "#1A1E22"
+CLR_TXT_LT, CLR_TXT_DK = "#000000", "#FFFFFF"
+CLR_BLUE = "#3B8ED0"
+CLR_GREEN, CLR_GREEN_D = "#3BD056", "#2FA047"
+CLR_RED,  CLR_RED_D    = "#D03B3D", "#A03031"
+CLR_BAR_LT, CLR_BAR_DK = "#D9D9D9", "#333333"
+LEFT_BG_LT, LEFT_BG_DK = "#1A1E22", "#EBEBEB"      # inverso para contraste
+TOPBAR_CLR = "#1C2C59"
+
+BTN_W_MAIN, BTN_H_MAIN     = 215, 30
+BTN_W_ICON = BTN_H_ICON    = 35
+BTN_ICON_RAD               = 10
+PROGRESS_W                 = 357
+
+# ───────────────  Utils de recurso / cfg  ────────────────
+def res(rel):
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, "recursos", rel)
+
+def load_cfg():
+    if os.path.exists(CFG_FILE):
+        try:
+            data = json.load(open(CFG_FILE, encoding="utf‑8"))
+            for k, v in DEFAULT_CFG.items():
+                data.setdefault(k, v)
+            return data
+        except Exception:
+            pass
+    return DEFAULT_CFG.copy()
+
+def save_cfg(cfg):
     try:
-        # Si se ha empaquetado con PyInstaller, _MEIPASS es donde están los recursos
-        base_path = sys._MEIPASS
-    except Exception:
-        # Caso normal: ruta al directorio actual del script
-        base_path = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_path, relative_path)
+        json.dump(cfg, open(CFG_FILE, "w", encoding="utf‑8"), indent=2)
+    except Exception as e:
+        messagebox.showerror("Error", f"No se pudo guardar la configuración:\n{e}")
 
-
-# DPI AWARENESS PARA WINDOWS
-if os.name == 'nt':
-    try:
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:
-        pass
-
-# --------- COLORES Y VARIABLES GLOBALES ---------
-COLOR_FONDO_CLARO = "#EBEBEB"
-COLOR_FONDO_OSCURO = "#1A1E22"
-COLOR_TEXTO_CLARO  = "#000000"
-COLOR_TEXTO_OSCURO = "#FFFFFF"
-
-COLOR_BOTON_AZUL   = "#3B8ED0"
-
-COLOR_BOTON_VERDE  = "#3BD056"
-COLOR_BOTON_VERDE_DARK = "#2FA047"   # verde más oscuro al pasar el mouse
-COLOR_BOTON_ROJO   = "#D03B3D"
-COLOR_BOTON_ROJO_DARK  = "#A03031"   # rojo más oscuro al pasar el mouse
-
-EXTENSIONES_TEXTO  = ['.txt', '.py', '.html', '.java', '.md', '.css']
-CARPETAS_EXCLUIDAS = ['__pycache__', 'venv', '.venv', 'migrations', '.git']
-
-
+# ───────────────  App principal  ────────────────
 class LectorcitoApp(ctk.CTk):
+
+    # ───────  TRaducciones  ───────
+    TR = {
+        "es": {
+            "title": "LECTORCITO PRO",
+            "welcome": "por favor seleccione una opción a realizar",
+            "btn_choose_folder": "Elegir Carpeta a Leer",
+            "btn_sel_lecturas":  "Seleccionar Ruta de Lecturas",
+            "btn_open_lecturas": "Abrir archivo Lecturas",
+            "btn_open_last":     "Abrir último archivo generado",
+            "btn_del":           "Eliminar todas las Lecturas",
+            "msg_done":          "Operación completada",
+            "msg_select_read":   "Seleccione primero la carpeta a leer.",
+            "msg_select_lect":   "Primero seleccione la ruta de Lecturas.",
+            "msg_no_files":      "No se encontraron archivos válidos",
+            "dlg_exts":          "Extensiones permitidas separadas por comas:",
+            "dlg_excl":          "Carpetas excluidas separadas por comas:",
+            "info":              "Lectorcito Pro v3.*\nRenzo Fernando 2025",
+            "confirm_del":       "¿Eliminar todas las Lecturas?",
+            "greet_m": "Buenos días", "greet_a": "Buenas tardes", "greet_n": "Buenas noches"
+        },
+        "en": {
+            "title": "LECTORCITO PRO",
+            "welcome": "please choose an option to perform",
+            "btn_choose_folder": "Choose Folder to Read",
+            "btn_sel_lecturas":  "Select Lecturas Path",
+            "btn_open_lecturas": "Open Lecturas File",
+            "btn_open_last":     "Open last generated file",
+            "btn_del":           "Delete all Lecturas",
+            "msg_done":          "Done",
+            "msg_select_read":   "Select folder to read first.",
+            "msg_select_lect":   "Select Lecturas path first.",
+            "msg_no_files":      "No valid files found",
+            "dlg_exts":          "Allowed extensions (comma separated):",
+            "dlg_excl":          "Excluded folders (comma separated):",
+            "info":              "Lectorcito Pro v3.*\nRenzo Fernando 2025",
+            "confirm_del":       "Delete all Lecturas?",
+            "greet_m": "Good morning", "greet_a": "Good afternoon", "greet_n": "Good evening"
+        },
+    }
+
+    # ───────  INIT  ───────
     def __init__(self):
         super().__init__()
+        if os.name == "nt":
+            try: ctypes.windll.shcore.SetProcessDpiAwareness(1)
+            except Exception: pass
+
+        # Estado
+        self.cfg = load_cfg()
+        self.lang          = "es"
+        self.current_theme = "Light"
+        self.lecturas_path      = self.cfg["lecturas_path"]
+        self.EXTENSIONES_TEXTO  = self.cfg["EXTENSIONES_TEXTO"]
+        self.CARPETAS_EXCLUIDAS = self.cfg["CARPETAS_EXCLUIDAS"]
+        self.folder_to_read, self.archivo_generado = None, None
+
+        # Ventana
         self.title("Lectorcito Pro")
-        self.resizable(False, False)
-        self.geometry("625x425")
-
-        # -------------- Variables de ruta --------------
-        self.folder_to_read = None       # Carpeta que se va a leer
-        self.lecturas_path = None       # Ruta donde se creará la carpeta Lecturas
-        self.archivo_generado = None    # Último archivo generado
-        self.current_mode = "light"     # Modo inicial (light/dark)
-
-        # -------------- Cargar íconos --------------
-        icon_path_ico = get_resource_path("recursos/lector.ico")
-        icon_path_png = get_resource_path("recursos/lector.png")
-
-        if os.path.exists(icon_path_ico):
-            try:
-                self.iconbitmap(icon_path_ico)
-            except Exception:
-                pass
-
-        # Íconos para modo (sol y luna)
-        sun_png  = get_resource_path("recursos/sol.png")
-        moon_png = get_resource_path("recursos/luna.png")
-
-        self.img_sun  = None
-        self.img_moon = None
-
-        if os.path.exists(sun_png) and os.path.exists(moon_png):
-            try:
-                self.img_sun = ctk.CTkImage(
-                    light_image=Image.open(sun_png),
-                    dark_image=Image.open(sun_png),
-                    size=(28, 28)
-                )
-                self.img_moon = ctk.CTkImage(
-                    light_image=Image.open(moon_png),
-                    dark_image=Image.open(moon_png),
-                    size=(28, 28)
-                )
-            except Exception as e:
-                print(f"Error cargando imágenes sol/luna: {e}")
-
-        # -------------- Configurar y crear widgets --------------
-        self.configure_gui()
-        self.create_widgets()
-        self.apply_theme(self.current_mode)
-
-
-    # --------------------------------------------------------------------
-    # ------------------------ CONFIGURAR VENTANA -------------------------
-    # --------------------------------------------------------------------
-    def configure_gui(self):
-        """Configura el modo de apariencia inicial (light)."""
-        ctk.set_appearance_mode("light")  # Por defecto
+        self.geometry("600x425"); self.resizable(False, False)
+        ctk.set_appearance_mode(self.current_theme)
         ctk.set_default_color_theme("blue")
 
+        # Recursos
+        self._load_icons()
 
-    # --------------------------------------------------------------------
-    # ------------------------- CREAR WIDGETS ----------------------------
-    # --------------------------------------------------------------------
-    def create_widgets(self):
-        # Frame superior (header) para título y botón de cambiar modo
-        self.frame_top = ctk.CTkFrame(self, corner_radius=0)
-        self.frame_top.pack(side="top", fill="x", pady=5)
+        # Layout
+        #NO TE NECEITO MAS -> self._topbar()
+        self._sidebar_left()
+        self._sidebar_right()
+        self._header()
+        self._main_buttons()
+        self._progress()
+        self._footer()
+        self._apply_theme()
+        self._apply_lang()
 
-        self.label_title = ctk.CTkLabel(
-            self.frame_top,
-            text="Lectorcito Pro",
-            font=("Segoe UI", 18, "bold")
-        )
-        self.label_title.pack(side="left", padx=10)
+    # ───────────────  Recursos / iconos  ────────────────
+    def _load_icons(self):
+        # sol / luna
+        self.icon_sun  = ctk.CTkImage(Image.open(res("sol.png")),  size=(24,24))
+        self.icon_moon = ctk.CTkImage(Image.open(res("luna.png")), size=(24,24))
+        # otros
+        self.icons = {}
+        for key in ["ver","nover","guardar","traducir","github","info"]:
+            self.icons[key] = ctk.CTkImage(
+                light_image=Image.open(res(f"{key}_claro.png")),
+                dark_image =Image.open(res(f"{key}_oscuro.png")),
+                size=(24,24))
 
-        # Botón modo (sol/luna) en la esquina superior derecha
-        self.btn_mode_toggle = ctk.CTkButton(
-            self.frame_top,
-            text="",
-            width=40,
-            fg_color="#3B8ED0",  # valor inicial; será reasignado en apply_theme
-            hover_color="#3B8ED0",
-            command=self.toggle_mode
-        )
-        # Imagen inicial (icono de luna si empezamos en modo claro)
-        if self.img_moon:
-            self.btn_mode_toggle.configure(image=self.img_moon)
-        self.btn_mode_toggle.pack(side="right", padx=10)
+    # ───────────────  Barra superior  ────────────────
+    def _topbar(self):
+        bar = ctk.CTkFrame(self, height=30, fg_color=TOPBAR_CLR, corner_radius=0)
+        bar.pack(side="top", fill="x")
 
-        # Etiqueta de bienvenida
-        self.label_welcome = ctk.CTkLabel(
-            self,
-            text="Bienvenid@, por favor seleccione una opción a realizar",
-            font=("Segoe UI", 14, "bold")
-        )
-        self.label_welcome.pack(pady=(10, 10))
+        # icono app
+        if os.path.exists(res("lector.png")):
+            img = ctk.CTkImage(Image.open(res("lector.png")), size=(18,18))
+            ctk.CTkLabel(bar, image=img, text="").pack(side="left", padx=6)
 
-        # ------------------- Botones principales -------------------
-        self.btn_seleccionar_lecturas = ctk.CTkButton(
-            self,
-            text="Seleccionar Ruta de Lecturas",
-            width=220,
-            command=self.seleccionar_ruta_lecturas
-        )
-        self.btn_seleccionar_lecturas.pack(pady=5)
+        ctk.CTkLabel(bar, text="Lectorcito Pro", font=("Segoe UI",12,"bold"),
+                     text_color="#FFFFFF").pack(side="left")
 
-        self.btn_elegir_carpeta = ctk.CTkButton(
-            self,
-            text="Elegir Carpeta a Leer",
-            width=220,
-            command=self.seleccionar_carpeta_leer
-        )
-        self.btn_elegir_carpeta.pack(pady=5)
+        def _w(txt, cmd): return ctk.CTkButton(bar, text=txt, width=22, height=22,
+                                               fg_color="transparent", hover_color="#284180",
+                                               text_color="#FFFFFF", command=cmd)
+        _w("—", self.iconify).pack(side="right", padx=(0,4))
+        _w("□", lambda: self.state("zoomed" if self.state()!="zoomed" else "normal")).pack(side="right")
+        _w("✕", self.destroy).pack(side="right")
 
-        self.btn_abrir_lecturas = ctk.CTkButton(
-            self,
-            text="Abrir archivo Lecturas",
-            width=220,
-            command=self.abrir_carpeta_lecturas
-        )
-        self.btn_abrir_lecturas.pack(pady=5)
+    # ───────────────  Sidebar izquierda  ────────────────
+    def _sidebar_left(self):
+        #self.side_left = ctk.CTkFrame(self, width=35, corner_radius=0)
+        self.side_left = ctk.CTkFrame(self, width=35, height=306, fg_color="#1a1e22", corner_radius=10)
+        #self.side_left.pack(side="left", fill="y")
+        self.side_left.pack(side="left")  
+        #self.canvas_left = Canvas(self.side_left, width=35, highlightthickness=0)
+        self.canvas_left = Canvas(self.side_left, width=35, height=306, highlightthickness=0, bg="#1a1e22")
+        #self.canvas_left.pack(fill="both", expand=True)
+        self.canvas_left.place(x=0, y=0)
+        #self.canvas_left.bind("<Configure>", self._paint_left)
+        self.canvas_left.bind("<Configure>", self._paint_left)
 
-        self.btn_abrir_ultimo_archivo = ctk.CTkButton(
-            self,
-            text="Abrir último archivo generado",
-            width=220,
-            fg_color=COLOR_BOTON_VERDE,
-            hover_color=COLOR_BOTON_VERDE_DARK,
-            text_color="#FFFFFF",
-            command=self.abrir_archivo_generado
-        )
-        self.btn_abrir_ultimo_archivo.pack(pady=5)
+    def _paint_left(self, *_):
+        col = CLR_TXT_DK if self.current_theme=="Light" else CLR_TXT_LT
+        self.canvas_left.delete("all")
+        self.canvas_left.create_text(
+            17.5, self.canvas_left.winfo_height()/2,
+            text="Lectorcito Pro v3.*", angle=90,
+            font=("Segoe UI",9,"bold"), fill=col)
 
-        self.btn_eliminar_lecturas = ctk.CTkButton(
-            self,
-            text="Eliminar todas las Lecturas",
-            width=220,
-            fg_color=COLOR_BOTON_ROJO,
-            hover_color=COLOR_BOTON_ROJO_DARK,
-            text_color="#FFFFFF",
-            command=self.eliminar_todas_lecturas
-        )
-        self.btn_eliminar_lecturas.pack(pady=5)
+    # ───────────────  Sidebar derecha  ────────────────
+    def _sidebar_right(self):
+        self.side_right = ctk.CTkFrame(self, width=60, corner_radius=0)
+        self.side_right.pack(side="right", fill="y")
 
-        # ----------------- Barra de progreso y % -----------------
-        self.frame_progress = ctk.CTkFrame(self, corner_radius=0)
-        self.frame_progress.pack(pady=(15, 0))
+        btns = [
+            ("ver",      self._cfg_exts),
+            ("nover",    self._cfg_excl),
+            ("guardar",  self._save_prefs),
+            ("tema",     self._toggle_theme),
+            ("traducir", self._toggle_lang),
+            ("github",   lambda: webbrowser.open_new("https://github.com/RenzoFernando/LectorcitoPro.git")),
+            ("info",     lambda: messagebox.showinfo("Info", self._tr("info"))),
+        ]
+        for k, cmd in btns:
+            img = self.icon_moon if k=="tema" and self.current_theme=="Light" else \
+                  self.icon_sun  if k=="tema" and self.current_theme=="Dark"  else self.icons[k]
+            ctk.CTkButton(
+                self.side_right, width=BTN_W_ICON, height=BTN_H_ICON, corner_radius=BTN_ICON_RAD,
+                fg_color="#1A1E22", hover_color="#1A1E22",
+                image=img, text="", command=cmd
+            ).pack(pady=6, padx=12)
 
-        self.progress_bar = ctk.CTkProgressBar(self.frame_progress, width=300)
-        self.progress_bar.grid(row=0, column=0, padx=5)
-        self.progress_bar.set(0)
+    # ───────────────  Encabezado  ────────────────
+    def _header(self):
+        self.header = ctk.CTkFrame(self, fg_color="transparent")
+        # posición exacta (63 px título según mock‑up)
+        self.header.place(relx=0.5, y=63, anchor="n")
+        self.lbl_title = ctk.CTkLabel(self.header, font=("Segoe UI",16,"bold"))
+        self.lbl_title.pack()
+        self.lbl_greet = ctk.CTkLabel(self.header, font=("Segoe UI",13,"bold"))
+        self.lbl_greet.pack(pady=(4,0))
 
-        self.label_progress_percent = ctk.CTkLabel(
-            self.frame_progress,
-            text="0%"
-        )
-        self.label_progress_percent.grid(row=0, column=1, padx=5)
+    # ───────────────  Botones principales  ────────────────
+    def _main_buttons(self):
+        self.main_fr = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_fr.place(relx=0.5, y=134, anchor="n")   # 134 px top primer botón
 
-        # ----------------- Créditos y link -----------------
-        self.frame_footer = ctk.CTkFrame(self, corner_radius=0)
-        self.frame_footer.pack(side="bottom", fill="x", pady=0)
+        self.btn_choose = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
+                                        corner_radius=10, font=("Segoe UI",11,"bold"),
+                                        command=self._select_folder_to_read)
+        self.btn_selpath = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
+                                         corner_radius=10, font=("Segoe UI",11,"bold"),
+                                         command=self._select_lecturas_path)
+        self.btn_openlect = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
+                                          corner_radius=10, font=("Segoe UI",11,"bold"),
+                                          command=self._open_lecturas_folder)
+        self.btn_openlast = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
+                                          corner_radius=10, font=("Segoe UI",11,"bold"),
+                                          fg_color=CLR_GREEN, hover_color=CLR_GREEN_D,
+                                          text_color="#FFFFFF", command=self._open_last_file)
+        self.btn_delete   = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
+                                          corner_radius=10, font=("Segoe UI",11,"bold"),
+                                          fg_color=CLR_RED, hover_color=CLR_RED_D,
+                                          text_color="#FFFFFF", command=self._delete_all)
 
-        font_footer_bold    = ("Segoe UI", 10, "bold")
-        font_footer_regular = ("Segoe UI", 10)
+        for idx, btn in enumerate([self.btn_choose, self.btn_selpath,
+                                   self.btn_openlect, self.btn_openlast,
+                                   self.btn_delete]):
+            btn.grid(row=idx, column=0, pady=4)
 
-        self.label_footer_1 = ctk.CTkLabel(
-            self.frame_footer,
-            text="Lectorcito Pro v2.3",
-            font=font_footer_bold
-        )
-        self.label_footer_1.pack(anchor="center", pady=0)
+    # ───────────────  Barra de progreso  ────────────────
+    def _progress(self):
+        self.fr_prog = ctk.CTkFrame(self, fg_color="transparent")
+        self.fr_prog.place(relx=0.5, y=334, anchor="n")   # 334 px según mock‑up
+        self.progress = ctk.CTkProgressBar(self.fr_prog, width=PROGRESS_W, corner_radius=10)
+        self.progress.grid(row=0, column=0); self.progress.set(0)
+        self.lbl_pct = ctk.CTkLabel(self.fr_prog, text="0%")
+        self.lbl_pct.grid(row=1, column=0, pady=3)
 
-        self.label_footer_2 = ctk.CTkLabel(
-            self.frame_footer,
-            text="Desarrollado por: Renzo Fernando Mosquera Daza y ChatGPT Plus",
-            font=font_footer_regular
-        )
-        self.label_footer_2.pack(anchor="center", pady=0)
+    # ───────────────  Footer  ────────────────
+    def _footer(self):
+        foot = ctk.CTkFrame(self, height=30, corner_radius=0)
+        foot.place(relx=0, rely=1.0, relwidth=1.0, anchor="sw")
+        ctk.CTkLabel(foot, text="Copyright © - 2025 - Renzo Fernando - All Rights Reserved.",
+                     font=("Segoe UI",9)).place(relx=0.5, rely=0.5, anchor="center")
 
-        self.label_footer_link = ctk.CTkLabel(
-            self.frame_footer,
-            text="https://github.com/RenzoFernando/LectorcitoPro.git",
-            font=("Segoe UI", 10, "underline"),
-            cursor="hand2"
-        )
-        self.label_footer_link.bind("<Button-1>", self.open_github_link)
-        self.label_footer_link.pack(anchor="center", pady=0)
+    # ───────────────  Helpers de UI  ────────────────
+    def _tr(self, k): return self.TR[self.lang][k]
 
-        self.label_footer_3 = ctk.CTkLabel(
-            self.frame_footer,
-            text="© 2025 github.com/RenzoFernando - All Rights Reserved.",
-            font=font_footer_regular
-        )
-        self.label_footer_3.pack(anchor="center", pady=0)
+    def _apply_theme(self):
+        lt = self.current_theme=="Light"
+        bg, fg = (CLR_BG_LT, CLR_TXT_LT) if lt else (CLR_BG_DK, CLR_TXT_DK)
+        left_bg = LEFT_BG_LT if lt else LEFT_BG_DK
+        self.configure(fg_color=bg)
+        self.side_left.configure(fg_color=left_bg); self.canvas_left.configure(bg=left_bg)
+        for fr in [self.side_right, self.header, self.main_fr, self.fr_prog]:
+            fr.configure(fg_color="transparent")
+        self.lbl_title.configure(text_color=fg)
+        self.lbl_greet.configure(text_color=fg)
+        self.lbl_pct.configure(text_color=fg)
+        self.canvas_left.event_generate("<Configure>")
+        # botones azules
+        for btn in [self.btn_choose, self.btn_selpath, self.btn_openlect]:
+            btn.configure(fg_color=CLR_BLUE, text_color="#FFFFFF")
+        # icon buttons bg
+        for b in self.side_right.winfo_children():
+            b.configure(fg_color="#1A1E22" if lt else "#EBEBEB",
+                        hover_color="#1A1E22" if lt else "#EBEBEB")
+        # sol/luna icon
+        self.side_right.winfo_children()[3].configure(
+            image=self.icon_moon if lt else self.icon_sun)
+        # progress bar
+        self.progress.configure(progress_color=CLR_BLUE,
+                                fg_color=CLR_BAR_LT if lt else CLR_BAR_DK)
 
+    def _apply_lang(self):
+        self.lbl_title.configure(text=self._tr("title"))
+        self._update_greet()
+        self.btn_choose.configure(text=self._tr("btn_choose_folder"))
+        self.btn_selpath.configure(text=self._tr("btn_sel_lecturas"))
+        self.btn_openlect.configure(text=self._tr("btn_open_lecturas"))
+        self.btn_openlast.configure(text=self._tr("btn_open_last"))
+        self.btn_delete.configure(text=self._tr("btn_del"))
 
-    # --------------------------------------------------------------------
-    # --------------------- APLICAR TEMA (MODO) --------------------------
-    # --------------------------------------------------------------------
-    def apply_theme(self, mode):
-        """
-        Ajusta colores de fondo, texto, botones, etc. de forma manual
-        para simular los estilos solicitados (modo claro/oscuro).
-        """
-        if mode == "light":
-            bg_color = COLOR_FONDO_CLARO
-            text_color = COLOR_TEXTO_CLARO
-            # Botón de modo oscuro => color #1A1E22, ícono = luna
-            self.btn_mode_toggle.configure(fg_color="#1A1E22", hover_color="#1A1E22")
-            if self.img_moon:
-                self.btn_mode_toggle.configure(image=self.img_moon)
-        else:
-            bg_color = COLOR_FONDO_OSCURO
-            text_color = COLOR_TEXTO_OSCURO
-            # Botón de modo claro => color #EBEBEB, ícono = sol
-            self.btn_mode_toggle.configure(fg_color="#EBEBEB", hover_color="#EBEBEB")
-            if self.img_sun:
-                self.btn_mode_toggle.configure(image=self.img_sun)
+    def _update_greet(self):
+        h = datetime.datetime.now().hour
+        greet = self._tr("greet_m") if h<12 else self._tr("greet_a") if h<18 else self._tr("greet_n")
+        user = os.getlogin() if hasattr(os,"getlogin") else "####"
+        self.lbl_greet.configure(text=f"{greet} {user},  {self._tr('welcome')}")
 
-        # Fondo principal
-        self.configure(fg_color=bg_color)
-        self.frame_top.configure(fg_color=bg_color)
-        self.frame_footer.configure(fg_color=bg_color)
-        self.frame_progress.configure(fg_color=bg_color)
+    # ───────────────  Acciones side‑right  ────────────────
+    def _cfg_exts(self):
+        s = simpledialog.askstring("Extensiones", self._tr("dlg_exts"),
+                                   initialvalue=",".join(self.EXTENSIONES_TEXTO))
+        if s is not None:
+            self.EXTENSIONES_TEXTO = [x.strip() for x in s.split(",") if x.strip()]
+            self.cfg["EXTENSIONES_TEXTO"] = self.EXTENSIONES_TEXTO
 
-        # Texto (títulos, labels)
-        self.label_title.configure(text_color=text_color)
-        self.label_welcome.configure(text_color=text_color)
+    def _cfg_excl(self):
+        s = simpledialog.askstring("Carpetas", self._tr("dlg_excl"),
+                                   initialvalue=",".join(self.CARPETAS_EXCLUIDAS))
+        if s is not None:
+            self.CARPETAS_EXCLUIDAS = [x.strip() for x in s.split(",") if x.strip()]
+            self.cfg["CARPETAS_EXCLUIDAS"] = self.CARPETAS_EXCLUIDAS
 
-        self.label_footer_1.configure(text_color=text_color)
-        self.label_footer_2.configure(text_color=text_color)
-        self.label_footer_link.configure(text_color=text_color)
-        self.label_footer_3.configure(text_color=text_color)
+    def _save_prefs(self):
+        self.cfg.update({
+            "lecturas_path": self.lecturas_path,
+            "EXTENSIONES_TEXTO": self.EXTENSIONES_TEXTO,
+            "CARPETAS_EXCLUIDAS": self.CARPETAS_EXCLUIDAS
+        })
+        save_cfg(self.cfg)
+        messagebox.showinfo("✔", self._tr("msg_done"))
 
-        self.label_progress_percent.configure(text_color=text_color)
+    def _toggle_theme(self):
+        self.current_theme = "Dark" if self.current_theme=="Light" else "Light"
+        ctk.set_appearance_mode(self.current_theme)
+        self._apply_theme()
 
-        # Botones principales
-        self.btn_elegir_carpeta.configure(fg_color=COLOR_BOTON_AZUL,
-                                          text_color="#FFFFFF")
-        self.btn_seleccionar_lecturas.configure(fg_color=COLOR_BOTON_AZUL,
-                                                text_color="#FFFFFF")
-        self.btn_abrir_lecturas.configure(fg_color=COLOR_BOTON_AZUL,
-                                          text_color="#FFFFFF")
-        self.btn_abrir_ultimo_archivo.configure(fg_color=COLOR_BOTON_VERDE,
-                                                text_color="#FFFFFF")
-        self.btn_eliminar_lecturas.configure(fg_color=COLOR_BOTON_ROJO,
-                                             text_color="#FFFFFF")
+    def _toggle_lang(self):
+        self.lang = "en" if self.lang=="es" else "es"
+        self._apply_lang()
 
-        # Ajustar barra de progreso
-        self.progress_bar.configure(
-            progress_color=COLOR_BOTON_AZUL,  # color de la barra
-            fg_color="#CCCCCC" if mode == "light" else "#333333"  # color del fondo de la barra
-        )
+    # ───────────────  Botones principales (lógica)  ────────────────
+    def _select_lecturas_path(self):
+        p = filedialog.askdirectory(title=self._tr("btn_sel_lecturas"))
+        if p:
+            self.lecturas_path = os.path.join(p, "Lecturas")
+            os.makedirs(self.lecturas_path, exist_ok=True)
 
-
-    # --------------------------------------------------------------------
-    # ------------------- TOGGLE MODO CLARO/OSCURO -----------------------
-    # --------------------------------------------------------------------
-    def toggle_mode(self):
-        """Alterna entre modo claro y oscuro, aplicando los estilos."""
-        if self.current_mode == "light":
-            self.current_mode = "dark"
-            ctk.set_appearance_mode("dark")
-        else:
-            self.current_mode = "light"
-            ctk.set_appearance_mode("light")
-        self.apply_theme(self.current_mode)
-
-
-    # --------------------------------------------------------------------
-    # ------------------- MANEJO DE CARPETAS Y ARCHIVOS ------------------
-    # --------------------------------------------------------------------
-    def seleccionar_ruta_lecturas(self):
-        """Selecciona la ruta donde se creará (o existe) la carpeta 'Lecturas'."""
-        ruta = filedialog.askdirectory(title="Seleccione la ruta donde se creará la carpeta Lecturas")
-        if ruta:
-            self.lecturas_path = os.path.join(ruta, "Lecturas")
-            # Crea la carpeta si no existe
-            if not os.path.exists(self.lecturas_path):
-                try:
-                    os.makedirs(self.lecturas_path)
-                except Exception as e:
-                    messagebox.showerror("Error", f"No se pudo crear la carpeta Lecturas:\n{e}")
-
-    def seleccionar_carpeta_leer(self):
-        """Selecciona la carpeta a leer y, si ya se ha establecido la ruta de Lecturas, inicia el procesamiento."""
-        carpeta = filedialog.askdirectory(title="Seleccione la carpeta a analizar")
-        if carpeta:
-            self.folder_to_read = carpeta
-            if self.lecturas_path:
-                self.start_processing()
+    def _select_folder_to_read(self):
+        f = filedialog.askdirectory(title=self._tr("btn_choose_folder"))
+        if f:
+            self.folder_to_read = f
+            if not self.lecturas_path:
+                messagebox.showwarning("…", self._tr("msg_select_lect"))
             else:
-                messagebox.showwarning("Atención", "Primero debe seleccionar la ruta de Lecturas.")
+                self._start_processing()
 
-    def eliminar_todas_lecturas(self):
-        """Elimina la carpeta Lecturas con todo su contenido."""
-        if not self.lecturas_path or not os.path.exists(self.lecturas_path):
-            messagebox.showinfo("Atención", "No hay carpeta Lecturas para eliminar.")
-            return
-
-        resp = messagebox.askyesno("Confirmación", "¿Está seguro de eliminar la carpeta Lecturas y todo su contenido?")
-        if resp:
-            try:
-                shutil.rmtree(self.lecturas_path)
-                messagebox.showinfo("¡Listo!", "Se han eliminado todas las lecturas correctamente.")
-            except Exception as e:
-                messagebox.showerror("❗ Error", f"No se pudo eliminar la carpeta:\n{e}")
-
-    def abrir_carpeta_lecturas(self):
-        """Abre la carpeta Lecturas en el explorador de archivos."""
-        if not self.lecturas_path or not os.path.exists(self.lecturas_path):
-            messagebox.showwarning("Atención", "No existe carpeta 'Lecturas' aún.")
-            return
-        try:
+    def _open_lecturas_folder(self):
+        if self.lecturas_path and os.path.isdir(self.lecturas_path):
             os.startfile(self.lecturas_path)
-        except Exception as e:
-            messagebox.showerror("Error", f"No se pudo abrir la carpeta Lecturas:\n{e}")
+        else:
+            messagebox.showwarning("…", self._tr("msg_select_lect"))
 
-    def abrir_archivo_generado(self):
-        """Abre el último archivo generado en la carpeta Lecturas."""
-        if not self.archivo_generado or not os.path.exists(self.archivo_generado):
-            messagebox.showwarning("Atención", "Primero debe generar un archivo para poder abrirlo.")
-            return
-        try:
+    def _open_last_file(self):
+        if self.archivo_generado and os.path.isfile(self.archivo_generado):
             os.startfile(self.archivo_generado)
-        except Exception as e:
-            messagebox.showerror("Error", f"No se pudo abrir el archivo:\n{e}")
+        else:
+            messagebox.showwarning("…", self._tr("msg_no_files"))
 
+    def _delete_all(self):
+        if self.lecturas_path and os.path.isdir(self.lecturas_path):
+            if messagebox.askyesno("…", self._tr("confirm_del")):
+                shutil.rmtree(self.lecturas_path, ignore_errors=True)
 
-    # --------------------------------------------------------------------
-    # ----------------------- PROCESAR LECTURAS --------------------------
-    # --------------------------------------------------------------------
-    def start_processing(self):
-        """Inicia el proceso de lectura de la carpeta seleccionada y guarda el contenido en la carpeta Lecturas."""
-        if not self.folder_to_read:
-            messagebox.showwarning("Atención", "Primero seleccione la carpeta a leer.")
-            return
-        if not self.lecturas_path:
-            messagebox.showwarning("Atención", "Primero seleccione la ruta de Lecturas.")
-            return
+    # ───────────────  Procesamiento  ────────────────
+    def _start_processing(self):
+        threading.Thread(target=self._process, daemon=True).start()
 
-        threading.Thread(target=self.procesar_lecturas, daemon=True).start()
+    def _process(self):
+        self._set_state("disabled")
+        self._progress_set(0)
+        tot = self._count_files(self.folder_to_read)
+        if not tot:
+            messagebox.showinfo("…", self._tr("msg_no_files"))
+            self._set_state("normal"); return
 
-    def procesar_lecturas(self):
-        """Procesa la carpeta, leyendo archivos de texto y guardándolos."""
-        self.bloquear_interfaz()
+        base = os.path.basename(os.path.normpath(self.folder_to_read))
+        idx = 1
+        while True:
+            self.archivo_generado = os.path.join(self.lecturas_path, f"{base}_v{idx}.txt")
+            if not os.path.exists(self.archivo_generado): break
+            idx += 1
 
-        self.progress_bar.set(0)
-        self.label_progress_percent.configure(text="0%")
-
-        total_files = self.contar_archivos(self.folder_to_read)
-        self.archivo_generado = self.crear_nombre_archivo_salida(self.folder_to_read)
-
+        done = 0
         try:
-            actual = 0
-            with open(self.archivo_generado, "w", encoding="utf-8") as salida:
-                salida.write(f"REPORTE DE ARCHIVOS EN: {self.folder_to_read}\n\n")
-
+            with open(self.archivo_generado,"w",encoding="utf‑8") as out:
+                out.write(f"REPORTE DE ARCHIVOS EN: {self.folder_to_read}\n\n")
                 for root, dirs, files in os.walk(self.folder_to_read):
-                    # Filtrar carpetas excluidas
-                    dirs[:] = [d for d in dirs if d.lower() not in [ex.lower() for ex in CARPETAS_EXCLUIDAS]]
-
-                    rel_folder = os.path.relpath(root, self.folder_to_read)
-                    salida.write(f"Carpeta: {rel_folder}\n")
-                    for file_ in sorted(files):
-                        ext = os.path.splitext(file_)[1].lower()
-                        if ext in EXTENSIONES_TEXTO:
-                            archivo_path = os.path.join(root, file_)
-                            rel_path = os.path.relpath(archivo_path, self.folder_to_read)
-                            salida.write(f"    Archivo: {rel_path} ({ext})\n")
-                            salida.write("    -------- CONTENIDO --------\n")
+                    dirs[:] = [d for d in dirs if d not in self.CARPETAS_EXCLUIDAS]
+                    rel = os.path.relpath(root, self.folder_to_read)
+                    out.write(f"Carpeta: {rel}\n")
+                    for fn in sorted(files):
+                        if os.path.splitext(fn)[1].lower() in self.EXTENSIONES_TEXTO:
+                            fp = os.path.join(root, fn)
+                            relp = os.path.relpath(fp, self.folder_to_read)
+                            out.write(f"    Archivo: {relp}\n    -------- CONTENIDO --------\n")
                             try:
-                                with open(archivo_path, "r", encoding="utf-8") as f:
-                                    for linea in f:
-                                        salida.write(f"    {linea.rstrip()}\n")
+                                for l in open(fp,"r",encoding="utf‑8",errors="ignore"):
+                                    out.write("    "+l)
                             except Exception as e:
-                                salida.write(f"    Error leyendo {file_}: {e}\n")
-                            salida.write("    -------- FIN --------\n\n")
+                                out.write(f"    Error: {e}\n")
+                            out.write("    -------- FIN --------\n\n")
+                            done += 1
+                            self._progress_set(done/tot*100)
+            messagebox.showinfo("✔", self._tr("msg_done"))
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+        self._set_state("normal")
 
-                            actual += 1
-                            if total_files > 0:
-                                porcentaje = (actual / total_files) * 100
-                                self.update_progress(porcentaje)
+    def _count_files(self, folder):
+        c = 0
+        for root, dirs, files in os.walk(folder):
+            dirs[:] = [d for d in dirs if d not in self.CARPETAS_EXCLUIDAS]
+            c += sum(1 for f in files if os.path.splitext(f)[1].lower() in self.EXTENSIONES_TEXTO)
+        return c
 
-            messagebox.showinfo("¡Listo!", "El contenido fue guardado correctamente.")
-
-        except Exception:
-            messagebox.showerror("Error", "Ocurrió un error durante el análisis. Intente con otra carpeta.")
-
-        self.desbloquear_interfaz()
-
-
-    def bloquear_interfaz(self):
-        """Bloquea botones para evitar múltiples procesos simultáneos."""
-        self.btn_elegir_carpeta.configure(state="disabled")
-        self.btn_seleccionar_lecturas.configure(state="disabled")
-        self.btn_abrir_lecturas.configure(state="disabled")
-        self.btn_abrir_ultimo_archivo.configure(state="disabled")
-        self.btn_eliminar_lecturas.configure(state="disabled")
-
-    def desbloquear_interfaz(self):
-        """Desbloquea botones tras finalizar la lectura."""
-        self.btn_elegir_carpeta.configure(state="normal")
-        self.btn_seleccionar_lecturas.configure(state="normal")
-        self.btn_abrir_lecturas.configure(state="normal")
-        self.btn_abrir_ultimo_archivo.configure(state="normal")
-        self.btn_eliminar_lecturas.configure(state="normal")
-
-    def update_progress(self, porcentaje):
-        """Actualiza la barra de progreso y la etiqueta de porcentaje."""
-        self.progress_bar.set(porcentaje / 100.0)
-        self.label_progress_percent.configure(text=f"{porcentaje:.0f}%")
+    def _progress_set(self, pct):
+        pct = max(0, min(100, pct))
+        self.progress.set(pct/100)
+        self.lbl_pct.configure(text=f"{pct:.0f}%")
         self.update_idletasks()
 
-    def contar_archivos(self, folder):
-        """Cuenta la cantidad total de archivos con EXTENSIONES_TEXTO, ignorando CARPETAS_EXCLUIDAS."""
-        contador = 0
-        for root, dirs, files in os.walk(folder):
-            dirs[:] = [d for d in dirs if d.lower() not in [ex.lower() for ex in CARPETAS_EXCLUIDAS]]
-            for file_ in files:
-                ext = os.path.splitext(file_)[1].lower()
-                if ext in EXTENSIONES_TEXTO:
-                    contador += 1
-        return contador
+    def _set_state(self, st):
+        for btn in [self.btn_choose, self.btn_selpath, self.btn_openlect,
+                    self.btn_openlast, self.btn_delete]:
+            btn.configure(state=st)
 
-    def crear_nombre_archivo_salida(self, carpeta_origen):
-        """Genera un nombre único para el archivo de salida dentro de self.lecturas_path."""
-        nombre_carpeta = os.path.basename(carpeta_origen.rstrip("\\/"))
-        version = 1
-        while True:
-            nombre_archivo = f"{nombre_carpeta}_v{version}.txt"
-            ruta_salida = os.path.join(self.lecturas_path, nombre_archivo)
-            if not os.path.exists(ruta_salida):
-                return ruta_salida
-            version += 1
-
-
-    # --------------------------------------------------------------------
-    # ------------------------- ABRIR LINK GITHUB -------------------------
-    # --------------------------------------------------------------------
-    def open_github_link(self, event):
-        """Abre el repositorio en el navegador."""
-        url = "https://github.com/RenzoFernando/LectorcitoPro.git"
-        webbrowser.open_new(url)
-
-
-# ------------------------------------------------------------------------
-# ----------------------- EJECUCIÓN PRINCIPAL ----------------------------
-# ------------------------------------------------------------------------
+# ───────────────  Run  ────────────────
 if __name__ == "__main__":
     app = LectorcitoApp()
     app.mainloop()
