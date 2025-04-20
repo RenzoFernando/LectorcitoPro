@@ -1,12 +1,11 @@
 import os, sys, json, shutil, threading, ctypes, datetime, webbrowser
 from tkinter import PhotoImage, filedialog, messagebox, simpledialog, Canvas
 import customtkinter as ctk
-from PIL import Image      # pip install pillow
-import datetime
-from tkinter import PhotoImage
+from PIL import Image
+import tkinter as tk 
 
 # ───────────────  Versión y metadatos  ────────────────
-VERSION    = "3.6"
+VERSION    = "3.7"
 YEAR       = datetime.datetime.now().year
 AUTHOR     = "Renzo Fernando Mosquera Daza"
 COAUTHOR   = "ChatGPT Plus"
@@ -138,6 +137,12 @@ class LectorcitoApp(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         # Recursos
+        self._tk_icon = PhotoImage(file=res("lector.png"))
+        try:
+            self.iconphoto(True, self._tk_icon)
+        except:
+            pass
+
         self._load_icons()
         if os.path.exists(res("lector.ico")):
             try: self.iconbitmap(res("lector.ico"))
@@ -309,58 +314,73 @@ class LectorcitoApp(ctk.CTk):
 
     # ───────────────  Acciones side‑right  ────────────────
     def _cfg_exts(self):
-        # Crear la ventana flotante
-        dialog = ctk.CTkToplevel(self)
+        # 1) Usa un Toplevel nativo en lugar de CTkToplevel
+        dialog = tk.Toplevel(self)
+        # Aplica el icono .ico de tu app
+        try:
+            dialog.iconbitmap(res("lector.ico"))
+        except Exception:
+            pass
+
         dialog.title("Extensiones")
         dialog.geometry("400x200")
-        #ventana en primer plano
         dialog.transient(self)
         dialog.grab_set()
+        dialog.focus_force()
 
-        # Etiqueta y entrada de texto
-        lbl = ctk.CTkLabel(dialog, text=self._tr("dlg_exts"), font=("Segoe UI", 12))
-        lbl.pack(pady=10)
-        entry = ctk.CTkEntry(dialog, width=300)
+        # 2) Mete tus widgets CTk dentro de un frame contenedor
+        container = ctk.CTkFrame(dialog, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=20, pady=20)
+
+        lbl = ctk.CTkLabel(container, text=self._tr("dlg_exts"), font=("Segoe UI", 12))
+        lbl.pack(pady=(0,10))
+        entry = ctk.CTkEntry(container, width=300)
         entry.insert(0, ",".join(self.EXTENSIONES_TEXTO))
-        entry.pack(pady=10)
+        entry.pack(pady=(0,20))
 
-        # Botón para guardar
+        
+
         def save():
             s = entry.get()
             if s:
                 self.EXTENSIONES_TEXTO = [x.strip() for x in s.split(",") if x.strip()]
                 self.cfg["EXTENSIONES_TEXTO"] = self.EXTENSIONES_TEXTO
-                dialog.destroy()
+            dialog.destroy()
 
-        btn_save = ctk.CTkButton(dialog, text="Guardar", command=save)
-        btn_save.pack(pady=10)
+        btn_save = ctk.CTkButton(container, text="Guardar", command=save)
+        btn_save.pack()
 
     def _cfg_excl(self):
-        # Crear la ventana flotante
-        dialog = ctk.CTkToplevel(self)
+        dialog = tk.Toplevel(self)
+        try:
+            dialog.iconbitmap(res("lector.ico"))
+        except Exception:
+            pass
+
         dialog.title("Carpetas Excluidas")
         dialog.geometry("400x200")
-        #ventana en primer plano
         dialog.transient(self)
         dialog.grab_set()
+        dialog.focus_force()
 
-        # Etiqueta y entrada de texto
-        lbl = ctk.CTkLabel(dialog, text=self._tr("dlg_excl"), font=("Segoe UI", 12))
-        lbl.pack(pady=10)
-        entry = ctk.CTkEntry(dialog, width=300)
+        container = ctk.CTkFrame(dialog, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=20, pady=20)
+
+        lbl = ctk.CTkLabel(container, text=self._tr("dlg_excl"), font=("Segoe UI", 12))
+        lbl.pack(pady=(0,10))
+        entry = ctk.CTkEntry(container, width=300)
         entry.insert(0, ",".join(self.CARPETAS_EXCLUIDAS))
-        entry.pack(pady=10)
+        entry.pack(pady=(0,20))
 
-        # Botón para guardar
         def save():
             s = entry.get()
             if s:
                 self.CARPETAS_EXCLUIDAS = [x.strip() for x in s.split(",") if x.strip()]
                 self.cfg["CARPETAS_EXCLUIDAS"] = self.CARPETAS_EXCLUIDAS
-                dialog.destroy()
+            dialog.destroy()
 
-        btn_save = ctk.CTkButton(dialog, text="Guardar", command=save)
-        btn_save.pack(pady=10)
+        btn_save = ctk.CTkButton(container, text="Guardar", command=save)
+        btn_save.pack()
 
     def _save_prefs(self):
         self.cfg.update({
