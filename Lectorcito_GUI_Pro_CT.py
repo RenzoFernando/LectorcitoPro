@@ -1,7 +1,30 @@
 import os, sys, json, shutil, threading, ctypes, datetime, webbrowser
-from tkinter import filedialog, messagebox, simpledialog, Canvas
+from tkinter import PhotoImage, filedialog, messagebox, simpledialog, Canvas
 import customtkinter as ctk
-from PIL import Image        # pip install pillow
+from PIL import Image      # pip install pillow
+import datetime
+from tkinter import PhotoImage
+
+# ───────────────  Versión y metadatos  ────────────────
+VERSION    = "3.6"
+YEAR       = datetime.datetime.now().year
+AUTHOR     = "Renzo Fernando Mosquera Daza"
+COAUTHOR   = "ChatGPT Plus"
+REPO_URL   = "https://github.com/RenzoFernando/LectorcitoPro.git"
+
+INFO_ES = (
+    f"Lectorcito Pro v{VERSION}\n"
+    f"Desarrollado por: {AUTHOR} & {COAUTHOR}\n"
+    f"Repositorio: {REPO_URL}\n"
+    f"© {YEAR}"
+)
+INFO_EN = (
+    f"Lectorcito Pro v{VERSION}\n"
+    f"Developed by: {AUTHOR} & {COAUTHOR}\n"
+    f"Repository: {REPO_URL}\n"
+    f"© {YEAR}"
+)
+
 
 # ───────────────  Configuración persistente  ────────────────
 CFG_FILE = os.path.join(os.path.expanduser("~"), ".lectorcito_cfg.json")
@@ -9,6 +32,8 @@ DEFAULT_CFG = {
     "lecturas_path": "",
     "EXTENSIONES_TEXTO": [".txt", ".py", ".html", ".java", ".md", ".css"],
     "CARPETAS_EXCLUIDAS": ["__pycache__", "venv", ".venv", "migrations", ".git"],
+    "theme": "Light",
+    "lang":  "es"
 }
 
 # ───────────────  Colores (mock‑up)  ────────────────
@@ -67,7 +92,7 @@ class LectorcitoApp(ctk.CTk):
             "msg_no_files":      "No se encontraron archivos válidos",
             "dlg_exts":          "Extensiones permitidas separadas por comas:",
             "dlg_excl":          "Carpetas excluidas separadas por comas:",
-            "info":              "Lectorcito Pro v3.4\nRenzo Fernando 2025",
+            "info": INFO_ES,
             "confirm_del":       "¿Eliminar todas las Lecturas?",
             "greet_m": "Buenos días", "greet_a": "Buenas tardes", "greet_n": "Buenas noches"
         },
@@ -85,7 +110,7 @@ class LectorcitoApp(ctk.CTk):
             "msg_no_files":      "No valid files found",
             "dlg_exts":          "Allowed extensions (comma separated):",
             "dlg_excl":          "Excluded folders (comma separated):",
-            "info":              "Lectorcito Pro v3.4\nRenzo Fernando 2025",
+            "info": INFO_EN,
             "confirm_del":       "Delete all Lecturas?",
             "greet_m": "Good morning", "greet_a": "Good afternoon", "greet_n": "Good evening"
         },
@@ -100,12 +125,11 @@ class LectorcitoApp(ctk.CTk):
 
         # Estado
         self.cfg = load_cfg()
-        self.lang          = "es"
-        self.current_theme = "Light"
+        self.lang          = self.cfg.get("lang", "es")
+        self.current_theme = self.cfg.get("theme", "Light")
         self.lecturas_path      = self.cfg["lecturas_path"]
         self.EXTENSIONES_TEXTO  = self.cfg["EXTENSIONES_TEXTO"]
         self.CARPETAS_EXCLUIDAS = self.cfg["CARPETAS_EXCLUIDAS"]
-        self.folder_to_read, self.archivo_generado = None, None
 
         # Ventana
         self.title("Lectorcito Pro")
@@ -115,7 +139,6 @@ class LectorcitoApp(ctk.CTk):
 
         # Recursos
         self._load_icons()
-        # icono de la app en la ventana y barra superior
         if os.path.exists(res("lector.ico")):
             try: self.iconbitmap(res("lector.ico"))
             except: pass
@@ -160,7 +183,7 @@ class LectorcitoApp(ctk.CTk):
         self.canvas_left.delete("all")
         self.canvas_left.create_text(
             17.5, self.canvas_left.winfo_height()/2 + 4,
-            text="Lectorcito Pro v3.4", angle=90,
+            text=f"Lectorcito Pro v{VERSION}", angle=90,
             font=("Segoe UI",10,"bold"), fill=col)
 
 
@@ -201,12 +224,12 @@ class LectorcitoApp(ctk.CTk):
         self.main_fr = ctk.CTkFrame(self, fg_color="transparent")
         self.main_fr.place(relx=0.5, y=118, anchor="n") 
 
-        self.btn_choose = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
-                                        corner_radius=10, font=("Segoe UI",11,"bold"),
-                                        command=self._select_folder_to_read)
         self.btn_selpath = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
                                          corner_radius=10, font=("Segoe UI",11,"bold"),
                                          command=self._select_lecturas_path)
+        self.btn_choose = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
+                                        corner_radius=10, font=("Segoe UI",11,"bold"),
+                                        command=self._select_folder_to_read)
         self.btn_openlect = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
                                           corner_radius=10, font=("Segoe UI",11,"bold"),
                                           command=self._open_lecturas_folder)
@@ -219,7 +242,7 @@ class LectorcitoApp(ctk.CTk):
                                           fg_color=CLR_RED, hover_color=CLR_RED_D,
                                           text_color="#FFFFFF", command=self._delete_all)
 
-        for idx, btn in enumerate([self.btn_choose, self.btn_selpath,
+        for idx, btn in enumerate([self.btn_selpath, self.btn_choose, 
                                    self.btn_openlect, self.btn_openlast,
                                    self.btn_delete]):
             btn.grid(row=idx, column=0, pady=4)
@@ -286,32 +309,75 @@ class LectorcitoApp(ctk.CTk):
 
     # ───────────────  Acciones side‑right  ────────────────
     def _cfg_exts(self):
-        s = simpledialog.askstring("Extensiones", self._tr("dlg_exts"),
-                                   initialvalue=",".join(self.EXTENSIONES_TEXTO))
-        if s is not None:
-            self.EXTENSIONES_TEXTO = [x.strip() for x in s.split(",") if x.strip()]
-            self.cfg["EXTENSIONES_TEXTO"] = self.EXTENSIONES_TEXTO
+        # Crear la ventana flotante
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Extensiones")
+        dialog.geometry("400x200")
+        #ventana en primer plano
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # Etiqueta y entrada de texto
+        lbl = ctk.CTkLabel(dialog, text=self._tr("dlg_exts"), font=("Segoe UI", 12))
+        lbl.pack(pady=10)
+        entry = ctk.CTkEntry(dialog, width=300)
+        entry.insert(0, ",".join(self.EXTENSIONES_TEXTO))
+        entry.pack(pady=10)
+
+        # Botón para guardar
+        def save():
+            s = entry.get()
+            if s:
+                self.EXTENSIONES_TEXTO = [x.strip() for x in s.split(",") if x.strip()]
+                self.cfg["EXTENSIONES_TEXTO"] = self.EXTENSIONES_TEXTO
+                dialog.destroy()
+
+        btn_save = ctk.CTkButton(dialog, text="Guardar", command=save)
+        btn_save.pack(pady=10)
 
     def _cfg_excl(self):
-        s = simpledialog.askstring("Carpetas", self._tr("dlg_excl"),
-                                   initialvalue=",".join(self.CARPETAS_EXCLUIDAS))
-        if s is not None:
-            self.CARPETAS_EXCLUIDAS = [x.strip() for x in s.split(",") if x.strip()]
-            self.cfg["CARPETAS_EXCLUIDAS"] = self.CARPETAS_EXCLUIDAS
+        # Crear la ventana flotante
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Carpetas Excluidas")
+        dialog.geometry("400x200")
+        #ventana en primer plano
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # Etiqueta y entrada de texto
+        lbl = ctk.CTkLabel(dialog, text=self._tr("dlg_excl"), font=("Segoe UI", 12))
+        lbl.pack(pady=10)
+        entry = ctk.CTkEntry(dialog, width=300)
+        entry.insert(0, ",".join(self.CARPETAS_EXCLUIDAS))
+        entry.pack(pady=10)
+
+        # Botón para guardar
+        def save():
+            s = entry.get()
+            if s:
+                self.CARPETAS_EXCLUIDAS = [x.strip() for x in s.split(",") if x.strip()]
+                self.cfg["CARPETAS_EXCLUIDAS"] = self.CARPETAS_EXCLUIDAS
+                dialog.destroy()
+
+        btn_save = ctk.CTkButton(dialog, text="Guardar", command=save)
+        btn_save.pack(pady=10)
 
     def _save_prefs(self):
         self.cfg.update({
             "lecturas_path": self.lecturas_path,
             "EXTENSIONES_TEXTO": self.EXTENSIONES_TEXTO,
-            "CARPETAS_EXCLUIDAS": self.CARPETAS_EXCLUIDAS
+            "CARPETAS_EXCLUIDAS": self.CARPETAS_EXCLUIDAS,
+            "theme": self.current_theme,
+            "lang": self.lang
         })
         save_cfg(self.cfg)
-        messagebox.showinfo("✔", self._tr("msg_done"))
+        messagebox.showinfo("guardado/saved", self._tr("msg_done"))
 
     def _toggle_theme(self):
         self.current_theme = "Dark" if self.current_theme=="Light" else "Light"
         ctk.set_appearance_mode(self.current_theme)
         self._apply_theme()
+        self._apply_lang()
 
     def _toggle_lang(self):
         self.lang = "en" if self.lang=="es" else "es"
@@ -391,8 +457,10 @@ class LectorcitoApp(ctk.CTk):
                             done += 1
                             self._progress_set(done/tot*100)
             messagebox.showinfo("✔", self._tr("msg_done"))
+            self._progress_set(0)
         except Exception as e:
             messagebox.showerror("Error", str(e))
+            self._progress_set(0)
         self._set_state("normal")
 
     def _count_files(self, folder):
