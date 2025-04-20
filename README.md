@@ -1,69 +1,72 @@
-
 # Lectorcito Pro
 
-**Lectorcito Pro** es una aplicación de escritorio desarrollada en Python que utiliza la librería [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) para ofrecer una interfaz gráfica moderna, limpia y funcional. La aplicación permite seleccionar una carpeta, recorrer y leer el contenido de archivos de código o texto (de acuerdo a las extensiones configurables) y generar un reporte completo en un archivo de texto. Además, incluye opciones para abrir el reporte generado y la carpeta de salida.
+**Versión:** 3  
+**Autor:** Renzo Fernando Mosquera Daza & ChatGPT Plus  
+**Repositorio:** [https://github.com/RenzoFernando/LectorcitoPro](https://github.com/RenzoFernando/LectorcitoPro)  
+© 2025
 
-> **Objetivo:**  
-> Facilitar la tarea de leer código o documentos cuando se requiere alimentar intérpretes de IA sin necesidad de copiar y pegar el contenido de múltiples archivos de forma manual.
+---
+
+## Descripción
+
+**Lectorcito Pro** es una aplicación de escritorio en Python que facilita la generación de reportes de carpetas completas de código y documentos de texto. Ofrece:
+
+- Interfaz gráfica moderna basada en [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter).
+- Soporte multilenguaje (Español / Inglés).
+- Tema claro/oscuro con persistencia de preferencias.
+- Configuración de extensiones y carpetas excluidas mediante diálogos personalizados.
+- Barra de progreso con porcentaje durante la generación del reporte.
+- Sidebars izquierdo y derecho para información de versión y accesos rápidos.
+- Icono personalizado para ventana y ejecutable.
+- Persistencia de configuración en `~/.lectorcito_cfg.json`.
+
+El objetivo es que puedas alimentar intérpretes de IA o revisar proyectos sin necesidad de copiar/pegar manualmente el contenido de múltiples archivos.
 
 ---
 
 ## Tabla de Contenidos
 
-- [Características](#características)
-- [Requisitos y Dependencias](#requisitos-y-dependencias)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Instalación](#instalación)
-- [Uso](#uso)
-- [Compilación a Ejecutable](#compilación-a-ejecutable)
-- [Advertencias y Recomendaciones](#advertencias-y-recomendaciones)
-- [Contribuciones](#contribuciones)
-- [Licencia](#licencia)
+1. [Características](#caracter%C3%ADsticas)
+2. [Instalación de Dependencias](#instalaci%C3%B3n-de-dependencias)
+3. [Estructura del Proyecto](#estructura-del-proyecto)
+4. [Configuración](#configuraci%C3%B3n)
+5. [Ejecución](#ejecuci%C3%B3n)
+6. [Uso de la Aplicación](#uso-de-la-aplicaci%C3%B3n)
+7. [Compilación a Ejecutable](#compilaci%C3%B3n-a-ejecutable)
+8. [Firma de Ejecutables (Code Signing)](#firma-de-ejecutables-code-signing)
+9. [Advertencias y Consejos](#advertencias-y-consejos)
+10. [Contribuciones](#contribuciones)
+11. [Licencia](#licencia)
 
 ---
 
 ## Características
 
-- **Selector de Carpeta:**  
-  Permite al usuario elegir una carpeta mediante un explorador de archivos.
-
-- **Recorrido Recursivo:**  
-  Lee de forma recursiva todos los archivos con extensiones configuradas (por ejemplo, `.txt`, `.py`, `.html`, `.java`, `.md`, `.css`) y omite aquellas carpetas que no se desean analizar (como `__pycache__`, `venv`, `.git`, etc.).
-
-- **Reporte Completo:**  
-  Genera un archivo de reporte que incluye el contenido completo de cada archivo leído, mostrando además la ruta relativa del archivo respecto a la carpeta seleccionada.
-
-- **Barra de Progreso:**  
-  Se muestra una barra de progreso durante la generación del reporte para informar al usuario del avance del proceso.
-
-- **Botones de Acceso Rápido:**  
-  - **Abrir Archivo Generado:** Permite visualizar el reporte directamente.
-  - **Abrir Carpeta de Salida:** Abre la carpeta donde se almacenan los reportes.
-
-- **Icono Personalizado:**  
-  El ejecutable se compila con un icono personalizado (`lector.ico`) y, opcionalmente, la ventana usa `lector.png` para mejorar la apariencia.  
-  > **Nota:** Debido a la forma en que Tkinter maneja los iconos, es posible que la ventana en ejecución muestre otro icono (esto puede solucionarse borrando la caché de iconos o reiniciando Windows).
-
-- **Portabilidad:**  
-  El proyecto está preparado para funcionar en cualquier equipo, ya que la carpeta de salida se crea de forma relativa a la ubicación del script o ejecutable.
+- **Selector de Ruta de Lecturas:** Define dónde guardar los reportes.
+- **Selector de Carpeta a Leer:** Elige el proyecto o carpeta a analizar.
+- **Extensiones Configurables:** Diálogo para indicar qué extensiones de archivo leer (por defecto `.txt, .py, .html, .java, .md, .css`).
+- **Carpetas Excluidas Configurables:** Diálogo para indicar qué carpetas omitir (por defecto `__pycache__, venv, .git`, etc.).
+- **Reporte Detallado:** Archivo `.txt` con la ruta relativa y contenido completo de cada archivo.
+- **Barra de Progreso con %:** Indicador visual del avance durante el análisis.
+- **Botones de Acceso Rápido:** Abrir último archivo generado o carpeta de reportes.
+- **Sidebar Izquierdo:** Texto vertical con versión de la aplicación.
+- **Sidebar Derecho:** Botones rápidos para preferencias, tema, idioma, GitHub e información.
+- **Tema Claro/Oscuro:** Toggle que persiste en configuración.
+- **Multilenguaje (ES/EN):** Toggle que persiste en configuración.
+- **Metadatos Dinámicos:** Versión y año dinámicos definidos en variables.
+- **Iconos y Ventana:** Usa `lector.ico` y `lector.png` para personalizar la ventana y el ejecutable.
+- **Persistencia de Configuración:** Archivo JSON en el home del usuario.
 
 ---
 
-## Requisitos y Dependencias
+## Instalación de Dependencias
 
-**Requisitos de Sistema:**
+Requisitos mínimos:
 
-- **Sistema Operativo:** Windows (se recomienda Windows 10 o superior)
-- **Python:** Se recomienda usar Python 3.13 (o versiones 3.x compatibles).  
-  > **Importante:** Se recomienda descargar Python desde [python.org](https://www.python.org/downloads/windows/) y asegurarse de que la instalación se agregue al `PATH`.
+- **Python 3.7+** (probado con 3.13)  
+- **Windows 10+** (recomendado)  
 
-**Dependencias:**
-
-- [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter)  
-- [Pillow](https://pypi.org/project/Pillow/)  
-- [PyInstaller](https://www.pyinstaller.org/)
-
-Para instalar todas las dependencias, usa:
+Instala las librerías necesarias:
 
 ```bash
 python -m pip install customtkinter pillow pyinstaller
@@ -73,128 +76,132 @@ python -m pip install customtkinter pillow pyinstaller
 
 ## Estructura del Proyecto
 
-La estructura recomendada del proyecto es la siguiente:
-
 ```
 LectorcitoPro/
-├── build/                   # Carpeta generada por PyInstaller (archivo temporario)
-├── dist/                    # Carpeta que contendrá el ejecutable generado
-├── Lecturas/                # Carpeta de salida para los reportes (se crea automáticamente)
+├── build/                   # Carpeta temporal de PyInstaller
+├── dist/                    # Ejecutable generado
+├── recursos/               # Iconos (.ico, .png) y recursos estáticos
+├── Lecturas/                # Carpeta de reportes (se crea al ejecutar)
 ├── Lectorcito_GUI_Pro_CT.py # Código fuente principal
-├── Lectorcito_GUI_Pro_CT.spec  # Archivo de especificaciones generado por PyInstaller
-├── lector.ico               # Icono usado para el ejecutable y la ventana
-├── lector.png               # (Opcional) Imagen PNG para el icono de la ventana
-├── README.md                # Este archivo
-└── .gitignore               # Archivo para ignorar archivos/carpetas innecesarias en Git
+├── README.md                # Documentación del proyecto
+├── .gitignore               # Archivos/carpetas ignorados por Git
+└── Lectorcito_GUI_Pro_CT.spec # Especificación generada por PyInstaller
 ```
 
-> **Importante:** La carpeta `Lecturas/` se crea automáticamente en la misma ubicación que el script (o ejecutable) y se utiliza para guardar los reportes generados.
+---
+
+## Configuración
+
+Al primer arranque, se genera `~/.lectorcito_cfg.json` con valores por defecto. Puedes editarlo manualmente o usar los diálogos:
+
+```json
+{
+  "lecturas_path": "",         
+  "EXTENSIONES_TEXTO": [".txt",".py",".html",".java",".md",".css"],
+  "CARPETAS_EXCLUIDAS": ["__pycache__","venv",".git"],
+  "theme": "Light",
+  "lang": "es"
+}
+```
+
+- **lecturas_path:** Ruta donde se crean las carpetas y archivos de reporte.
+- **theme:** `Light` o `Dark`.
+- **lang:** `es` o `en`.
 
 ---
 
-## Instalación
+## Ejecución
 
-1. **Clona el repositorio** (o descarga el ZIP):
-
-   ```bash
-   git clone https://github.com/RenzoFernando/LectorcitoPro.git
-   ```
-
-2. **Accede a la carpeta del proyecto:**
-
-   ```bash
-   cd LectorcitoPro
-   ```
-
-3. **Instala las dependencias:**
-
-   ```bash
-   python -m pip install customtkinter pillow pyinstaller
-   ```
-
----
-
-## Uso
-
-### Ejecución en Modo Script
-
-Para ejecutar la aplicación desde el código fuente, en la raíz del proyecto:
+### Como Script
 
 ```bash
 python Lectorcito_GUI_Pro_CT.py
 ```
 
-La aplicación se abrirá en **modo claro** y podrás seleccionar una carpeta para analizar. El reporte se generará en la carpeta `Lecturas/`.
+### Como Ejecutable
 
-### Funciones Principales
+```bash
+dist\Lectorcito_GUI_Pro_CT.exe
+```
 
-- **Elegir Carpeta:**  
-  Selecciona la carpeta a analizar a través de un explorador de archivos.
+La ventana se abrirá en modo claro y en el idioma configurado.
 
-- **Reporte:**  
-  La aplicación recorre todos los archivos (de las extensiones configuradas) en la carpeta seleccionada y crea un archivo de reporte que incluye la ruta relativa y el contenido completo de cada archivo.
+---
 
-- **Abrir Reporte:**  
-  Botón que permite abrir el archivo de reporte generado.
+## Uso de la Aplicación
 
-- **Abrir Carpeta de Reportes:**  
-  Botón que abre la carpeta `Lecturas/` donde se almacenan los reportes.
+1. **Seleccionar Ruta de Lecturas:** Permite cambiar dónde se guardarán los reportes.
+2. **Elegir Carpeta a Leer:** Selecciona el directorio a analizar; inicia el proceso si ya definiste la ruta de lecturas.
+3. **Monitorear Progreso:** La barra y el porcentaje indican el avance.
+4. **Abrir Archivo Generado:** Clic para abrir el último reporte.
+5. **Abrir Carpeta de Reportes:** Abre directamente la carpeta `Lecturas`.
+6. **Eliminar Reportes:** Borra toda la carpeta `Lecturas` (confirmación previa).
+7. **Sidebar Derecho:** Accesos rápidos a configuración de extensiones, carpetas excluidas, tema, idioma, GitHub e información.
 
 ---
 
 ## Compilación a Ejecutable
 
-Para compilar la aplicación a un ejecutable (.exe) utilizando PyInstaller:
+Desde PowerShell o CMD en la raíz del proyecto:
 
-1. **Verifica que estás usando la instalación de Python correcta:**
+```powershell
+python -m PyInstaller --onefile --noconsole --icon=recursos\lector.ico --add-data "recursos;recursos" Lectorcito_GUI_Pro_CT.py
+```
 
-   ```bash
-   where python
-   python --version
-   ```
+- **--onefile:** Empaqueta todo en un único `.exe`.
+- **--noconsole:** Oculta la consola de Python.
+- **--icon:** Incluye el icono `lector.ico` en el ejecutable.
+- **--add-data:** Copia el directorio `recursos` para que la app cargue iconos en runtime.
 
-2. **Desde la raíz del proyecto, ejecuta el siguiente comando en CMD o PowerShell:**
-
-   ```powershell
-   python -m PyInstaller --onefile --windowed --icon=recursos\lector.ico --add-data "recursos;recursos" Lectorcito_GUI_Pro_CT.py
-   ```
-
-   Esto generará una carpeta `dist/` en la que se encontrará el ejecutable `Lectorcito_GUI_Pro_CT.exe`.
+El ejecutable resultante queda en `dist/Lectorcito_GUI_Pro_CT.exe`.
 
 ---
 
-## Advertencias y Recomendaciones
+## Firma de Ejecutables (Code Signing)
 
-- **Iconos en la Ventana:**  
-  Es posible que la ventana de la aplicación muestre un icono distinto al establecido en el ejecutable. Este comportamiento se debe a cómo Tkinter maneja los iconos y la caché de Windows. Si no se actualiza, prueba borrar la caché de iconos o reiniciar el sistema.
+Para distribuir sin alertas de seguridad, firma tu `.exe` con un certificado de firma de código:
 
-- **Caché de Compilación:**  
-  Si realizas cambios en el código y recompilas, elimina las carpetas `build/` y `dist/` para evitar conflictos.
+1. **Genera un certificado raíz y uno de firma** (o adquiere uno de una CA confiable).
+2. **Exporta tu PFX** con contraseña.  
+3. **Usa `signtool.exe`:**
+   ```powershell
+   & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign \
+     /sha1 <TU_THUMBPRINT> \
+     /fd SHA256 \
+     /tr http://timestamp.digicert.com \
+     /td SHA256 \
+     dist\Lectorcito_GUI_Pro_CT.exe
+   ```
+4. **Verifica:**
+   ```powershell
+   signtool verify /pa /v dist\Lectorcito_GUI_Pro_CT.exe
+   ```
 
-- **Permisos:**  
-  Asegúrate de cerrar cualquier instancia del ejecutable antes de recompilar; de lo contrario, podrías recibir errores por acceso denegado.
+> **Consejo:** Para que Windows confíe en tu certificado raíz, impórtalo en `Cert:\LocalMachine\Root`.
 
-- **Ruta de Salida (Lecturas/):**  
-  La carpeta de reportes se crea de forma relativa a la ubicación del script o ejecutable, haciendo el proyecto portable para cualquier usuario que lo descargue desde GitHub.
+---
 
-- **Compatibilidad:**  
-  Este proyecto ha sido probado con Python 3.13 y CustomTkinter. Se recomienda utilizar Python descargado desde python.org para evitar problemas con la versión de Microsoft Store.
+## Advertencias y Consejos
+
+- Si la ventana muestra un icono distinto, borra la caché de iconos de Windows o reinicia.
+- Elimina `build/` y `dist/` antes de volver a compilar para evitar conflictos.
+- Cierra todas las instancias antes de recompilar para evitar bloqueos de archivo.
+- Se recomienda usar Python oficial de [python.org] para evitar problemas de App Store.
 
 ---
 
 ## Contribuciones
 
-Si deseas contribuir a este proyecto, sigue estos pasos:
+1. Haz fork del repositorio.
+2. Crea una rama descriptiva (`feature/tu-función`).
+3. Realiza cambios y commits claros.
+4. Abre un Pull Request.
 
-1. Haz un **fork** del repositorio.
-2. Crea una nueva rama para tu función o arreglo:
-   ```bash
-   git checkout -b feature/nueva-función
-   ```
-3. Realiza tus cambios y haz commits descriptivos.
-4. Envía un **pull request** para revisión.
-
-¡Todas las mejoras y correcciones son bienvenidas!
+¡Todas las mejoras son bienvenidas!
 
 ---
-¡Disfruta de Lectorcito Pro y muchas gracias por usarlo!
+
+## Licencia
+
+Este proyecto está licenciado bajo la [MIT License](https://opensource.org/licenses/MIT).  
+
