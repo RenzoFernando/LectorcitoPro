@@ -1,16 +1,3 @@
-# ─────────────────────────────  LECTORCITO PRO v3.3  ─────────────────────────────
-# Apariencia calcada al mock‑up Figma:
-#   • Ventana 600 × 425 px, barra azul superior (30 px) con min‑max‑close
-#   • Sidebar izq. (35 px) con texto vertical “Lectorcito Pro v3.*”
-#   • Sidebar dcha. con 7 icon‑botones 35 × 35 px (radio 10 px)
-#   • Encabezado centrado: título + saludo dinámico
-#   • 5 botones principales 215 × 30 px (3 azules, 1 verde, 1 rojo)
-#   • Barra de progreso 357 px centrada + porcentaje debajo
-#   • Footer “Copyright © ‑ 2025 ‑ Renzo Fernando ‑ All Rights Reserved.”
-#   • Tema claro/oscuro, ES/EN, preferencias persistentes
-#   • ¡Sólo se cambió la apariencia; toda la lógica anterior sigue intacta!
-# ────────────────────────────────────────────────────────────────────────────────
-
 import os, sys, json, shutil, threading, ctypes, datetime, webbrowser
 from tkinter import filedialog, messagebox, simpledialog, Canvas
 import customtkinter as ctk
@@ -34,7 +21,7 @@ CLR_BAR_LT, CLR_BAR_DK = "#D9D9D9", "#333333"
 LEFT_BG_LT, LEFT_BG_DK = "#1A1E22", "#EBEBEB"      # inverso para contraste
 TOPBAR_CLR = "#1C2C59"
 
-BTN_W_MAIN, BTN_H_MAIN     = 215, 30
+BTN_W_MAIN, BTN_H_MAIN     = 250, 30
 BTN_W_ICON = BTN_H_ICON    = 35
 BTN_ICON_RAD               = 10
 PROGRESS_W                 = 357
@@ -64,7 +51,7 @@ def save_cfg(cfg):
 # ───────────────  App principal  ────────────────
 class LectorcitoApp(ctk.CTk):
 
-    # ───────  TRaducciones  ───────
+    # ───────  Traducciones  ───────
     TR = {
         "es": {
             "title": "LECTORCITO PRO",
@@ -80,7 +67,7 @@ class LectorcitoApp(ctk.CTk):
             "msg_no_files":      "No se encontraron archivos válidos",
             "dlg_exts":          "Extensiones permitidas separadas por comas:",
             "dlg_excl":          "Carpetas excluidas separadas por comas:",
-            "info":              "Lectorcito Pro v3.*\nRenzo Fernando 2025",
+            "info":              "Lectorcito Pro v3.4\nRenzo Fernando 2025",
             "confirm_del":       "¿Eliminar todas las Lecturas?",
             "greet_m": "Buenos días", "greet_a": "Buenas tardes", "greet_n": "Buenas noches"
         },
@@ -98,7 +85,7 @@ class LectorcitoApp(ctk.CTk):
             "msg_no_files":      "No valid files found",
             "dlg_exts":          "Allowed extensions (comma separated):",
             "dlg_excl":          "Excluded folders (comma separated):",
-            "info":              "Lectorcito Pro v3.*\nRenzo Fernando 2025",
+            "info":              "Lectorcito Pro v3.4\nRenzo Fernando 2025",
             "confirm_del":       "Delete all Lecturas?",
             "greet_m": "Good morning", "greet_a": "Good afternoon", "greet_n": "Good evening"
         },
@@ -128,6 +115,11 @@ class LectorcitoApp(ctk.CTk):
 
         # Recursos
         self._load_icons()
+        # icono de la app en la ventana y barra superior
+        if os.path.exists(res("lector.ico")):
+            try: self.iconbitmap(res("lector.ico"))
+            except: pass
+        #self._topbar()
 
         # Layout
         #NO TE NECEITO MAS -> self._topbar()
@@ -153,51 +145,29 @@ class LectorcitoApp(ctk.CTk):
                 dark_image =Image.open(res(f"{key}_oscuro.png")),
                 size=(24,24))
 
-    # ───────────────  Barra superior  ────────────────
-    def _topbar(self):
-        bar = ctk.CTkFrame(self, height=30, fg_color=TOPBAR_CLR, corner_radius=0)
-        bar.pack(side="top", fill="x")
-
-        # icono app
-        if os.path.exists(res("lector.png")):
-            img = ctk.CTkImage(Image.open(res("lector.png")), size=(18,18))
-            ctk.CTkLabel(bar, image=img, text="").pack(side="left", padx=6)
-
-        ctk.CTkLabel(bar, text="Lectorcito Pro", font=("Segoe UI",12,"bold"),
-                     text_color="#FFFFFF").pack(side="left")
-
-        def _w(txt, cmd): return ctk.CTkButton(bar, text=txt, width=22, height=22,
-                                               fg_color="transparent", hover_color="#284180",
-                                               text_color="#FFFFFF", command=cmd)
-        _w("—", self.iconify).pack(side="right", padx=(0,4))
-        _w("□", lambda: self.state("zoomed" if self.state()!="zoomed" else "normal")).pack(side="right")
-        _w("✕", self.destroy).pack(side="right")
-
     # ───────────────  Sidebar izquierda  ────────────────
     def _sidebar_left(self):
-        #self.side_left = ctk.CTkFrame(self, width=35, corner_radius=0)
-        self.side_left = ctk.CTkFrame(self, width=35, height=306, fg_color="#1a1e22", corner_radius=10)
-        #self.side_left.pack(side="left", fill="y")
-        self.side_left.pack(side="left")  
-        #self.canvas_left = Canvas(self.side_left, width=35, highlightthickness=0)
-        self.canvas_left = Canvas(self.side_left, width=35, height=306, highlightthickness=0, bg="#1a1e22")
-        #self.canvas_left.pack(fill="both", expand=True)
-        self.canvas_left.place(x=0, y=0)
-        #self.canvas_left.bind("<Configure>", self._paint_left)
+        self.side_left = ctk.CTkFrame(self, width=40, height=310, fg_color="#1a1e22", corner_radius=17)
+        self.side_left.place(x=15, y=43)
+
+        self.canvas_left = Canvas(self.side_left, width=25, height=270, highlightthickness=0, bg="#1a1e22")
+        self.canvas_left.place(x=5, y=45)
+
         self.canvas_left.bind("<Configure>", self._paint_left)
 
     def _paint_left(self, *_):
         col = CLR_TXT_DK if self.current_theme=="Light" else CLR_TXT_LT
         self.canvas_left.delete("all")
         self.canvas_left.create_text(
-            17.5, self.canvas_left.winfo_height()/2,
-            text="Lectorcito Pro v3.*", angle=90,
-            font=("Segoe UI",9,"bold"), fill=col)
+            17.5, self.canvas_left.winfo_height()/2 + 4,
+            text="Lectorcito Pro v3.4", angle=90,
+            font=("Segoe UI",10,"bold"), fill=col)
+
 
     # ───────────────  Sidebar derecha  ────────────────
     def _sidebar_right(self):
-        self.side_right = ctk.CTkFrame(self, width=60, corner_radius=0)
-        self.side_right.pack(side="right", fill="y")
+        self.side_right = ctk.CTkFrame(self, width=35, height=306, fg_color="transparent", corner_radius=17)
+        self.side_right.place(x=600-15-60, y=40)
 
         btns = [
             ("ver",      self._cfg_exts),
@@ -215,22 +185,21 @@ class LectorcitoApp(ctk.CTk):
                 self.side_right, width=BTN_W_ICON, height=BTN_H_ICON, corner_radius=BTN_ICON_RAD,
                 fg_color="#1A1E22", hover_color="#1A1E22",
                 image=img, text="", command=cmd
-            ).pack(pady=6, padx=12)
+            ).pack(pady=5, padx=10)
 
     # ───────────────  Encabezado  ────────────────
     def _header(self):
         self.header = ctk.CTkFrame(self, fg_color="transparent")
-        # posición exacta (63 px título según mock‑up)
-        self.header.place(relx=0.5, y=63, anchor="n")
+        self.header.place(relx=0.5, y=20, anchor="n")
         self.lbl_title = ctk.CTkLabel(self.header, font=("Segoe UI",16,"bold"))
         self.lbl_title.pack()
         self.lbl_greet = ctk.CTkLabel(self.header, font=("Segoe UI",13,"bold"))
-        self.lbl_greet.pack(pady=(4,0))
+        self.lbl_greet.pack(pady=(0,0))
 
     # ───────────────  Botones principales  ────────────────
     def _main_buttons(self):
         self.main_fr = ctk.CTkFrame(self, fg_color="transparent")
-        self.main_fr.place(relx=0.5, y=134, anchor="n")   # 134 px top primer botón
+        self.main_fr.place(relx=0.5, y=118, anchor="n") 
 
         self.btn_choose = ctk.CTkButton(self.main_fr, width=BTN_W_MAIN, height=BTN_H_MAIN,
                                         corner_radius=10, font=("Segoe UI",11,"bold"),
@@ -258,7 +227,7 @@ class LectorcitoApp(ctk.CTk):
     # ───────────────  Barra de progreso  ────────────────
     def _progress(self):
         self.fr_prog = ctk.CTkFrame(self, fg_color="transparent")
-        self.fr_prog.place(relx=0.5, y=334, anchor="n")   # 334 px según mock‑up
+        self.fr_prog.place(relx=0.5, y=335, anchor="n")   
         self.progress = ctk.CTkProgressBar(self.fr_prog, width=PROGRESS_W, corner_radius=10)
         self.progress.grid(row=0, column=0); self.progress.set(0)
         self.lbl_pct = ctk.CTkLabel(self.fr_prog, text="0%")
