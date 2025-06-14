@@ -1,6 +1,5 @@
 import os
 
-
 def count_files(folder: str, extensions: list[str], excludes: list[str]) -> int:
 
     file_count = 0

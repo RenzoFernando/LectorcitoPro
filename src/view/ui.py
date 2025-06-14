@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from tkinter import PhotoImage, Canvas, filedialog
+from tkinter import Canvas, filedialog
 from PIL import Image
 import webbrowser
 import datetime
@@ -7,7 +7,7 @@ import os
 from utils import resource_path
 
 # --- Constantes de la Interfaz ---
-VERSION = "4.2.1"
+VERSION = "4.2.2"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
