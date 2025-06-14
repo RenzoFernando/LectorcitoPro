@@ -1,7 +1,6 @@
 import os
 import json
 from appdirs import user_config_dir
-import tkinter.messagebox as mb
 
 # --- Constantes de Configuración ---
 APP_NAME = "LectorcitoPro"
@@ -9,7 +8,6 @@ APP_AUTHOR = "RenzoFernando"
 CFG_NAME = "config.json"
 
 # --- Ruta del Archivo de Configuración ---
-# Usa una carpeta estándar del sistema operativo para guardar la configuración.
 _config_dir = user_config_dir(APP_NAME, APP_AUTHOR, roaming=True)
 os.makedirs(_config_dir, exist_ok=True)
 CONFIG_FILE_PATH = os.path.join(_config_dir, CFG_NAME)
@@ -30,6 +28,7 @@ def load_config() -> dict:
         try:
             with open(CONFIG_FILE_PATH, 'r', encoding="utf-8") as f:
                 data = json.load(f)
+            # Asegura que todas las claves por defecto existan en la configuración cargada
             for key, value in DEFAULT_CONFIG.items():
                 data.setdefault(key, value)
             return data
@@ -42,7 +41,4 @@ def save_config(config: dict):
         with open(CONFIG_FILE_PATH, 'w', encoding="utf-8") as f:
             json.dump(config, f, indent=4, ensure_ascii=False)
     except Exception as e:
-        mb.showerror("Error", f"No se pudo guardar la configuración:\n{e}")
-
-load_cfg = load_config
-save_cfg = save_config
+        print(f"Error al guardar la configuración: {e}")
