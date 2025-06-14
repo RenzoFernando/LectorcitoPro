@@ -52,6 +52,7 @@
 12. Cambiar y actualizar README
 
 ## Versión 4 [Proximamente, en desarrollo]
-1. Arreglar alineacion y justificación (centrados) de la app
+1. Cambiar el repositorio a MVC (Modelo Vista Controlador) para una mejor organización del código.
+2. Arreglar alineacion y justificación (centrados) de la app
 2. Ajustar el color de los botones y barra laterales
 3. Mas ajutes de traducción
