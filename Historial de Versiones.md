@@ -54,5 +54,15 @@
 ## Versión 4 [Proximamente, en desarrollo]
 1. Cambiar el repositorio a MVC (Modelo Vista Controlador) para una mejor organización del código.
 2. Arreglar alineacion y justificación (centrados) de la app
-2. Ajustar el color de los botones y barra laterales
-3. Mas ajutes de traducción
+3. Ajustar el color de los botones y barra laterales
+4. Mas ajutes de traducción
+5. Ver y No Ver para carpetas y extensiones de archivos
+6. Mejorar la UI de Ver y No Ver
+7. Buen guardado de los ajustes de JSON
+8. Preguntar si definir un lugar por defecto de guardado de las Lecturas o elejir uno propio con posibilidad de siempre cambiarlo
+9.  Arreglo del icono de la aplicacion en todas sus ventanas
+10.  Mejorar la barra de carga
+11.  Añadir generador arbol de estructura de raiz a partir de una dirección de carpeta (lectura de carpetas y ya)
+12.  Si hay cualquier imagen (png, jpg, svg, etc) solo poner el nombre la la imagen y su extesion pero nunca leerlas
+13.  Manual de uso de la aplicasion (una imagen infografia con las instrucciones)
+14.  Añadir mas saludos dependiendo de la hora
