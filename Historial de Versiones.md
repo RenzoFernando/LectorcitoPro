@@ -32,7 +32,7 @@
 10. Pie de página dinámico con número de versión y enlace al repositorio:
  ```
  Lectorcito Pro v*.*  
- Desarrollado por: Renzo Fernando Mosquera Daza & ChatGPT Plus  
+ Desarrollado por: Renzo Fernando Mosquera Daza  
  https://github.com/RenzoFernando/LectorcitoPro.git  
  © 2025 github.com/RenzoFernando – All Rights Reserved.
  ```
