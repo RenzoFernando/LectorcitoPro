@@ -5,6 +5,8 @@
 1. Lectura recursiva de archivos de texto (`.txt`, `.py`, etc.).
 2. Concatenación del contenido en un único archivo de salida.
 3. Nombre básico del archivo generado (sin interfaz gráfica).
+4. Inclusión de extensión `.txt` predeterminada para el reporte generado.
+5. Impresión por consola del path donde se guardó el archivo final.
 
 ## Versión 1
 
@@ -41,41 +43,47 @@
 
 1. Mensaje de bienvenida dinámico según la hora del día (“¡Buenos días!”, “¡Buenas tardes!”, “¡Buenas noches!”).
 2. Soporte multilenguaje (Español/Inglés).
-3. Optimización del alineado y espaciado en el pie de página.
-4. Persistencia de preferencias para rutas utilizadas anteriormente.
-5. Corrección del error al seleccionar una carpeta después de haber eliminado la carpeta de Lecturas.
-6. Posibilidad de configurar libremente:
+3. Persistencia de preferencias para rutas utilizadas anteriormente.
+4. Corrección del error al seleccionar una carpeta después de haber eliminado la carpeta de Lecturas.
+5. Posibilidad de configurar libremente:
 
    * Las extensiones de archivos que se desean leer ("Ver").
    * Las carpetas y extensiones que se desean excluir ("No Ver").
-7. Alineación y descripción emergente (tooltip) para los botones de configuración lateral (Ver, No Ver, Guardar preferencias, Tema claro/oscuro, Idioma, GitHub e Información).
-8. Barra lateral izquierda ajustada al ancho y altura de los botones laterales derechos.
-9. Pie de página simplificado a:
+6. Alineación y descripción emergente (tooltip) para los botones de configuración lateral (Ver, No Ver, Guardar preferencias, Tema claro/oscuro, Idioma, GitHub e Información).
+7. Barra lateral izquierda ajustada al ancho y altura de los botones laterales derechos.
+8. Pie de página simplificado a:
 ```
 Copyright © 2025 - Renzo Fernando - All Rights Reserved.
 ```
-10. Barra de progreso centrada que no sobrepase el 100% y con porcentaje visible debajo.
-11. Encabezado centrado dinámico:
+9. Barra de progreso centrada que no sobrepase el 100% y con porcentaje visible debajo.
+10. Encabezado centrado dinámico:
 ```
 LECTORCITO PRO  
 Buen@s [momento del día] [usuario], por favor seleccione una opción a realizar.
 ```
-12. Actualización completa del archivo `README.md`.
 
-## Versión 4 (Próximamente, en desarrollo)
+## Versión 4 (En desarrollo)
 
 1. Reorganización completa del código usando el patrón MVC (Modelo-Vista-Controlador).
-2. Corrección de alineación y justificación de elementos en la interfaz (centrados).
-3. Ajuste y mejora del color y estilo de los botones y barras laterales.
-4. Ajustes adicionales en la traducción Español/Inglés.
-5. Configuración avanzada independiente para carpetas y extensiones ("Ver"/"No Ver").
-6. Mejora significativa en la interfaz de los diálogos "Ver" y "No Ver".
-7. Mejora en la persistencia de ajustes mediante archivo JSON.
-8. Pregunta inicial opcional: usar lugar por defecto para guardar los reportes o permitir al usuario elegirlo libremente cada vez.
-9. Corrección del icono personalizado de la aplicación en todas las ventanas y subventanas emergentes.
-10. Mejora visual y funcional en la barra de progreso.
-11. Función adicional: Generar una estructura tipo árbol (tree-view) mostrando solo la jerarquía de carpetas y archivos según Ver y No Ver.
-12. Manejo especial para imágenes (png, jpg, svg, etc.): solo mostrar su nombre y extensión, nunca incluir su contenido en el reporte.
-13. Creación de un manual de usuario visual (infografía con instrucciones claras sobre cómo usar la aplicación).
-14. Más variedad de saludos dinámicos según la hora del día.
-15. Facilidad para cancelar una lectura en curso y limpiar lo no terminado.
+2. Configuración avanzada independiente para carpetas y extensiones ("Ver" / "No Ver").
+3. Mejora en la persistencia de ajustes mediante archivo JSON estructurado.
+4. Corrección del icono personalizado de la aplicación en todas las ventanas y subventanas emergentes.
+5. Pregunta inicial opcional: usar lugar por defecto para guardar los reportes o permitir elegirlo cada vez.
+6. Soporte para cancelar una lectura en curso y eliminar archivos interrumpidos.
+7. Manejo especial para imágenes (`.png`, `.jpg`, `.svg`, etc.): solo mostrar su nombre y extensión.
+8. Soporte para estructuras tipo árbol (tree-view) del contenido leído, sin leer archivos.
+9. Mejor manejo de errores y mensajes claros en caso de fallos durante el procesamiento.
+10. Preparación para exportación como ejecutable firmado profesionalmente (Code Signing).
+
+## Versión 5 (Próximamente)
+
+1. Corrección de alineación y justificación de todos los elementos de la interfaz (centrado total).
+2. Rediseño visual de botones y sidebars: colores, bordes, sombras y estados de hover.
+3. Mejora en los tooltips y alineación de íconos en barra lateral derecha.
+4. Nuevo selector visual de idioma y tema desde el inicio.
+5. Mayor variedad y personalización de saludos dinámicos según hora del día.
+6. Mejora visual y funcional en la barra de progreso (color, suavidad, animación).
+7. Transiciones suaves y efectos en la interfaz (fade in/out o animaciones ligeras).
+8. Interfaz optimizada para pantallas pequeñas o resolución variable (responsive).
+9. Diálogos “Ver” y “No Ver” con estilo más atractivo y compacto.
+10. Manual visual (infografía dentro del programa o accesible desde el botón de información).
