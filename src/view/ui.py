@@ -7,7 +7,7 @@ import os
 from utils import resource_path
 
 # --- Constantes de la Interfaz ---
-VERSION = "4.10.0"  # Versión con filtros granulares
+VERSION = "4.10.1"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -22,7 +22,6 @@ COLORS = {
 BTN_W_MAIN, BTN_H_MAIN = 250, 30
 BTN_W_ICON, BTN_H_ICON = 35, 35
 PROGRESS_W = 357
-
 
 # --- DIÁLOGOS PERSONALIZADOS ---
 class BaseDialog(ctk.CTkToplevel):
@@ -182,7 +181,6 @@ class LectorcitoApp(ctk.CTk):
             "msg_delete_success": "Contenido de '{}' eliminado con éxito.",
             "msg_delete_error": "No se pudo eliminar la carpeta:\n{}",
             "greet_m": "Buenos días", "greet_a": "Buenas tardes", "greet_n": "Buenas noches",
-            # Nuevas traducciones para los diálogos de filtros
             "dlg_ver_title": "Configurar qué VER",
             "dlg_ver_folder_prompt": "Carpetas a resaltar como IMPORTANTES (separadas por comas):",
             "dlg_ver_file_prompt": "Extensiones de archivo a LEER (ej: .py, .md, .txt):",
@@ -218,7 +216,6 @@ class LectorcitoApp(ctk.CTk):
             "msg_delete_success": "Contents of '{}' deleted successfully.",
             "msg_delete_error": "Could not delete the folder:\n{}",
             "greet_m": "Good morning", "greet_a": "Good afternoon", "greet_n": "Good evening",
-            # New translations for filter dialogs
             "dlg_ver_title": "Configure what to VIEW",
             "dlg_ver_folder_prompt": "Folders to highlight as IMPORTANT (comma separated):",
             "dlg_ver_file_prompt": "File extensions to READ (e.g., .py, .md, .txt):",

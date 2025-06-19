@@ -21,12 +21,11 @@ DEFAULT_CONFIG = {
     "custom_lecturas_path": "",
     "lecturas_path": DEFAULT_LECTURAS_PATH,
     "last_read_folder": "",
-    # --- Nuevas claves para la lógica Ver/No Ver ---
     "important_folders": [],  # (Ver > Carpetas) Carpetas a resaltar.
     "text_extensions": [".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json", ".xml", ".yml", ".bat", ".ps1"], # (Ver > Archivos) Extensiones a incluir.
     "excluded_folders": ["__pycache__", "venv", ".venv", "node_modules", ".git", "build", "dist", ".idea"], # (No Ver > Carpetas) Carpetas a ignorar.
     "excluded_files": [], # (No Ver > Archivos) Nombres de archivo completos a ignorar.
-    # --- Claves para archivos multimedia (se mantienen sin cambios) ---
+    # Claves para archivos multimedia
     "media_extensions": [
         '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.ico', '.webp',
         '.mp4', '.mkv', '.avi', '.mov', '.webm',
