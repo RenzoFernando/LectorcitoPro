@@ -96,7 +96,7 @@ def generate_report(
                 folder_name_display = relative_path if relative_path != '.' else '.'
 
                 # Resaltar si es una carpeta importante
-                highlight = " (Carpeta Importante)" if os.path.basename(root) in important_folders else ""
+                highlight = " (CARPETA IMPORTANTE)" if os.path.basename(root) in important_folders else ""
                 outfile.write(f"Carpeta: {folder_name_display}{highlight}\n")
 
                 # Procesar los archivos de esta carpeta

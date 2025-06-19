@@ -7,7 +7,7 @@ import os
 from utils import resource_path
 
 # --- Constantes de la Interfaz ---
-VERSION = "4.10.1"
+VERSION = "4.10.2"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -181,12 +181,12 @@ class LectorcitoApp(ctk.CTk):
             "msg_delete_success": "Contenido de '{}' eliminado con éxito.",
             "msg_delete_error": "No se pudo eliminar la carpeta:\n{}",
             "greet_m": "Buenos días", "greet_a": "Buenas tardes", "greet_n": "Buenas noches",
-            "dlg_ver_title": "Configurar qué VER",
-            "dlg_ver_folder_prompt": "Carpetas a resaltar como IMPORTANTES (separadas por comas):",
-            "dlg_ver_file_prompt": "Extensiones de archivo a LEER (ej: .py, .md, .txt):",
-            "dlg_nover_title": "Configurar qué NO VER",
-            "dlg_nover_folder_prompt": "Carpetas a IGNORAR por completo (separadas por comas):",
-            "dlg_nover_file_prompt": "Archivos a IGNORAR por nombre completo (ej: readme.md, license.txt):"
+            "dlg_ver_title": "Configurar qué Ver",
+            "dlg_ver_folder_prompt": "Carpetas a resaltar como Importantes (separadas por comas):",
+            "dlg_ver_file_prompt": "Extensiones de archivo a Leer (ej: .py, .md, .txt):",
+            "dlg_nover_title": "Configurar qué No Ver",
+            "dlg_nover_folder_prompt": "Carpetas a Ignorar por completo (separadas por comas):",
+            "dlg_nover_file_prompt": "Archivos a Ignorar por nombre completo (ej: readme.md, license.txt):"
         },
         "en": {
             "btn_restore_defaults": "Restore Defaults", "confirm_restore_title": "Confirm Restore",
@@ -216,12 +216,12 @@ class LectorcitoApp(ctk.CTk):
             "msg_delete_success": "Contents of '{}' deleted successfully.",
             "msg_delete_error": "Could not delete the folder:\n{}",
             "greet_m": "Good morning", "greet_a": "Good afternoon", "greet_n": "Good evening",
-            "dlg_ver_title": "Configure what to VIEW",
-            "dlg_ver_folder_prompt": "Folders to highlight as IMPORTANT (comma separated):",
-            "dlg_ver_file_prompt": "File extensions to READ (e.g., .py, .md, .txt):",
-            "dlg_nover_title": "Configure what NOT to VIEW",
-            "dlg_nover_folder_prompt": "Folders to IGNORE completely (comma separated):",
-            "dlg_nover_file_prompt": "Files to IGNORE by full name (e.g., readme.md, license.txt):"
+            "dlg_ver_title": "Configure what to View",
+            "dlg_ver_folder_prompt": "Folders to highlight as Important (comma separated):",
+            "dlg_ver_file_prompt": "File extensions to Read (e.g., .py, .md, .txt):",
+            "dlg_nover_title": "Configure what Not to View",
+            "dlg_nover_folder_prompt": "Folders to Ignore completely (comma separated):",
+            "dlg_nover_file_prompt": "Files to Ignore by full name (e.g., readme.md, license.txt):"
         }
     }
 
