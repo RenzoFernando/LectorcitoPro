@@ -7,7 +7,7 @@ from tkinter import filedialog
 # Importación de módulos del proyecto
 import config
 from model import processor
-from view.ui import LectorcitoApp, InputDialog, ConfirmDialog, ChoiceDialog
+from view.ui import LectorcitoApp, FilterConfigDialog, ConfirmDialog, ChoiceDialog
 
 
 class LectorcitoController:
@@ -161,22 +161,44 @@ class LectorcitoController:
         self._update_active_lecturas_path()
         self.save_preferences_silent()
 
-    def show_extensions_dialog(self):
-        current_exts = ", ".join(self.config["text_extensions"])
-        new_exts_str = InputDialog.get_input(
-            self.view, self.view._tr("dlg_exts_title"), self.view._tr("dlg_exts_prompt"), current_exts
+    def show_view_config_dialog(self):
+        """Muestra el diálogo para configurar qué VER (carpetas importantes y extensiones)."""
+        current_folders = ", ".join(self.config.get("important_folders", []))
+        current_files = ", ".join(self.config.get("text_extensions", []))
+
+        result = FilterConfigDialog.get_input(
+            self.view,
+            title=self.view._tr("dlg_ver_title"),
+            folder_prompt=self.view._tr("dlg_ver_folder_prompt"),
+            file_prompt=self.view._tr("dlg_ver_file_prompt"),
+            initial_folder_value=current_folders,
+            initial_file_value=current_files
         )
-        if new_exts_str is not None:
-            self.config["text_extensions"] = [f".{e.strip().lstrip('.')}" for e in new_exts_str.split(",") if e.strip()]
+
+        if result is not None:
+            folder_str, file_str = result
+            self.config["important_folders"] = [f.strip() for f in folder_str.split(",") if f.strip()]
+            self.config["text_extensions"] = [f".{e.strip().lstrip('.')}" for e in file_str.split(",") if e.strip()]
             self.save_preferences_silent()
 
-    def show_excludes_dialog(self):
-        current_excl = ", ".join(self.config["excluded_folders"])
-        new_excl_str = InputDialog.get_input(
-            self.view, self.view._tr("dlg_excl_title"), self.view._tr("dlg_excl_prompt"), current_excl
+    def show_no_view_config_dialog(self):
+        """Muestra el diálogo para configurar qué NO VER (carpetas y archivos a excluir)."""
+        current_folders = ", ".join(self.config.get("excluded_folders", []))
+        current_files = ", ".join(self.config.get("excluded_files", []))
+
+        result = FilterConfigDialog.get_input(
+            self.view,
+            title=self.view._tr("dlg_nover_title"),
+            folder_prompt=self.view._tr("dlg_nover_folder_prompt"),
+            file_prompt=self.view._tr("dlg_nover_file_prompt"),
+            initial_folder_value=current_folders,
+            initial_file_value=current_files
         )
-        if new_excl_str is not None:
-            self.config["excluded_folders"] = [d.strip() for d in new_excl_str.split(",") if d.strip()]
+
+        if result is not None:
+            folder_str, file_str = result
+            self.config["excluded_folders"] = [f.strip() for f in folder_str.split(",") if f.strip()]
+            self.config["excluded_files"] = [f.strip() for f in file_str.split(",") if f.strip()]
             self.save_preferences_silent()
 
     def save_preferences_silent(self):
@@ -198,7 +220,7 @@ class LectorcitoController:
     def restore_default_settings(self):
         """Restaura la configuración por defecto eliminando el archivo JSON."""
         if ConfirmDialog.ask(self.view, self.view._tr("confirm_restore_title"),
-                             self.view._tr("confirm_restore_prompt")):
+                            self.view._tr("confirm_restore_prompt")):
             config.delete_config_file()
             self.config = config.load_config()
 

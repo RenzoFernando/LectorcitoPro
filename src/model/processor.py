@@ -3,16 +3,22 @@ import threading
 
 
 def _count_files_to_process(folder: str, config: dict) -> int:
-    """Cuenta de forma eficiente el número de archivos que se procesarán."""
+    """Cuenta de forma eficiente el número de archivos que se procesarán, respetando las exclusiones."""
     file_count = 0
-    extensions_to_check = config.get("text_extensions", []) + config.get("media_extensions", [])
+    extensions_to_check = set(config.get("text_extensions", []) + config.get("media_extensions", []))
     folders_to_exclude = set(config.get("excluded_folders", []))
+    files_to_exclude = set(config.get("excluded_files", []))
 
     try:
         for root, dirs, files in os.walk(folder, topdown=True):
             # Modifica la lista de directorios en el lugar para evitar recorrer las carpetas excluidas.
             dirs[:] = [d for d in dirs if d not in folders_to_exclude]
+
             for filename in files:
+                # Excluir archivos por nombre completo
+                if filename in files_to_exclude:
+                    continue
+
                 # Comprueba si la extensión del archivo está en la lista de extensiones a procesar.
                 if any(filename.lower().endswith(ext) for ext in extensions_to_check):
                     file_count += 1
@@ -30,17 +36,19 @@ def generate_report(
         progress_callback: callable
 ) -> tuple[str, str | None]:
     """
-    Genera un reporte de contenidos de archivos de texto y lista los multimedia.
-    Devuelve una tupla (status, path). Status puede ser: 'success', 'cancelled', 'no_files', 'error'.
+    Genera un reporte de contenidos de archivos, respetando la nueva lógica de Ver/No Ver.
+    Devuelve una tupla (status, path). Status: 'success', 'cancelled', 'no_files', 'error'.
     """
     total_files = _count_files_to_process(source_folder, config)
     if total_files == 0:
         return "no_files", None
 
-    # Extrae las listas de configuración para un acceso más rápido.
-    text_ext = config.get("text_extensions", [])
-    media_ext = config.get("media_extensions", [])
-    excludes = config.get("excluded_folders", [])
+    # Extrae todas las listas de configuración para un acceso más rápido y limpio.
+    important_folders = set(config.get("important_folders", []))
+    text_ext = set(config.get("text_extensions", []))
+    media_ext = set(config.get("media_extensions", []))
+    excluded_folders = set(config.get("excluded_folders", []))
+    excluded_files = set(config.get("excluded_files", []))
 
     # Genera un nombre de archivo único para el reporte.
     folder_name = os.path.basename(os.path.normpath(source_folder))
@@ -60,37 +68,57 @@ def generate_report(
             for root, dirs, files in os.walk(source_folder, topdown=True):
                 if cancel_event.is_set():
                     break
-                dirs[:] = [d for d in dirs if d not in excludes]
+
+                # Excluir carpetas
+                dirs[:] = [d for d in dirs if d not in excluded_folders]
                 files.sort()
 
-                # Escribe la cabecera de la carpeta solo si contiene archivos relevantes.
-                rel_root = os.path.relpath(root, source_folder)
-                if rel_root == ".": rel_root = "Carpeta Raíz"
-
-                # Procesa los archivos dentro del directorio actual.
+                # Filtrar archivos de la carpeta actual
+                files_in_dir = []
                 for filename in files:
+                    # Regla 1: Excluir por nombre de archivo completo (máxima prioridad)
+                    if filename in excluded_files:
+                        continue
+
+                    # Regla 2: Incluir por extensión
+                    is_text = any(filename.lower().endswith(ext) for ext in text_ext)
+                    is_media = any(filename.lower().endswith(ext) for ext in media_ext)
+
+                    if is_text or is_media:
+                        files_in_dir.append((filename, is_text, is_media))
+
+                # Si no hay archivos que procesar en esta carpeta, continuar con la siguiente.
+                if not files_in_dir:
+                    continue
+
+                # Escribir la cabecera de la carpeta
+                relative_path = os.path.relpath(root, source_folder)
+                folder_name_display = relative_path if relative_path != '.' else '.'
+
+                # Resaltar si es una carpeta importante
+                highlight = " (Carpeta Importante)" if os.path.basename(root) in important_folders else ""
+                outfile.write(f"Carpeta: {folder_name_display}{highlight}\n")
+
+                # Procesar los archivos de esta carpeta
+                for filename, is_text, is_media in files_in_dir:
                     if cancel_event.is_set():
                         break
 
                     file_path = os.path.join(root, filename)
-                    is_text = any(filename.lower().endswith(ext) for ext in text_ext)
-                    is_media = any(filename.lower().endswith(ext) for ext in media_ext)
+                    outfile.write(f"    Archivo: {filename}\n")
+                    outfile.write(f"    -------- CONTENIDO --------\n")
 
-                    if not (is_text or is_media):
-                        continue
-
-                    # Escribe la información del archivo.
-                    outfile.write(f"--- Archivo: {os.path.join(rel_root, filename)} ---\n")
                     if is_text:
-                        outfile.write("--- CONTENIDO ---\n")
                         try:
                             with open(file_path, 'r', encoding='utf-8', errors='ignore') as infile:
-                                outfile.write(infile.read())
-                            outfile.write("\n--- FIN ---\n\n")
+                                for line in infile:
+                                    outfile.write(f"    {line}")
                         except Exception as e:
-                            outfile.write(f"[Error al leer el archivo: {e}]\n\n")
+                            outfile.write(f"    [Error al leer el archivo: {e}]\n")
                     elif is_media:
-                        outfile.write("--- ARCHIVO MULTIMEDIA (CONTENIDO NO INCLUIDO) ---\n\n")
+                        outfile.write("    (Archivo multimedia, contenido no incluido)\n")
+
+                    outfile.write(f"\n    -------- FIN --------\n\n")
 
                     # Actualiza el progreso.
                     processed_files += 1
@@ -155,7 +183,8 @@ def _build_tree_recursive(current_path, prefix, outfile, use_config, config):
     # Filtra los elementos si la opción está activada
     if use_config:
         excluded_folders = set(config.get('excluded_folders', []))
-        valid_ext = config.get('text_extensions', []) + config.get('media_extensions', [])
+        excluded_files = set(config.get('excluded_files', []))
+        valid_ext = set(config.get('text_extensions', []) + config.get('media_extensions', []))
 
         filtered_elements = []
         for elem in elements:
@@ -163,8 +192,9 @@ def _build_tree_recursive(current_path, prefix, outfile, use_config, config):
             if os.path.isdir(elem_path):
                 if elem not in excluded_folders:
                     filtered_elements.append(elem)
-            elif any(elem.lower().endswith(ext) for ext in valid_ext):
-                filtered_elements.append(elem)
+            else:  # Es un archivo
+                if elem not in excluded_files and any(elem.lower().endswith(ext) for ext in valid_ext):
+                    filtered_elements.append(elem)
         elements = filtered_elements
 
     pointers = ['├── '] * (len(elements) - 1) + ['└── ']
@@ -174,4 +204,3 @@ def _build_tree_recursive(current_path, prefix, outfile, use_config, config):
         if os.path.isdir(element_path):
             extension = '│   ' if pointer == '├── ' else '    '
             _build_tree_recursive(element_path, prefix + extension, outfile, use_config, config)
-

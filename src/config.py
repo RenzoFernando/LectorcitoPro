@@ -21,8 +21,12 @@ DEFAULT_CONFIG = {
     "custom_lecturas_path": "",
     "lecturas_path": DEFAULT_LECTURAS_PATH,
     "last_read_folder": "",
-    "text_extensions": [".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json", ".xml", ".yml", ".bat", ".ps1"],
-    "excluded_folders": ["__pycache__", "venv", ".venv", "node_modules", ".git", "build", "dist", ".idea"],
+    # --- Nuevas claves para la lógica Ver/No Ver ---
+    "important_folders": [],  # (Ver > Carpetas) Carpetas a resaltar.
+    "text_extensions": [".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json", ".xml", ".yml", ".bat", ".ps1"], # (Ver > Archivos) Extensiones a incluir.
+    "excluded_folders": ["__pycache__", "venv", ".venv", "node_modules", ".git", "build", "dist", ".idea"], # (No Ver > Carpetas) Carpetas a ignorar.
+    "excluded_files": [], # (No Ver > Archivos) Nombres de archivo completos a ignorar.
+    # --- Claves para archivos multimedia (se mantienen sin cambios) ---
     "media_extensions": [
         '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.ico', '.webp',
         '.mp4', '.mkv', '.avi', '.mov', '.webm',
@@ -43,10 +47,12 @@ def load_config() -> dict:
         try:
             with open(CONFIG_FILE_PATH, 'r', encoding="utf-8") as f:
                 data = json.load(f)
+            # Asegura que todas las claves del DEFAULT_CONFIG existan en la configuración cargada.
             config_completa = DEFAULT_CONFIG.copy()
             config_completa.update(data)
             return config_completa
         except (json.JSONDecodeError, TypeError):
+            # Si hay un error, se retorna una copia de la configuración por defecto.
             return DEFAULT_CONFIG.copy()
     return DEFAULT_CONFIG.copy()
 
@@ -65,4 +71,3 @@ def delete_config_file():
             os.remove(CONFIG_FILE_PATH)
     except Exception as e:
         print(f"Error al eliminar el archivo de configuración: {e}")
-
