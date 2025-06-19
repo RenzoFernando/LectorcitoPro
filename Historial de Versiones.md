@@ -60,7 +60,7 @@ LECTORCITO PRO
 Buen@s [momento del día] [usuario], por favor seleccione una opción a realizar.
 ```
 
-## Versión 4 (En desarrollo)
+## Versión 4
 
 1. Reorganización completa del código usando el patrón MVC (Modelo-Vista-Controlador).
 2. Configuración avanzada independiente para carpetas y extensiones ("Ver" / "No Ver").
@@ -73,7 +73,7 @@ Buen@s [momento del día] [usuario], por favor seleccione una opción a realizar
 9. Mejor manejo de errores y mensajes claros en caso de fallos durante el procesamiento.
 10. Implementar guardado silencioso de preferencias y añadir botón para restaurar ajustes.
 
-## Versión 5 (Próximamente)
+## Versión 5 (En desarrollo)
 
 1. Corrección de alineación y justificación de todos los elementos de la interfaz (centrado total).
 2. Rediseño visual de botones y sidebars: colores, bordes, sombras y estados de hover.
