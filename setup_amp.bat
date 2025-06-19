@@ -32,4 +32,4 @@ echo.
 echo ¡Setup completado! El entorno virtual está activo en esta consola.
 pause
 
-:: .\setup_amp.bat
+:: python -m src.main
