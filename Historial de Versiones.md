@@ -68,7 +68,7 @@ Buen@s [momento del día] [usuario], por favor seleccione una opción a realizar
 4. Corrección del icono personalizado de la aplicación en todas las ventanas y subventanas emergentes.
 5. Pregunta inicial opcional: usar lugar por defecto para guardar los reportes o permitir elegirlo cada vez.
 6. Soporte para cancelar una lectura en curso y eliminar archivos interrumpidos.
-7. Manejo especial para imágenes (`.png`, `.jpg`, `.svg`, etc.): solo mostrar su nombre y extensión.
+7. Manejo especial para imágenes (`.png`, `.jpg`, `.svg`, etc.), y demas extensiones multimedia y solo solo mostrar su nombre y extensión.
 8. Soporte para estructuras tipo árbol (tree-view) del contenido leído, sin leer archivos.
 9. Mejor manejo de errores y mensajes claros en caso de fallos durante el procesamiento.
 10. Implementar guardado silencioso de preferencias y añadir botón para restaurar ajustes.
