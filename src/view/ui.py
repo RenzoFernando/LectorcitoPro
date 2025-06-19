@@ -7,7 +7,7 @@ import os
 from utils import resource_path
 
 # --- Constantes de la Interfaz ---
-VERSION = "4.10.2"
+VERSION = "4.10.3"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
