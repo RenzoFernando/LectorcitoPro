@@ -27,7 +27,6 @@
 7. Mejoras visuales en colores, tipografía y distribución.
 8. Barra de progreso siempre visible con porcentaje (0–100%).
 9. Mensajes emergentes (pop-ups):
-
    * Éxito: “¡Listo! El contenido fue guardado correctamente.”
    * Atención: “Primero debe generar un archivo para poder abrirlo.”
    * Error: “Ocurrió un error durante el análisis. Intente con otra carpeta.”
@@ -46,7 +45,6 @@
 3. Persistencia de preferencias para rutas utilizadas anteriormente.
 4. Corrección del error al seleccionar una carpeta después de haber eliminado la carpeta de Lecturas.
 5. Posibilidad de configurar libremente:
-
    * Las extensiones de archivos que se desean leer ("Ver").
    * Las carpetas y extensiones que se desean excluir ("No Ver").
 6. Alineación y descripción emergente (tooltip) para los botones de configuración lateral (Ver, No Ver, Guardar preferencias, Tema claro/oscuro, Idioma, GitHub e Información).
@@ -73,7 +71,7 @@ Buen@s [momento del día] [usuario], por favor seleccione una opción a realizar
 7. Manejo especial para imágenes (`.png`, `.jpg`, `.svg`, etc.): solo mostrar su nombre y extensión.
 8. Soporte para estructuras tipo árbol (tree-view) del contenido leído, sin leer archivos.
 9. Mejor manejo de errores y mensajes claros en caso de fallos durante el procesamiento.
-10. Preparación para exportación como ejecutable firmado profesionalmente (Code Signing).
+10. Implementar guardado silencioso de preferencias y añadir botón para restaurar ajustes.
 
 ## Versión 5 (Próximamente)
 
