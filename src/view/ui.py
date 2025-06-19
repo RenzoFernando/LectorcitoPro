@@ -1,13 +1,15 @@
 import customtkinter as ctk
 from tkinter import Canvas
-from PIL import Image
+from PIL import Image, ImageTk
 import webbrowser
 import datetime
 import os
+
 from utils import resource_path
+from view.translations import TRANSLATIONS  # <-- 1. IMPORTACIÓN DE TRADUCCIONES
 
 # --- Constantes de la Interfaz ---
-VERSION = "4.10.3"
+VERSION = "5.1.0"  # Actualizado para reflejar la refactorización
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -23,6 +25,7 @@ BTN_W_MAIN, BTN_H_MAIN = 250, 30
 BTN_W_ICON, BTN_H_ICON = 35, 35
 PROGRESS_W = 357
 
+
 # --- DIÁLOGOS PERSONALIZADOS ---
 class BaseDialog(ctk.CTkToplevel):
     def __init__(self, parent, title: str):
@@ -30,7 +33,13 @@ class BaseDialog(ctk.CTkToplevel):
         self.transient(parent)
         self.title(title)
         self.resizable(False, False)
-        self.grab_set()
+
+        parent_x = parent.winfo_x()
+        parent_y = parent.winfo_y()
+        parent_width = parent.winfo_width()
+        parent_height = parent.winfo_height()
+        self.geometry(
+            f"+{parent_x + parent_width // 2 - self.winfo_width() // 2}+{parent_y + parent_height // 2 - self.winfo_height() // 2}")
 
         def _set_icon():
             try:
@@ -44,39 +53,33 @@ class BaseDialog(ctk.CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self.bind("<Escape>", lambda e: self._on_cancel())
 
+        self.grab_set()
+
     def _on_ok(self, event=None):
+        self.grab_release()
         self.destroy()
 
     def _on_cancel(self, event=None):
+        self.grab_release()
         self.destroy()
 
 
 class FilterConfigDialog(BaseDialog):
-    """Un diálogo para configurar filtros de carpetas y archivos en dos campos."""
-
     def __init__(self, parent, title, folder_prompt, file_prompt, initial_folder_value, initial_file_value):
         super().__init__(parent, title)
-
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-
-        # --- Campo de Carpetas ---
         ctk.CTkLabel(main_frame, text=folder_prompt, wraplength=350, font=("Segoe UI", 12, "bold")).pack(fill="x",
-                                                                                                        pady=(0, 5))
+                                                                                                         pady=(0, 5))
         self.folder_entry = ctk.CTkEntry(main_frame, width=350)
         self.folder_entry.insert(0, initial_folder_value)
         self.folder_entry.pack(fill="x", pady=(0, 15))
-
-        # --- Campo de Archivos ---
         ctk.CTkLabel(main_frame, text=file_prompt, wraplength=350, font=("Segoe UI", 12, "bold")).pack(fill="x",
-                                                                                                    pady=(0, 5))
+                                                                                                       pady=(0, 5))
         self.file_entry = ctk.CTkEntry(main_frame, width=350)
         self.file_entry.insert(0, initial_file_value)
         self.file_entry.pack(fill="x", pady=(0, 20))
-
         self.folder_entry.focus_set()
-
-        # --- Botones ---
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.pack()
         ctk.CTkButton(button_frame, text="OK", width=100, command=self._on_ok).pack(side="left", padx=10)
@@ -150,83 +153,62 @@ class ChoiceDialog(BaseDialog):
         return dialog.result
 
 
+class InfographicDialog(ctk.CTkToplevel):
+    def __init__(self, parent, title: str, image_path: str):
+        super().__init__(parent)
+        self.title(title)
+        self.geometry("500x400")
+        self.resizable(False, False)
+        self.transient(parent)
+
+        def _set_icon():
+            try:
+                if hasattr(parent, '_icon_path') and parent._icon_path and os.path.exists(parent._icon_path):
+                    self.iconbitmap(parent._icon_path)
+            except Exception as e:
+                print(f"Error al establecer el icono de la ventana de infografía: {e}")
+
+        self.after(225, _set_icon)
+
+        try:
+            scroll_frame = ctk.CTkScrollableFrame(self, label_text="")
+            scroll_frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+            pil_image_original = Image.open(image_path)
+            original_width, original_height = pil_image_original.size
+
+            target_width = 450
+            ratio = target_width / original_width
+            target_height = int(original_height * ratio)
+
+            pil_image_resized = pil_image_original.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+            self.infographic_image = ctk.CTkImage(
+                light_image=pil_image_resized, dark_image=pil_image_resized, size=(target_width, target_height)
+            )
+
+            image_label = ctk.CTkLabel(scroll_frame, image=self.infographic_image, text="")
+            image_label.pack(expand=True)
+
+        except Exception as e:
+            self.destroy()
+            parent.show_message("error_title", f"{parent._tr('msg_error_generic')}\n\n{e}")
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.bind("<Escape>", self.on_close)
+        self.grab_set()
+
+    def on_close(self, event=None):
+        self.grab_release()
+        self.destroy()
+
+
 # --- CLASE PRINCIPAL DE LA VISTA ---
 class LectorcitoApp(ctk.CTk):
-    TRANSLATIONS = {
-        "es": {
-            "btn_restore_defaults": "Restaurar Ajustes", "confirm_restore_title": "Confirmar Restauración",
-            "confirm_restore_prompt": "¿Está seguro de que desea restaurar todos los ajustes a sus valores por defecto?\n\nEsto eliminará sus configuraciones guardadas.",
-            "msg_restore_success": "¡Ajustes restaurados a los valores por defecto!",
-            "btn_create_tree": "Crear Estructura de Árbol",
-            "dlg_tree_choice_title": "Tipo de Árbol",
-            "dlg_tree_choice_prompt": "Seleccione cómo generar la estructura del árbol:",
-            "dlg_tree_op1": "Completo (ignorar filtros)", "dlg_tree_op2": "Filtrado (usar configuración)",
-            "msg_tree_done": "¡Árbol de directorios guardado en '{}'!", "btn_cancel": "Cancelar Lectura",
-            "msg_cancelled": "La lectura fue cancelada.", "error_title": "Error",
-            "msg_error_generic": "Ocurrió un error inesperado durante la operación.",
-            "dlg_dest_choice_title": "Elegir Destino de Reportes",
-            "dlg_dest_choice_prompt": "Seleccione dónde guardar los reportes:",
-            "dlg_dest_choice_op1": "Usar Ruta por Defecto", "dlg_dest_choice_op2": "Elegir Ruta Personalizada",
-            "dest_set_default_msg": "Los reportes se guardarán en la ruta por defecto.",
-            "dest_set_custom_msg": "Los reportes se guardarán en:\n{}",
-            "title": "LECTORCITO PRO", "welcome": ", por favor seleccione una opción.",
-            "btn_choose_folder": "Elegir Carpeta a Leer", "btn_sel_lecturas": "Seleccionar Destino de Lecturas",
-            "btn_open_lecturas": "Abrir Carpeta de Lecturas", "btn_open_last": "Abrir Último Reporte",
-            "btn_del": "Eliminar Todas las Lecturas", "msg_done": "¡Listo! Operación completada con éxito.",
-            "msg_select_dest": "Por favor, primero configure una carpeta de destino.",
-            "msg_no_files_found": "No se encontraron archivos válidos para procesar.",
-            "msg_no_report_yet": "Aún no se ha generado ningún reporte.", "info_title": "Información",
-            "confirm_del_title": "Confirmar Eliminación",
-            "confirm_del_prompt": "¿Está seguro de que desea eliminar permanentemente la carpeta de lecturas y todo su contenido?",
-            "msg_delete_success": "Contenido de '{}' eliminado con éxito.",
-            "msg_delete_error": "No se pudo eliminar la carpeta:\n{}",
-            "greet_m": "Buenos días", "greet_a": "Buenas tardes", "greet_n": "Buenas noches",
-            "dlg_ver_title": "Configurar qué Ver",
-            "dlg_ver_folder_prompt": "Carpetas a resaltar como Importantes (separadas por comas):",
-            "dlg_ver_file_prompt": "Extensiones de archivo a Leer (ej: .py, .md, .txt):",
-            "dlg_nover_title": "Configurar qué No Ver",
-            "dlg_nover_folder_prompt": "Carpetas a Ignorar por completo (separadas por comas):",
-            "dlg_nover_file_prompt": "Archivos a Ignorar por nombre completo (ej: readme.md, license.txt):"
-        },
-        "en": {
-            "btn_restore_defaults": "Restore Defaults", "confirm_restore_title": "Confirm Restore",
-            "confirm_restore_prompt": "Are you sure you want to restore all settings to their default values?\n\nThis will delete your saved configurations.",
-            "msg_restore_success": "Settings have been restored to default!",
-            "btn_create_tree": "Create Directory Tree",
-            "dlg_tree_choice_title": "Tree Type",
-            "dlg_tree_choice_prompt": "Select how to generate the directory tree:",
-            "dlg_tree_op1": "Full (ignore filters)", "dlg_tree_op2": "Filtered (use configuration)",
-            "msg_tree_done": "Directory tree saved in '{}'!", "btn_cancel": "Cancel Reading",
-            "msg_cancelled": "The reading process was cancelled.", "error_title": "Error",
-            "msg_error_generic": "An unexpected error occurred during the operation.",
-            "dlg_dest_choice_title": "Choose Report Destination",
-            "dlg_dest_choice_prompt": "Select where to save the reports:",
-            "dlg_dest_choice_op1": "Use Default Path", "dlg_dest_choice_op2": "Choose Custom Path",
-            "dest_set_default_msg": "Reports will be saved to the default path.",
-            "dest_set_custom_msg": "Reports will be saved to:\n{}",
-            "title": "LECTORCITO PRO", "welcome": ", please select an option.",
-            "btn_choose_folder": "Choose Folder to Read", "btn_sel_lecturas": "Select Readings Destination",
-            "btn_open_lecturas": "Open Readings Folder", "btn_open_last": "Open Last Report",
-            "btn_del": "Delete All Readings", "msg_done": "Done! Operation completed successfully.",
-            "msg_select_dest": "Please set a destination folder first.",
-            "msg_no_files_found": "No valid files were found to process.",
-            "msg_no_report_yet": "No report has been generated yet.", "info_title": "Information",
-            "confirm_del_title": "Confirm Deletion",
-            "confirm_del_prompt": "Are you sure you want to permanently delete the readings folder and all its contents?",
-            "msg_delete_success": "Contents of '{}' deleted successfully.",
-            "msg_delete_error": "Could not delete the folder:\n{}",
-            "greet_m": "Good morning", "greet_a": "Good afternoon", "greet_n": "Good evening",
-            "dlg_ver_title": "Configure what to View",
-            "dlg_ver_folder_prompt": "Folders to highlight as Important (comma separated):",
-            "dlg_ver_file_prompt": "File extensions to Read (e.g., .py, .md, .txt):",
-            "dlg_nover_title": "Configure what Not to View",
-            "dlg_nover_folder_prompt": "Folders to Ignore completely (comma separated):",
-            "dlg_nover_file_prompt": "Files to Ignore by full name (e.g., readme.md, license.txt):"
-        }
-    }
 
     def __init__(self, cfg: dict, controller):
         super().__init__()
+        self.TRANSLATIONS = TRANSLATIONS
         self.config = cfg
         self.controller = controller
         self.lang = self.config.get("language", "es")
@@ -250,13 +232,13 @@ class LectorcitoApp(ctk.CTk):
 
     def _load_image_assets(self):
         self.icons = {}
-        icon_keys = ["ver", "nover", "restaurar", "traducir", "github", "info"]
+        icon_keys = ["ver", "nover", "traducir", "restaurar", "github", "info"]
         for key in icon_keys:
             try:
                 img_for_dark_theme = Image.open(resource_path(f"{key}_oscuro.png"))
                 img_for_light_theme = Image.open(resource_path(f"{key}_claro.png"))
                 self.icons[key] = ctk.CTkImage(light_image=img_for_light_theme, dark_image=img_for_dark_theme,
-                                                size=(22, 22))
+                                               size=(22, 22))
             except Exception as e:
                 print(f"Error cargando icono '{key}': {e}")
                 self.icons[key] = None
@@ -296,8 +278,8 @@ class LectorcitoApp(ctk.CTk):
             "create_tree": ctk.CTkButton(frame, **opts, command=self.controller.create_tree_structure),
             "openlect": ctk.CTkButton(frame, **opts, command=self.controller.open_destination_folder),
             "openlast": ctk.CTkButton(frame, **opts, fg_color=COLORS['button']['green'],
-                                    hover_color=COLORS['button_hover']['green_h'],
-                                    command=self.controller.open_last_report),
+                                      hover_color=COLORS['button_hover']['green_h'],
+                                      command=self.controller.open_last_report),
             "delete": ctk.CTkButton(frame, **opts, fg_color=COLORS['button']['red'],
                                     hover_color=COLORS['button_hover']['red_h'],
                                     command=self.controller.delete_all_readings)
@@ -328,13 +310,14 @@ class LectorcitoApp(ctk.CTk):
     def _create_right_sidebar(self):
         self.side_right = ctk.CTkFrame(self, width=60, height=350, fg_color="transparent")
         self.side_right.place(x=525, y=40)
-        # Se actualizan los comandos para llamar a los nuevos métodos del controlador
         button_defs = [
             ("ver", self.controller.show_view_config_dialog),
             ("nover", self.controller.show_no_view_config_dialog),
+            ("theme_icon", self.controller.toggle_theme),
+            ("traducir", self.controller.toggle_language),
             ("restaurar", self.controller.restore_default_settings),
-            ("theme_icon", self.controller.toggle_theme), ("traducir", self.controller.toggle_language),
-            ("github", lambda: webbrowser.open_new(REPO_URL)), ("info", self.show_app_info)
+            ("github", lambda: webbrowser.open_new(REPO_URL)),
+            ("info", self.show_app_info)
         ]
         self.sidebar_buttons = {}
         theme = COLORS['light' if self.current_theme == "Light" else 'dark']
@@ -391,7 +374,7 @@ class LectorcitoApp(ctk.CTk):
         w, h = self.canvas_left.winfo_width(), self.canvas_left.winfo_height()
         color = COLORS['dark']['text'] if self.current_theme == "Light" else COLORS['light']['text']
         self.canvas_left.create_text(w / 2, h / 2, text=f"Lectorcito Pro v{VERSION}", angle=90,
-                                font=("Segoe UI", 10, "bold"), fill=color)
+                                     font=("Segoe UI", 10, "bold"), fill=color)
 
     def set_progress(self, percentage):
         self.progress_bar.set(percentage / 100)
@@ -413,8 +396,9 @@ class LectorcitoApp(ctk.CTk):
         MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
 
     def show_app_info(self):
-        info_text = (f"Lectorcito Pro v{VERSION}\n\n"
-                    f"Desarrollado por: \n{AUTHOR}\n\n"
-                    f"Repositorio: {REPO_URL}\n\n"
-                    f"© {YEAR} - All Rights Reserved.")
-        MessageDialog(self, self._tr("info_title"), info_text)
+        """Muestra el manual de usuario visual (infografía)."""
+        image_path = resource_path("Infografía_LectorcitoPro.png")
+        if os.path.exists(image_path):
+            InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
+        else:
+            self.show_message("error_title", "msg_infographic_error")
