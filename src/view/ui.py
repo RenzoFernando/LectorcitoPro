@@ -12,7 +12,7 @@ from view.translations import TRANSLATIONS
 from view.dialogs import MessageDialog, InfographicDialog
 
 # --- Constantes de la Interfaz ---
-VERSION = "5.7.0"
+VERSION = "5.7.3"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"

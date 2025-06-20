@@ -109,13 +109,24 @@ class LectorcitoController:
         )
         thread.start()
 
+    def _safe_progress_update(self, percentage: float, file_context: str):
+        """
+        Garantiza que la actualización de la UI se ejecute en el hilo principal
+        para evitar problemas de concurrencia con Tkinter.
+        """
+        self.view.after(0, self.view.set_progress, percentage, file_context)
+
     def _processing_thread_target(self, folder_path: str, cancel_event: threading.Event):
+        # La llamada a `generate_report` ahora usa un callback seguro para el hilo.
         status, report_path = processor.generate_report(
             source_folder=folder_path, output_path=self.config["lecturas_path"], config=self.config,
-            progress_callback=self.view.set_progress, cancel_event=cancel_event
+            progress_callback=self._safe_progress_update,  # <-- CAMBIO CLAVE
+            cancel_event=cancel_event
         )
         if status == "success":
             self.last_report_path = report_path
+
+        # La finalización se programa en el hilo principal usando `after`.
         self.view.after(0, self._on_processing_finished, status)
 
     def _on_processing_finished(self, status: str):

@@ -50,8 +50,11 @@ class TagsConfigDialog(BaseDialog):
                                       hover_color="#A03031")
         cancel_button.grid(row=0, column=1, padx=5, sticky="w")
 
-        # --- Redibujado inicial y único ---
-        self.after(50, self.redraw_all_tags)
+        # --- CORRECCIÓN: Redibujado inicial diferido ---
+        # Se fuerza una actualización de la geometría y se añade un retraso mayor
+        # para asegurar que la ventana se ha dibujado completamente antes de colocar las etiquetas.
+        self.update_idletasks()
+        self.after(500, self.redraw_all_tags)
 
     def _create_tag_section(self, section_index, prompt, section_id):
         """Crea una sección completa para un tipo de etiqueta (carpetas o archivos)."""
