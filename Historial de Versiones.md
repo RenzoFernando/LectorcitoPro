@@ -80,7 +80,7 @@ Buen@s [momento del día] [usuario], por favor seleccione una opción a realizar
 3. Mejora en los tooltips y alineación de íconos en barra lateral derecha.
 4. Nuevo selector visual de idioma y tema desde el inicio.
 5. Mayor variedad y personalización de saludos dinámicos según hora del día.
-6. Mejora visual y funcional en la barra de progreso (color, suavidad, animación).
+6. Mejora visual y funcional en la barra de progreso (color, suavidad, animación) y GIf mientras la barra está inactiva.
 7. Transiciones suaves y efectos en la interfaz (fade in/out o animaciones ligeras).
 8. Interfaz optimizada para pantallas pequeñas o resolución variable (responsive).
 9. Diálogos “Ver” y “No Ver” con estilo más atractivo y compacto.
