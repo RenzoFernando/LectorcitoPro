@@ -1,15 +1,18 @@
 import customtkinter as ctk
 from tkinter import Canvas
-from PIL import Image, ImageTk
+from PIL import Image
 import webbrowser
 import datetime
 import os
+import random
 
 from utils import resource_path
-from view.translations import TRANSLATIONS  # <-- 1. IMPORTACIÓN DE TRADUCCIONES
+from view.translations import TRANSLATIONS
+# --- Se importan los diálogos desde su propio módulo ---
+from view.dialogs import MessageDialog, InfographicDialog
 
 # --- Constantes de la Interfaz ---
-VERSION = "5.1.0"  # Actualizado para reflejar la refactorización
+VERSION = "5.6.0"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -19,204 +22,37 @@ COLORS = {
     "light": {"bg": "#EBEBEB", "text": "#000000", "left_bar": "#1A1E22", "progress_bar": "#D9D9D9"},
     "dark": {"bg": "#1A1E22", "text": "#FFFFFF", "left_bar": "#EBEBEB", "progress_bar": "#333333"},
     "button": {"blue": "#3B8ED0", "green": "#3BD056", "red": "#D03B3D"},
-    "button_hover": {"blue_h": "#3073A8", "green_h": "#2FA047", "red_h": "#A03031"}
+    "button_hover": {"blue_h": "#3073A8", "green_h": "#2FA047", "red_h": "#A03031"},
+    "progress_colors": {"start": "#3B8ED0", "mid": "#F9A825", "done": "#4CAF50"}
 }
 BTN_W_MAIN, BTN_H_MAIN = 250, 30
 BTN_W_ICON, BTN_H_ICON = 35, 35
 PROGRESS_W = 357
 
 
-# --- DIÁLOGOS PERSONALIZADOS ---
-class BaseDialog(ctk.CTkToplevel):
-    def __init__(self, parent, title: str):
-        super().__init__(parent)
-        self.transient(parent)
-        self.title(title)
-        self.resizable(False, False)
-
-        parent_x = parent.winfo_x()
-        parent_y = parent.winfo_y()
-        parent_width = parent.winfo_width()
-        parent_height = parent.winfo_height()
-        self.geometry(
-            f"+{parent_x + parent_width // 2 - self.winfo_width() // 2}+{parent_y + parent_height // 2 - self.winfo_height() // 2}")
-
-        def _set_icon():
-            try:
-                if hasattr(parent, '_icon_path') and parent._icon_path and os.path.exists(parent._icon_path):
-                    self.iconbitmap(parent._icon_path)
-            except Exception as e:
-                print(f"Error al establecer el icono de la sub-ventana: {e}")
-
-        self.after(200, _set_icon)
-        self.result = None
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", lambda e: self._on_cancel())
-
-        self.grab_set()
-
-    def _on_ok(self, event=None):
-        self.grab_release()
-        self.destroy()
-
-    def _on_cancel(self, event=None):
-        self.grab_release()
-        self.destroy()
-
-
-class FilterConfigDialog(BaseDialog):
-    def __init__(self, parent, title, folder_prompt, file_prompt, initial_folder_value, initial_file_value):
-        super().__init__(parent, title)
-        main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-        ctk.CTkLabel(main_frame, text=folder_prompt, wraplength=350, font=("Segoe UI", 12, "bold")).pack(fill="x",
-                                                                                                         pady=(0, 5))
-        self.folder_entry = ctk.CTkEntry(main_frame, width=350)
-        self.folder_entry.insert(0, initial_folder_value)
-        self.folder_entry.pack(fill="x", pady=(0, 15))
-        ctk.CTkLabel(main_frame, text=file_prompt, wraplength=350, font=("Segoe UI", 12, "bold")).pack(fill="x",
-                                                                                                       pady=(0, 5))
-        self.file_entry = ctk.CTkEntry(main_frame, width=350)
-        self.file_entry.insert(0, initial_file_value)
-        self.file_entry.pack(fill="x", pady=(0, 20))
-        self.folder_entry.focus_set()
-        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        button_frame.pack()
-        ctk.CTkButton(button_frame, text="OK", width=100, command=self._on_ok).pack(side="left", padx=10)
-        ctk.CTkButton(button_frame, text="Cancelar", width=100, command=self._on_cancel).pack(side="left", padx=10)
-
-    def _on_ok(self, event=None):
-        self.result = (self.folder_entry.get(), self.file_entry.get())
-        super()._on_ok()
-
-    @classmethod
-    def get_input(cls, parent, title, folder_prompt, file_prompt, initial_folder_value, initial_file_value):
-        dialog = cls(parent, title, folder_prompt, file_prompt, initial_folder_value, initial_file_value)
-        parent.wait_window(dialog)
-        return dialog.result
-
-
-class MessageDialog(BaseDialog):
-    def __init__(self, parent, title, message):
-        super().__init__(parent, title)
-        main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center").pack(fill="x", pady=(0, 20))
-        ok_button = ctk.CTkButton(main_frame, text="OK", width=100, command=self._on_ok)
-        ok_button.pack(pady=(0, 10))
-        ok_button.focus_set()
-        self.bind("<Return>", self._on_ok)
-
-
-class ConfirmDialog(BaseDialog):
-    def __init__(self, parent, title, message):
-        super().__init__(parent, title)
-        self.result = False
-        main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center").pack(fill="x", pady=(0, 20))
-        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        button_frame.pack()
-        ctk.CTkButton(button_frame, text="Sí", width=100, command=self._on_yes).pack(side="left", padx=10)
-        ctk.CTkButton(button_frame, text="No", width=100, command=self._on_no).pack(side="left", padx=10)
-
-    def _on_yes(self): self.result = True; super()._on_ok()
-
-    def _on_no(self): self.result = False; super()._on_cancel()
-
-    @classmethod
-    def ask(cls, parent, title, message):
-        dialog = cls(parent, title, message)
-        parent.wait_window(dialog)
-        return dialog.result
-
-
-class ChoiceDialog(BaseDialog):
-    def __init__(self, parent, title, message, option1_text, option2_text, option1_value, option2_value):
-        super().__init__(parent, title)
-        self.option1_value = option1_value
-        self.option2_value = option2_value
-        main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-        ctk.CTkLabel(main_frame, text=message, wraplength=350).pack(fill="x", pady=(0, 20))
-        ctk.CTkButton(main_frame, text=option1_text, width=200, command=self._on_option1).pack(pady=5)
-        ctk.CTkButton(main_frame, text=option2_text, width=200, command=self._on_option2).pack(pady=5)
-
-    def _on_option1(self): self.result = self.option1_value; self._on_ok()
-
-    def _on_option2(self): self.result = self.option2_value; self._on_ok()
-
-    @classmethod
-    def ask(cls, parent, title, message, option1_text, option2_text, option1_value, option2_value):
-        dialog = cls(parent, title, message, option1_text, option2_text, option1_value, option2_value)
-        parent.wait_window(dialog)
-        return dialog.result
-
-
-class InfographicDialog(ctk.CTkToplevel):
-    def __init__(self, parent, title: str, image_path: str):
-        super().__init__(parent)
-        self.title(title)
-        self.geometry("500x400")
-        self.resizable(False, False)
-        self.transient(parent)
-
-        def _set_icon():
-            try:
-                if hasattr(parent, '_icon_path') and parent._icon_path and os.path.exists(parent._icon_path):
-                    self.iconbitmap(parent._icon_path)
-            except Exception as e:
-                print(f"Error al establecer el icono de la ventana de infografía: {e}")
-
-        self.after(225, _set_icon)
-
-        try:
-            scroll_frame = ctk.CTkScrollableFrame(self, label_text="")
-            scroll_frame.pack(expand=True, fill="both", padx=10, pady=10)
-
-            pil_image_original = Image.open(image_path)
-            original_width, original_height = pil_image_original.size
-
-            target_width = 450
-            ratio = target_width / original_width
-            target_height = int(original_height * ratio)
-
-            pil_image_resized = pil_image_original.resize((target_width, target_height), Image.Resampling.LANCZOS)
-
-            self.infographic_image = ctk.CTkImage(
-                light_image=pil_image_resized, dark_image=pil_image_resized, size=(target_width, target_height)
-            )
-
-            image_label = ctk.CTkLabel(scroll_frame, image=self.infographic_image, text="")
-            image_label.pack(expand=True)
-
-        except Exception as e:
-            self.destroy()
-            parent.show_message("error_title", f"{parent._tr('msg_error_generic')}\n\n{e}")
-
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.bind("<Escape>", self.on_close)
-        self.grab_set()
-
-    def on_close(self, event=None):
-        self.grab_release()
-        self.destroy()
-
-
 # --- CLASE PRINCIPAL DE LA VISTA ---
 class LectorcitoApp(ctk.CTk):
-
     def __init__(self, cfg: dict, controller):
         super().__init__()
+        self.attributes("-alpha", 0.0)
         self.TRANSLATIONS = TRANSLATIONS
         self.config = cfg
         self.controller = controller
         self.lang = self.config.get("language", "es")
         self.current_theme = self.config.get("theme", "Light")
+        self.current_progress = 0
+        self.target_progress = 0
+        self.animation_after_id = None
+
+        self.gif_pil_frames = []
+        self.gif_frame_index = 0
+        self.gif_animation_after_id = None
+        self.gif_delay = 100
 
         self.title("Lectorcito Pro")
-        self.geometry("600x450")
+        self.geometry("600x500")
         self.resizable(False, False)
+        self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
 
         self._icon_path = resource_path("lector.ico")
         if os.path.exists(self._icon_path):
@@ -226,9 +62,30 @@ class LectorcitoApp(ctk.CTk):
         self._build_ui()
         self.update_ui_texts()
         self.apply_theme()
+        self.toggle_ui_for_processing(is_active=False)
+        self.after(50, self._fade_in)
+
+    def _fade_in(self):
+        alpha = self.attributes("-alpha")
+        if alpha < 1:
+            alpha = min(alpha + 0.08, 1.0);
+            self.attributes("-alpha", alpha);
+            self.after(15, self._fade_in)
+
+    def _close_with_fade_out(self):
+        alpha = self.attributes("-alpha")
+        if alpha > 0:
+            alpha = max(alpha - 0.08, 0.0);
+            self.attributes("-alpha", alpha);
+            self.after(15, self._close_with_fade_out)
+        else:
+            self.destroy()
 
     def _tr(self, key, *args):
-        return self.TRANSLATIONS.get(self.lang, self.TRANSLATIONS["es"]).get(key, f"<{key}>").format(*args)
+        translation_entry = self.TRANSLATIONS.get(self.lang, self.TRANSLATIONS["es"]).get(key, f"<{key}>")
+        if isinstance(translation_entry, list):
+            return random.choice(translation_entry).format(*args)
+        return translation_entry.format(*args)
 
     def _load_image_assets(self):
         self.icons = {}
@@ -240,7 +97,7 @@ class LectorcitoApp(ctk.CTk):
                 self.icons[key] = ctk.CTkImage(light_image=img_for_light_theme, dark_image=img_for_dark_theme,
                                                size=(22, 22))
             except Exception as e:
-                print(f"Error cargando icono '{key}': {e}")
+                print(f"Error cargando icono '{key}': {e}");
                 self.icons[key] = None
         try:
             self.icons['sun'] = ctk.CTkImage(Image.open(resource_path("sol.png")), size=(24, 24))
@@ -248,8 +105,23 @@ class LectorcitoApp(ctk.CTk):
         except Exception as e:
             print(f"Error cargando iconos de tema: {e}")
 
+        self.gif_pil_frames = []
+        try:
+            gif_path = resource_path("Cat_Working.gif")
+            with Image.open(gif_path) as im:
+                self.gif_delay = im.info.get('duration', 100)
+                gif_size = (150, 150)
+                for i in range(im.n_frames):
+                    im.seek(i)
+                    frame_rgba = im.convert("RGBA")
+                    resized_frame = frame_rgba.resize(gif_size, Image.Resampling.LANCZOS)
+                    self.gif_pil_frames.append(resized_frame)
+        except Exception as e:
+            print(f"Error cargando el GIF 'Cat_Working.gif': {e}")
+            self.gif_pil_frames = []
+
     def _build_ui(self):
-        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1);
         self.grid_rowconfigure(2, weight=1)
         self._create_left_sidebar()
         self._create_right_sidebar()
@@ -261,78 +133,67 @@ class LectorcitoApp(ctk.CTk):
         self._create_footer()
 
     def _create_header(self, parent):
-        header = ctk.CTkFrame(parent, fg_color="transparent")
+        header = ctk.CTkFrame(parent, fg_color="transparent");
         header.pack(pady=(20, 15))
-        self.lbl_title = ctk.CTkLabel(header, font=("Segoe UI", 18, "bold"))
+        self.lbl_title = ctk.CTkLabel(header, font=("Segoe UI", 18, "bold"));
         self.lbl_title.pack()
-        self.lbl_greet = ctk.CTkLabel(header, font=("Segoe UI", 13))
+        self.lbl_greet = ctk.CTkLabel(header, font=("Segoe UI", 13));
         self.lbl_greet.pack()
 
     def _create_main_buttons(self, parent):
-        frame = ctk.CTkFrame(parent, fg_color="transparent")
+        frame = ctk.CTkFrame(parent, fg_color="transparent");
         frame.pack(pady=5, fill="x", expand=True)
         opts = {"width": BTN_W_MAIN, "height": BTN_H_MAIN, "corner_radius": 8, "font": ("Segoe UI", 11, "bold")}
         self.main_buttons = {
-            "selpath": ctk.CTkButton(frame, **opts, command=self.controller.select_destination_path),
-            "choose": ctk.CTkButton(frame, **opts, command=self.controller.select_folder_to_read),
-            "create_tree": ctk.CTkButton(frame, **opts, command=self.controller.create_tree_structure),
-            "openlect": ctk.CTkButton(frame, **opts, command=self.controller.open_destination_folder),
+            "selpath": ctk.CTkButton(frame, **opts), "choose": ctk.CTkButton(frame, **opts),
+            "create_tree": ctk.CTkButton(frame, **opts), "openlect": ctk.CTkButton(frame, **opts),
             "openlast": ctk.CTkButton(frame, **opts, fg_color=COLORS['button']['green'],
-                                      hover_color=COLORS['button_hover']['green_h'],
-                                      command=self.controller.open_last_report),
+                                      hover_color=COLORS['button_hover']['green_h']),
             "delete": ctk.CTkButton(frame, **opts, fg_color=COLORS['button']['red'],
-                                    hover_color=COLORS['button_hover']['red_h'],
-                                    command=self.controller.delete_all_readings)
+                                    hover_color=COLORS['button_hover']['red_h'])
         }
-        for btn in self.main_buttons.values():
-            btn.pack(pady=4)
+        for btn in self.main_buttons.values(): btn.pack(pady=4)
 
     def _create_progress_and_cancel(self, parent):
-        frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.pack(pady=10, fill="x")
-        frame.grid_columnconfigure(0, weight=1)
-        self.progress_bar = ctk.CTkProgressBar(frame, width=PROGRESS_W, corner_radius=8, mode='determinate')
+        self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent");
+        self.progress_frame.pack(pady=(15, 5), fill="x", expand=True, anchor="n")
+        self.progress_frame.grid_columnconfigure(0, weight=1);
+        self.progress_frame.grid_columnconfigure(1, weight=0)
+        self.lbl_progress_status = ctk.CTkLabel(self.progress_frame, text="", font=("Segoe UI", 11, "bold"))
+        self.lbl_percent = ctk.CTkLabel(self.progress_frame, text="", font=("Segoe UI", 11, "bold"))
+        self.progress_bar = ctk.CTkProgressBar(self.progress_frame, height=10, corner_radius=8, mode='determinate');
         self.progress_bar.set(0)
-        self.progress_bar.grid(row=0, column=0, sticky="ew")
-        self.lbl_percent = ctk.CTkLabel(frame, text="0%", font=("Segoe UI", 10))
-        self.lbl_percent.grid(row=1, column=0)
-        self.btn_cancel = ctk.CTkButton(frame, width=150, height=28, command=self.controller.cancel_processing)
-        self.btn_cancel.grid(row=2, column=0, pady=(5, 0))
-        self.btn_cancel.grid_remove()
+        self.lbl_current_file = ctk.CTkLabel(self.progress_frame, text="", font=("Segoe UI", 9), anchor="w")
+        self.btn_cancel = ctk.CTkButton(self.progress_frame, width=150, height=28)
+        self.lbl_gif_animation = ctk.CTkLabel(self.progress_frame, text="")
 
     def _create_left_sidebar(self):
-        self.side_left = ctk.CTkFrame(self, width=40, height=350, corner_radius=15)
+        self.side_left = ctk.CTkFrame(self, width=40, height=350, corner_radius=15);
         self.side_left.place(x=15, y=43)
-        self.canvas_left = Canvas(self.side_left, width=25, height=310, highlightthickness=0)
+        self.canvas_left = Canvas(self.side_left, width=25, height=310, highlightthickness=0);
         self.canvas_left.place(relx=0.5, rely=0.5, anchor="center")
         self.canvas_left.bind("<Configure>", self._paint_left_sidebar_text)
 
     def _create_right_sidebar(self):
-        self.side_right = ctk.CTkFrame(self, width=60, height=350, fg_color="transparent")
+        self.side_right = ctk.CTkFrame(self, width=60, height=350, fg_color="transparent");
         self.side_right.place(x=525, y=40)
-        button_defs = [
-            ("ver", self.controller.show_view_config_dialog),
-            ("nover", self.controller.show_no_view_config_dialog),
-            ("theme_icon", self.controller.toggle_theme),
-            ("traducir", self.controller.toggle_language),
-            ("restaurar", self.controller.restore_default_settings),
-            ("github", lambda: webbrowser.open_new(REPO_URL)),
-            ("info", self.show_app_info)
-        ]
+        btn_color = COLORS['light' if self.current_theme == "Light" else 'dark']['left_bar']
         self.sidebar_buttons = {}
-        theme = COLORS['light' if self.current_theme == "Light" else 'dark']
-        btn_color = theme['left_bar']
-        for key, cmd in button_defs:
-            initial_icon = self.icons.get('moon') if key == "theme_icon" and self.current_theme == "Light" else \
-                self.icons.get('sun') if key == "theme_icon" else self.icons.get(key)
+        icon_keys = ["ver", "nover", "theme_icon", "traducir", "restaurar", "github", "info"]
+
+        for key in icon_keys:
+            is_light = self.current_theme == "Light"
+            initial_icon = self.icons.get('moon') if key == "theme_icon" and is_light else self.icons.get(
+                'sun') if key == "theme_icon" else self.icons.get(key)
+
             btn = ctk.CTkButton(self.side_right, image=initial_icon, text="", width=BTN_W_ICON, height=BTN_H_ICON,
-                                corner_radius=8, command=cmd, fg_color=btn_color, hover_color=btn_color)
+                                corner_radius=8, fg_color=btn_color, hover_color=btn_color)
             btn.pack(pady=4, padx=5)
             self.sidebar_buttons[key] = btn
 
     def _create_footer(self):
-        footer = ctk.CTkFrame(self, height=30, corner_radius=0)
-        footer.grid(row=4, column=0, columnspan=2, sticky="ew")
+        footer = ctk.CTkFrame(self, height=30, corner_radius=0);
+        footer.grid(row=4, column=0, columnspan=2, sticky="sew")
         ctk.CTkLabel(footer, text=f"Copyright © {YEAR} - {AUTHOR} - All Rights Reserved.", font=("Segoe UI", 9)).place(
             relx=0.5, rely=0.5, anchor="center")
 
@@ -341,18 +202,17 @@ class LectorcitoApp(ctk.CTk):
         hour = datetime.datetime.now().hour
         greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
         try:
-            user = os.getlogin()
+            user = os.getlogin().lower().capitalize()
         except OSError:
             user = "User"
-        self.lbl_greet.configure(text=f"{self._tr(greet_key)} {user}{self._tr('welcome')}")
-        key_map = {
-            "selpath": "btn_sel_lecturas", "choose": "btn_choose_folder", "create_tree": "btn_create_tree",
-            "openlect": "btn_open_lecturas", "openlast": "btn_open_last", "delete": "btn_del"
-        }
+        greeting = self._tr(greet_key)
+        self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
+        key_map = {"selpath": "btn_sel_lecturas", "choose": "btn_choose_folder", "create_tree": "btn_create_tree",
+                   "openlect": "btn_open_lecturas", "openlast": "btn_open_last", "delete": "btn_del"}
         for key, btn in self.main_buttons.items():
-            if key in key_map:
-                btn.configure(text=self._tr(key_map[key]))
+            if key in key_map: btn.configure(text=self._tr(key_map[key]))
         self.btn_cancel.configure(text=self._tr("btn_cancel"))
+        self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
 
     def apply_theme(self):
         is_light = self.current_theme == "Light"
@@ -362,12 +222,14 @@ class LectorcitoApp(ctk.CTk):
         self.side_left.configure(fg_color=theme['left_bar'])
         self.canvas_left.configure(bg=theme['left_bar'])
         self._paint_left_sidebar_text()
-        self.progress_bar.configure(progress_color=COLORS['button']['blue'], fg_color=theme['progress_bar'])
+        self.progress_bar.configure(fg_color=theme['progress_bar'])
         btn_color = theme['left_bar']
-        for btn in self.sidebar_buttons.values():
-            btn.configure(fg_color=btn_color, hover_color=btn_color)
+        # Los íconos con versiones claro/oscuro se actualizan solos gracias a CTkImage.
+        # Solo necesitamos actualizar el color de fondo y el ícono especial del tema.
+        for btn in self.sidebar_buttons.values(): btn.configure(fg_color=btn_color, hover_color=btn_color)
         self.sidebar_buttons['theme_icon'].configure(
             image=self.icons.get('moon') if is_light else self.icons.get('sun'))
+        self.set_progress(self.target_progress, None, True)
 
     def _paint_left_sidebar_text(self, event=None):
         self.canvas_left.delete("all")
@@ -376,27 +238,62 @@ class LectorcitoApp(ctk.CTk):
         self.canvas_left.create_text(w / 2, h / 2, text=f"Lectorcito Pro v{VERSION}", angle=90,
                                      font=("Segoe UI", 10, "bold"), fill=color)
 
-    def set_progress(self, percentage):
-        self.progress_bar.set(percentage / 100)
-        self.lbl_percent.configure(text=f"{int(percentage)}%")
-        self.update_idletasks()
+    def _animate_progress(self):
+        if self.animation_after_id: self.after_cancel(self.animation_after_id); self.animation_after_id = None
+        diff = self.target_progress - self.current_progress
+        if abs(diff) < 0.1:
+            self.current_progress = self.target_progress
+        else:
+            self.current_progress += diff * 0.1; self.animation_after_id = self.after(20, self._animate_progress)
+        self.progress_bar.set(self.current_progress / 100)
+
+    def _animate_gif(self):
+        if self.gif_animation_after_id: self.after_cancel(self.gif_animation_after_id)
+        if self.gif_pil_frames:
+            pil_frame = self.gif_pil_frames[self.gif_frame_index]
+            ctk_image = ctk.CTkImage(light_image=pil_frame, dark_image=pil_frame, size=pil_frame.size)
+            self.lbl_gif_animation.configure(image=ctk_image)
+            self.gif_frame_index = (self.gif_frame_index + 1) % len(self.gif_pil_frames)
+            self.gif_animation_after_id = self.after(self.gif_delay, self._animate_gif)
+
+    def set_progress(self, percentage, file_context=None, force_color=False):
+        new_target = int(percentage)
+        if new_target != self.target_progress or force_color:
+            self.target_progress = new_target
+            color = COLORS['progress_colors']['done'] if self.target_progress >= 90 else COLORS['progress_colors'][
+                'mid'] if self.target_progress >= 50 else COLORS['progress_colors']['start']
+            self.progress_bar.configure(progress_color=color)
+        self.lbl_percent.configure(text=f"{self.target_progress}%")
+        if file_context: self.lbl_current_file.configure(text=file_context)
+        if self.animation_after_id is None: self._animate_progress()
 
     def toggle_ui_for_processing(self, is_active: bool):
         state = "disabled" if is_active else "normal"
-        for btn in self.main_buttons.values():
-            btn.configure(state=state)
-        for btn in self.sidebar_buttons.values():
-            btn.configure(state=state)
+        for btn in self.main_buttons.values(): btn.configure(state=state)
+        for btn in self.sidebar_buttons.values(): btn.configure(state=state)
+
         if is_active:
-            self.btn_cancel.grid()
+            if self.gif_animation_after_id: self.after_cancel(
+                self.gif_animation_after_id); self.gif_animation_after_id = None
+            self.lbl_gif_animation.pack_forget()
+            self.set_progress(0)
+            self.lbl_progress_status.grid(row=0, column=0, sticky="w", padx=5)
+            self.lbl_percent.grid(row=0, column=1, sticky="e", padx=5)
+            self.progress_bar.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(2, 5))
+            self.lbl_current_file.grid(row=2, column=0, columnspan=2, sticky="ew", padx=5)
+            self.btn_cancel.grid(row=3, column=0, columnspan=2, pady=(10, 0))
         else:
-            self.btn_cancel.grid_remove()
+            for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file,
+                           self.btn_cancel): widget.grid_remove()
+            self.after(1000, lambda: self.set_progress(0))
+            if self.gif_pil_frames:
+                self.lbl_gif_animation.pack(pady=10, expand=True)
+                self._animate_gif()
 
     def show_message(self, title_key: str, message_key: str, *args):
         MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
 
     def show_app_info(self):
-        """Muestra el manual de usuario visual (infografía)."""
         image_path = resource_path("Infografía_LectorcitoPro.png")
         if os.path.exists(image_path):
             InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)

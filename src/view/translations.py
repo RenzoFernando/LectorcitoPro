@@ -1,3 +1,5 @@
+import random
+
 TRANSLATIONS = {
     "es": {
         "manual_title": "Manual de Usuario",
@@ -28,13 +30,16 @@ TRANSLATIONS = {
         "confirm_del_prompt": "¿Está seguro de que desea eliminar permanentemente la carpeta de lecturas y todo su contenido?",
         "msg_delete_success": "Contenido de '{}' eliminado con éxito.",
         "msg_delete_error": "No se pudo eliminar la carpeta:\n{}",
-        "greet_m": "Buenos días", "greet_a": "Buenas tardes", "greet_n": "Buenas noches",
+        "greet_m": ["¡Buenos días!", "¡Un café y a programar!", "¿Listo para un nuevo día?", "¡Que tengas una mañana productiva!"],
+        "greet_a": ["¡Buenas tardes!", "Espero que tu día vaya de maravilla.", "¡A seguir dándole al código!", "La tarde es para crear."],
+        "greet_n": ["¡Buenas noches!", "Un último vistazo antes de descansar.", "¡Que el código te acompañe!", "Es hora de compilar sueños."],
         "dlg_ver_title": "Configurar qué Ver",
         "dlg_ver_folder_prompt": "Carpetas a resaltar como Importantes (separadas por comas):",
         "dlg_ver_file_prompt": "Extensiones de archivo a Leer (ej: .py, .md, .txt):",
         "dlg_nover_title": "Configurar qué No Ver",
         "dlg_nover_folder_prompt": "Carpetas a Ignorar por completo (separadas por comas):",
-        "dlg_nover_file_prompt": "Archivos a Ignorar por nombre completo (ej: readme.md, license.txt):"
+        "dlg_nover_file_prompt": "Archivos a Ignorar por nombre completo (ej: readme.md, license.txt):",
+        "progress_processing_text": "Procesando..."
     },
     "en": {
         "manual_title": "User Manual",
@@ -65,12 +70,15 @@ TRANSLATIONS = {
         "confirm_del_prompt": "Are you sure you want to permanently delete the readings folder and all its contents?",
         "msg_delete_success": "Contents of '{}' deleted successfully.",
         "msg_delete_error": "Could not delete the folder:\n{}",
-        "greet_m": "Good morning", "greet_a": "Good afternoon", "greet_n": "Good evening",
+        "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?", "Have a productive morning!"],
+        "greet_a": ["Good afternoon!", "Hope your day is going great.", "Let's keep pushing that code!", "The afternoon is for creating."],
+        "greet_n": ["Good evening!", "One last look before logging off.", "May the code be with you.", "Time to compile some dreams."],
         "dlg_ver_title": "Configure what to View",
         "dlg_ver_folder_prompt": "Folders to highlight as Important (comma separated):",
         "dlg_ver_file_prompt": "File extensions to Read (e.g., .py, .md, .txt):",
         "dlg_nover_title": "Configure what Not to View",
         "dlg_nover_folder_prompt": "Folders to Ignore completely (comma separated):",
-        "dlg_nover_file_prompt": "Files to Ignore by full name (e.g., readme.md, license.txt):"
+        "dlg_nover_file_prompt": "Files to Ignore by full name (e.g., readme.md, license.txt):",
+        "progress_processing_text": "Processing..."
     }
 }
