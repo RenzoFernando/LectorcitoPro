@@ -3,18 +3,30 @@ import threading
 from time import sleep
 
 
+def _get_active_tags(config: dict, key: str) -> set:
+    """Extrae los nombres de las etiquetas activas de una lista de configuración."""
+    tag_list = config.get(key, [])
+    return {tag['nombre'] for tag in tag_list if tag.get('estado') == 'activo'}
+
+
 def _count_files_to_process(folder: str, config: dict) -> int:
     """Cuenta de forma eficiente el número de archivos que se procesarán, respetando las exclusiones."""
     file_count = 0
-    extensions_to_check = set(config.get("text_extensions", []) + config.get("media_extensions", []))
-    folders_to_exclude = set(config.get("excluded_folders", []))
-    files_to_exclude = set(config.get("excluded_files", []))
+
+    # Extraer nombres de las etiquetas activas
+    extensions_to_include = _get_active_tags(config, "etiquetas_extensiones_incluidas")
+    extensions_to_check = extensions_to_include.union(set(config.get("media_extensions", [])))
+    folders_to_exclude = _get_active_tags(config, "etiquetas_carpetas_excluidas")
+    files_to_exclude = _get_active_tags(config, "etiquetas_archivos_excluidos")
 
     try:
         for root, dirs, files in os.walk(folder, topdown=True):
+            # Filtrar directorios para no explorarlos
             dirs[:] = [d for d in dirs if d not in folders_to_exclude]
             for filename in files:
-                if filename in files_to_exclude: continue
+                if filename in files_to_exclude:
+                    continue
+                # Comprobar si alguna extensión coincide
                 if any(filename.lower().endswith(ext) for ext in extensions_to_check):
                     file_count += 1
     except OSError as e:
@@ -38,11 +50,12 @@ def generate_report(
     if total_files == 0:
         return "no_files", None
 
-    important_folders = set(config.get("important_folders", []))
-    text_ext = set(config.get("text_extensions", []))
+    # Obtener listas de etiquetas activas para el procesamiento
+    important_folders = _get_active_tags(config, "etiquetas_carpetas_importantes")
+    text_ext = _get_active_tags(config, "etiquetas_extensiones_incluidas")
     media_ext = set(config.get("media_extensions", []))
-    excluded_folders = set(config.get("excluded_folders", []))
-    excluded_files = set(config.get("excluded_files", []))
+    excluded_folders = _get_active_tags(config, "etiquetas_carpetas_excluidas")
+    excluded_files = _get_active_tags(config, "etiquetas_archivos_excluidos")
 
     folder_name = os.path.basename(os.path.normpath(source_folder))
     version = 1
@@ -80,16 +93,13 @@ def generate_report(
                 for filename, is_text, is_media in files_in_dir:
                     if cancel_event.is_set(): break
 
-                    # --- ACTUALIZACIÓN ---
-                    # Enviar el contexto del archivo actual al callback
                     current_file_rel_path = os.path.join(folder_name_display, filename)
                     processed_files += 1
                     if progress_callback:
                         progress = (processed_files / total_files) * 100
                         progress_callback(progress, current_file_rel_path)
-                    # --- FIN ACTUALIZACIÓN ---
 
-                    sleep(0.01)  # Pequeña pausa para que la animación de la UI sea visible
+                    sleep(0.01)
 
                     file_path = os.path.join(root, filename)
                     outfile.write(f"    Archivo: {filename}\n")
@@ -148,9 +158,10 @@ def _build_tree_recursive(current_path, prefix, outfile, use_config, config):
         return
 
     if use_config:
-        excluded_folders = set(config.get('excluded_folders', []))
-        excluded_files = set(config.get('excluded_files', []))
-        valid_ext = set(config.get('text_extensions', []) + config.get('media_extensions', []))
+        excluded_folders = _get_active_tags(config, "etiquetas_carpetas_excluidas")
+        excluded_files = _get_active_tags(config, "etiquetas_archivos_excluidos")
+        included_ext = _get_active_tags(config, "etiquetas_extensiones_incluidas")
+        valid_ext = included_ext.union(set(config.get('media_extensions', [])))
 
         filtered_elements = []
         for elem in elements:

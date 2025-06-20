@@ -3,7 +3,9 @@ import shutil
 import webbrowser
 from tkinter import filedialog
 import config
-from view.dialogs import FilterConfigDialog, ConfirmDialog, ChoiceDialog
+from view.dialogs import ConfirmDialog, ChoiceDialog
+# --- Importamos el nuevo diálogo de etiquetas ---
+from view.tags_dialog import TagsConfigDialog
 
 
 def select_destination_path(controller):
@@ -30,44 +32,53 @@ def select_destination_path(controller):
 
 
 def show_view_config_dialog(controller):
-    """Muestra el diálogo para configurar qué archivos y carpetas incluir."""
-    current_folders = ", ".join(controller.config.get("important_folders", []))
-    current_files = ", ".join(controller.config.get("text_extensions", []))
+    """Muestra el nuevo diálogo de etiquetas para configurar qué incluir."""
+    # Obtener las listas actuales del config
+    current_folders = controller.config.get("etiquetas_carpetas_importantes", [])
+    current_files = controller.config.get("etiquetas_extensiones_incluidas", [])
 
-    result = FilterConfigDialog.get_input(
-        controller.view,
+    result = TagsConfigDialog.get_input(
+        parent=controller.view,
         title=controller.view._tr("dlg_ver_title"),
-        folder_prompt=controller.view._tr("dlg_ver_folder_prompt"),
-        file_prompt=controller.view._tr("dlg_ver_file_prompt"),
-        initial_folder_value=current_folders,
-        initial_file_value=current_files
+        folders_prompt=controller.view._tr("dlg_ver_folder_prompt"),
+        initial_folders=current_folders,
+        files_prompt=controller.view._tr("dlg_ver_file_prompt"),
+        initial_files=current_files
     )
 
     if result is not None:
-        folder_str, file_str = result
-        controller.config["important_folders"] = [f.strip() for f in folder_str.split(",") if f.strip()]
-        controller.config["text_extensions"] = [f".{e.strip().lstrip('.')}" for e in file_str.split(",") if e.strip()]
+        # El diálogo devuelve las listas de etiquetas modificadas
+        new_folders, new_files = result
+        # Asegurarse de que las extensiones tengan el punto inicial
+        for tag in new_files:
+            if not tag["nombre"].startswith("."):
+                tag["nombre"] = f".{tag['nombre']}"
+
+        controller.config["etiquetas_carpetas_importantes"] = new_folders
+        controller.config["etiquetas_extensiones_incluidas"] = new_files
         save_preferences_silent(controller)
 
 
 def show_no_view_config_dialog(controller):
-    """Muestra el diálogo para configurar qué archivos y carpetas excluir."""
-    current_folders = ", ".join(controller.config.get("excluded_folders", []))
-    current_files = ", ".join(controller.config.get("excluded_files", []))
+    """Muestra el nuevo diálogo de etiquetas para configurar qué excluir."""
+    # Obtener las listas actuales del config
+    current_folders = controller.config.get("etiquetas_carpetas_excluidas", [])
+    current_files = controller.config.get("etiquetas_archivos_excluidos", [])
 
-    result = FilterConfigDialog.get_input(
-        controller.view,
+    result = TagsConfigDialog.get_input(
+        parent=controller.view,
         title=controller.view._tr("dlg_nover_title"),
-        folder_prompt=controller.view._tr("dlg_nover_folder_prompt"),
-        file_prompt=controller.view._tr("dlg_nover_file_prompt"),
-        initial_folder_value=current_folders,
-        initial_file_value=current_files
+        folders_prompt=controller.view._tr("dlg_nover_folder_prompt"),
+        initial_folders=current_folders,
+        files_prompt=controller.view._tr("dlg_nover_file_prompt"),
+        initial_files=current_files
     )
 
     if result is not None:
-        folder_str, file_str = result
-        controller.config["excluded_folders"] = [f.strip() for f in folder_str.split(",") if f.strip()]
-        controller.config["excluded_files"] = [f.strip() for f in file_str.split(",") if f.strip()]
+        # El diálogo devuelve las listas de etiquetas modificadas
+        new_folders, new_files = result
+        controller.config["etiquetas_carpetas_excluidas"] = new_folders
+        controller.config["etiquetas_archivos_excluidos"] = new_files
         save_preferences_silent(controller)
 
 
