@@ -12,7 +12,7 @@ from view.translations import TRANSLATIONS
 from view.dialogs import MessageDialog, InfographicDialog
 
 # --- Constantes de la Interfaz ---
-VERSION = "5.7.3"
+VERSION = "5.8.0"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -26,8 +26,9 @@ COLORS = {
     "button_hover": {"blue_h": "#3073A8", "green_h": "#2FA047", "red_h": "#A03031"},
     "progress_colors": {"start": "#3B8ED0", "mid": "#F9A825", "done": "#4CAF50"}
 }
-BTN_W_MAIN, BTN_H_MAIN = 250, 30
-BTN_W_ICON, BTN_H_ICON = 35, 35
+BTN_W_MAIN, BTN_H_MAIN = 275, 31
+BTN_W_ICON, BTN_H_ICON = 35, 40
+SIDEBAR_WIDTH = 48
 PROGRESS_W = 357
 
 
@@ -44,17 +45,21 @@ class LectorcitoApp(ctk.CTk):
         self.current_progress = 0
         self.target_progress = 0
         self.animation_after_id = None
+        # SOLUCIÓN: Asignar REPO_URL como un atributo de instancia
+        self.REPO_URL = REPO_URL
 
         # --- Gestión de GIFs ---
-        self.gif_names = ["Cat_Working.gif", "Hacker_Coding.gif", "Computer_Coding.gif", "Mad_Artificial_Intelligence.gif", "Thinking_Working.gif", "Ctrl_C_V.gif", "Coding_Coffee.gif"]
+        self.gif_names = ["Cat_Working.gif", "Hacker_Coding.gif", "Computer_Coding.gif",
+                          "Mad_Artificial_Intelligence.gif", "Thinking_Working.gif", "Ctrl_C_V.gif",
+                          "Coding_Coffee.gif"]
         self.gif_pil_frames = []
         self.gif_frame_index = 0
         self.gif_animation_after_id = None
         self.gif_delay = 100
-        self.gif_change_timer_id = None  # ID para el temporizador de cambio de GIF
+        self.gif_change_timer_id = None
 
         self.title("Lectorcito Pro")
-        self.geometry("600x525")
+        self.geometry("600x500")
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
 
@@ -73,20 +78,16 @@ class LectorcitoApp(ctk.CTk):
         alpha = self.attributes("-alpha")
         if alpha < 1:
             alpha = min(alpha + 0.08, 1.0);
-            self.attributes("-alpha", alpha);
+            self.attributes("-alpha", alpha)
             self.after(15, self._fade_in)
 
     def _close_with_fade_out(self):
-        # Cancelar todos los temporizadores pendientes al cerrar
-        if self.gif_animation_after_id:
-            self.after_cancel(self.gif_animation_after_id)
-        if self.gif_change_timer_id:
-            self.after_cancel(self.gif_change_timer_id)
-
+        if self.gif_animation_after_id: self.after_cancel(self.gif_animation_after_id)
+        if self.gif_change_timer_id: self.after_cancel(self.gif_change_timer_id)
         alpha = self.attributes("-alpha")
         if alpha > 0:
             alpha = max(alpha - 0.08, 0.0);
-            self.attributes("-alpha", alpha);
+            self.attributes("-alpha", alpha)
             self.after(15, self._close_with_fade_out)
         else:
             self.destroy()
@@ -116,77 +117,67 @@ class LectorcitoApp(ctk.CTk):
             print(f"Error cargando iconos de tema: {e}")
 
     def _load_and_prepare_gif(self):
-        """Selecciona, carga y redimensiona un GIF aleatorio para que quepa en el
-        área de progreso manteniendo la relación de aspecto."""
         self.gif_pil_frames = []
         self.gif_frame_index = 0
-
-        if not self.gif_names:
-            return
-
+        if not self.gif_names: return
         try:
             self.progress_frame.update_idletasks()
-            container_width = self.progress_frame.winfo_width()
-            container_height = self.progress_frame.winfo_height()
-
-            padding = 20
-            max_w = container_width - padding
-            max_h = container_height - padding
-
-            if max_w <= 20 or max_h <= 20:
-                print(f"Advertencia: El área para el GIF es muy pequeña ({max_w}x{max_h}).")
-                return
-
+            container_width, container_height = self.progress_frame.winfo_width(), self.progress_frame.winfo_height()
+            padding = 25
+            max_w, max_h = container_width - padding, container_height - padding
+            if max_w <= 50 or max_h <= 50: return
             chosen_gif = random.choice(self.gif_names)
             gif_path = resource_path(chosen_gif)
-
             with Image.open(gif_path) as im:
                 self.gif_delay = im.info.get('duration', 100)
-
                 original_width, original_height = im.size
-                if original_height <= 0 or original_width <= 0:
-                    return
-
+                if original_height <= 0 or original_width <= 0: return
                 ratio = min(max_w / original_width, max_h / original_height)
-
-                target_width = int(original_width * ratio)
-                target_height = int(original_height * ratio)
-
+                target_width, target_height = int(original_width * ratio), int(original_height * ratio)
                 gif_size = (target_width, target_height)
-
                 for i in range(im.n_frames):
-                    im.seek(i)
+                    im.seek(i);
                     frame_rgba = im.convert("RGBA")
                     resized_frame = frame_rgba.resize(gif_size, Image.Resampling.LANCZOS)
                     self.gif_pil_frames.append(resized_frame)
-
         except Exception as e:
-            print(f"Error al cargar o redimensionar el GIF: {e}")
+            print(f"Error al cargar o redimensionar el GIF: {e}");
             self.gif_pil_frames = []
 
     def _build_ui(self):
-        self.grid_columnconfigure(0, weight=1);
-        self.grid_rowconfigure(2, weight=1)
-        self._create_left_sidebar()
-        self._create_right_sidebar()
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        left_sidebar_container = ctk.CTkFrame(self, fg_color="transparent")
+        left_sidebar_container.grid(row=0, column=0, sticky="ns", padx=15, pady=15)
+
+        right_sidebar_container = ctk.CTkFrame(self, fg_color="transparent")
+        right_sidebar_container.grid(row=0, column=2, sticky="ns", padx=15, pady=15)
+
         center_frame = ctk.CTkFrame(self, fg_color="transparent")
-        center_frame.grid(row=0, column=0, rowspan=4, sticky="nsew", padx=(60, 80))
+        center_frame.grid(row=0, column=1, sticky="nsew", pady=10)
+        center_frame.grid_columnconfigure(0, weight=1)
+        center_frame.grid_rowconfigure(2, weight=1)
+
         self._create_header(center_frame)
         self._create_main_buttons(center_frame)
         self._create_progress_and_cancel(center_frame)
+
+        self._create_left_sidebar(left_sidebar_container)
+        self._create_right_sidebar(right_sidebar_container)
         self._create_footer()
 
     def _create_header(self, parent):
-        self.header_frame = ctk.CTkFrame(parent, fg_color="transparent");
-        self.header_frame.pack(pady=(20, 15), fill="x")
+        self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        self.header_frame.grid(row=0, column=0, sticky="ew", pady=(20, 15))
         self.lbl_title = ctk.CTkLabel(self.header_frame, font=("Segoe UI", 18, "bold"));
         self.lbl_title.pack()
         self.lbl_greet = ctk.CTkLabel(self.header_frame, font=("Segoe UI", 13));
         self.lbl_greet.pack()
 
     def _create_main_buttons(self, parent):
-        self.main_buttons_frame = ctk.CTkFrame(parent, fg_color="transparent");
-        self.main_buttons_frame.pack(pady=5, fill="x")
+        self.main_buttons_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        self.main_buttons_frame.grid(row=1, column=0, sticky="ew", pady=5)
         opts = {"width": BTN_W_MAIN, "height": BTN_H_MAIN, "corner_radius": 8, "font": ("Segoe UI", 11, "bold")}
         self.main_buttons = {
             "selpath": ctk.CTkButton(self.main_buttons_frame, **opts),
@@ -198,11 +189,18 @@ class LectorcitoApp(ctk.CTk):
             "delete": ctk.CTkButton(self.main_buttons_frame, **opts, fg_color=COLORS['button']['red'],
                                     hover_color=COLORS['button_hover']['red_h'])
         }
-        for btn in self.main_buttons.values(): btn.pack(pady=4)
+        for btn in self.main_buttons.values(): btn.pack(pady=3)
 
     def _create_progress_and_cancel(self, parent):
-        self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent");
-        self.progress_frame.pack(pady=(10, 5), fill="both", expand=True)
+        self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=(1, 1))
+        self.progress_frame.grid_columnconfigure(0, weight=1)
+        self.progress_frame.grid_rowconfigure(0, weight=1)
+
+        self.progress_content_wrapper = ctk.CTkFrame(self.progress_frame, fg_color="transparent")
+        self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew")
+        self.lbl_gif_animation = ctk.CTkLabel(self.progress_content_wrapper, text="");
+        self.lbl_gif_animation.pack(expand=True)
 
         self.lbl_progress_status = ctk.CTkLabel(self.progress_frame, text="", font=("Segoe UI", 11, "bold"))
         self.lbl_percent = ctk.CTkLabel(self.progress_frame, text="", font=("Segoe UI", 11, "bold"))
@@ -210,38 +208,38 @@ class LectorcitoApp(ctk.CTk):
         self.progress_bar.set(0)
         self.lbl_current_file = ctk.CTkLabel(self.progress_frame, text="", font=("Segoe UI", 9), anchor="w")
         self.btn_cancel = ctk.CTkButton(self.progress_frame, width=150, height=28)
-        self.lbl_gif_animation = ctk.CTkLabel(self.progress_frame, text="")
 
-    def _create_left_sidebar(self):
-        self.side_left = ctk.CTkFrame(self, width=40, height=350, corner_radius=15);
-        self.side_left.place(x=15, y=43)
-        self.canvas_left = Canvas(self.side_left, width=25, height=310, highlightthickness=0);
+    def _create_left_sidebar(self, parent):
+        sidebar_height = 400
+        self.side_left = ctk.CTkFrame(parent, width=SIDEBAR_WIDTH, height=sidebar_height, corner_radius=15)
+        self.side_left.pack(expand=True, anchor="center")
+
+        self.canvas_left = Canvas(self.side_left, width=20, height=sidebar_height - 40, highlightthickness=0)
         self.canvas_left.place(relx=0.5, rely=0.5, anchor="center")
         self.canvas_left.bind("<Configure>", self._paint_left_sidebar_text)
 
-    def _create_right_sidebar(self):
-        self.side_right = ctk.CTkFrame(self, width=60, height=350, fg_color="transparent");
-        self.side_right.place(x=525, y=40)
-        btn_color = COLORS['light' if self.current_theme == "Light" else 'dark']['left_bar']
+    def _create_right_sidebar(self, parent):
+        button_container = ctk.CTkFrame(parent, fg_color="transparent")
+        button_container.pack(expand=True, anchor="center")
+
         self.sidebar_buttons = {}
         icon_keys = ["ver", "nover", "theme_icon", "traducir", "restaurar", "github", "info"]
-
         for key in icon_keys:
             is_light = self.current_theme == "Light"
             initial_icon = self.icons.get('moon') if key == "theme_icon" and is_light else self.icons.get(
                 'sun') if key == "theme_icon" else self.icons.get(key)
+            fg_color = COLORS['dark']['bg'] if is_light else COLORS['light']['bg']
 
-            btn = ctk.CTkButton(self.side_right, image=initial_icon, text="", width=BTN_W_ICON, height=BTN_H_ICON,
-                                corner_radius=8, fg_color=btn_color, hover_color=btn_color)
-            btn.pack(pady=4, padx=5)
+            btn = ctk.CTkButton(button_container, image=initial_icon, text="", width=SIDEBAR_WIDTH, height=BTN_H_ICON,
+                                corner_radius=8, fg_color=fg_color, hover_color=fg_color)
+            btn.pack(pady=5)
             self.sidebar_buttons[key] = btn
 
     def _create_footer(self):
-        self.footer_frame = ctk.CTkFrame(self, height=30, corner_radius=0);
-        self.footer_frame.grid(row=4, column=0, columnspan=2, sticky="sew")
+        self.footer_frame = ctk.CTkFrame(self, height=30, corner_radius=0)
+        self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="sew")
         ctk.CTkLabel(self.footer_frame, text=f"Copyright © {YEAR} - {AUTHOR} - All Rights Reserved.",
-                     font=("Segoe UI", 9)).place(
-            relx=0.5, rely=0.5, anchor="center")
+                     font=("Segoe UI", 9)).place(relx=0.5, rely=0.5, anchor="center")
 
     def update_ui_texts(self):
         self.lbl_title.configure(text=self._tr("title"))
@@ -251,7 +249,7 @@ class LectorcitoApp(ctk.CTk):
             user = os.getlogin().lower().capitalize()
         except OSError:
             user = "User"
-        greeting = self._tr(greet_key)
+        greeting = self._tr(greet_key);
         self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
         key_map = {"selpath": "btn_sel_lecturas", "choose": "btn_choose_folder", "create_tree": "btn_create_tree",
                    "openlect": "btn_open_lecturas", "openlast": "btn_open_last", "delete": "btn_del"}
@@ -269,8 +267,8 @@ class LectorcitoApp(ctk.CTk):
         self.canvas_left.configure(bg=theme['left_bar'])
         self._paint_left_sidebar_text()
         self.progress_bar.configure(fg_color=theme['progress_bar'])
-        btn_color = theme['left_bar']
-        for btn in self.sidebar_buttons.values(): btn.configure(fg_color=btn_color, hover_color=btn_color)
+        btn_fg_color = COLORS['dark']['bg'] if is_light else COLORS['light']['bg']
+        for btn in self.sidebar_buttons.values(): btn.configure(fg_color=btn_fg_color, hover_color=btn_fg_color)
         self.sidebar_buttons['theme_icon'].configure(
             image=self.icons.get('moon') if is_light else self.icons.get('sun'))
         self.set_progress(self.target_progress, None, True)
@@ -278,9 +276,10 @@ class LectorcitoApp(ctk.CTk):
     def _paint_left_sidebar_text(self, event=None):
         self.canvas_left.delete("all")
         w, h = self.canvas_left.winfo_width(), self.canvas_left.winfo_height()
-        color = COLORS['dark']['text'] if self.current_theme == "Light" else COLORS['light']['text']
-        self.canvas_left.create_text(w / 2, h / 2, text=f"Lectorcito Pro v{VERSION}", angle=90,
-                                     font=("Segoe UI", 10, "bold"), fill=color)
+        if w > 1 and h > 1:
+            color = COLORS['dark']['text'] if self.current_theme == "Light" else COLORS['light']['text']
+            self.canvas_left.create_text(w / 2, h / 2, text=f"Lectorcito Pro v{VERSION}", angle=90,
+                                         font=("Segoe UI", 10, "bold"), fill=color)
 
     def _animate_progress(self):
         if self.animation_after_id: self.after_cancel(self.animation_after_id); self.animation_after_id = None
@@ -288,8 +287,7 @@ class LectorcitoApp(ctk.CTk):
         if abs(diff) < 0.1:
             self.current_progress = self.target_progress
         else:
-            self.current_progress += diff * 0.1;
-            self.animation_after_id = self.after(20, self._animate_progress)
+            self.current_progress += diff * 0.1; self.animation_after_id = self.after(20, self._animate_progress)
         self.progress_bar.set(self.current_progress / 100)
 
     def _animate_gif(self):
@@ -313,54 +311,43 @@ class LectorcitoApp(ctk.CTk):
         if self.animation_after_id is None: self._animate_progress()
 
     def _change_and_reschedule_gif(self):
-        """Carga un nuevo GIF y programa el siguiente cambio."""
-        # Solo cambia el GIF si no hay un proceso activo
         if not self.controller.is_processing:
-            self._load_and_prepare_gif()
+            self._load_and_prepare_gif();
             self._animate_gif()
-
-        # Vuelve a programar la próxima ejecución
         self.gif_change_timer_id = self.after(GIF_CHANGE_INTERVAL_MS, self._change_and_reschedule_gif)
 
     def toggle_ui_for_processing(self, is_active: bool):
         state = "disabled" if is_active else "normal"
         for btn in self.main_buttons.values(): btn.configure(state=state)
         for btn in self.sidebar_buttons.values(): btn.configure(state=state)
-
-        # Cancela el temporizador de cambio de GIF al iniciar o terminar un proceso
-        if self.gif_change_timer_id:
-            self.after_cancel(self.gif_change_timer_id)
-            self.gif_change_timer_id = None
+        if self.gif_change_timer_id: self.after_cancel(self.gif_change_timer_id); self.gif_change_timer_id = None
 
         if is_active:
-            if self.gif_animation_after_id:
-                self.after_cancel(self.gif_animation_after_id)
-                self.gif_animation_after_id = None
-            self.lbl_gif_animation.place_forget()
-
+            if self.gif_animation_after_id: self.after_cancel(
+                self.gif_animation_after_id); self.gif_animation_after_id = None
+            self.progress_content_wrapper.grid_forget()
             self.set_progress(0)
-            self.lbl_progress_status.place(relx=0.0, rely=0.1, anchor="w")
-            self.lbl_percent.place(relx=1.0, rely=0.1, anchor="e")
-            self.progress_bar.place(relx=0.5, rely=0.4, anchor="center", relwidth=0.95)
-            self.lbl_current_file.place(relx=0.0, rely=0.6, anchor="w")
-            self.btn_cancel.place(relx=0.5, rely=0.9, anchor="center")
 
+            self.progress_frame.grid_rowconfigure(3, weight=1)
+            self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
+            self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
+            self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
+            self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
+            self.btn_cancel.grid(row=3, column=0, pady=(5, 10), sticky="s")
         else:
             for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file,
                            self.btn_cancel):
-                widget.place_forget()
+                widget.grid_forget()
 
+            self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew")
             self.after(50, self._load_and_prepare_gif)
 
             def show_gif():
                 if self.gif_pil_frames:
-                    self.lbl_gif_animation.place(relx=0.5, rely=0.5, anchor="center")
                     self._animate_gif()
-                    # Inicia el ciclo de cambios automáticos
                     self.gif_change_timer_id = self.after(GIF_CHANGE_INTERVAL_MS, self._change_and_reschedule_gif)
 
             self.after(60, show_gif)
-
             self.after(1000, lambda: self.set_progress(0))
 
     def show_message(self, title_key: str, message_key: str, *args):
