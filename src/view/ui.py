@@ -11,7 +11,7 @@ from view.translations import TRANSLATIONS
 from view.dialogs import MessageDialog, InfographicDialog
 
 # --- Constantes de la Interfaz ---
-VERSION = "5.9.5"
+VERSION = "5.9.6"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -176,7 +176,7 @@ class LectorcitoApp(ctk.CTk):
     def _create_main_buttons(self, parent):
         self.main_buttons_frame = ctk.CTkFrame(parent, fg_color="transparent")
         self.main_buttons_frame.grid(row=1, column=0, sticky="ew", pady=5)
-        opts = {"width": BTN_W_MAIN, "height": BTN_H_MAIN, "corner_radius": 8, "font": ("Segoe UI", 11, "bold")}
+        opts = {"width": BTN_W_MAIN, "height": BTN_H_MAIN, "corner_radius": 8, "font": ("Segoe UI", 11, "bold"), "text_color": "#FFFFFF"}
         self.main_buttons = {
             "selpath": ctk.CTkButton(self.main_buttons_frame, **opts),
             "choose": ctk.CTkButton(self.main_buttons_frame, **opts),

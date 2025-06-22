@@ -6,11 +6,14 @@ from utils import resource_path
 
 # --- Paleta de Colores Estándar (para consistencia) ---
 COLORS = {
+    "light": {"bg": "#EBEBEB", "text": "#000000", "left_bar": "#1A1E22", "progress_bar": "#D9D9D9"},
+    "dark": {"bg": "#1A1E22", "text": "#FFFFFF", "left_bar": "#EBEBEB", "progress_bar": "#333333"},
     "button": {"blue": "#3B8ED0", "green": "#3BD056", "red": "#D03B3D"},
     "button_hover": {"blue_h": "#3073A8", "green_h": "#2FA047", "red_h": "#A03031"},
+    "sidebar_hover": {"light": "#3C3C3C", "dark": "#DCDCDC"},
+    "progress_colors": {"start": "#3B8ED0", "mid": "#F9A825", "done": "#4CAF50"},
     "list_item": {"selected_bg": "#3B8ED0", "normal_bg": "transparent"}
 }
-
 
 # --- DIÁLOGOS PERSONALIZADOS (CON ANIMACIONES) ---
 class BaseDialog(ctk.CTkToplevel):
@@ -102,8 +105,10 @@ class ConfirmDialog(BaseDialog):
                                                                                                                    20))
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent");
         button_frame.pack()
-        ctk.CTkButton(button_frame, text="Sí", width=100, command=self._on_yes, fg_color=COLORS['button']['blue'],
-                      hover_color=COLORS['button_hover']['blue_h']).pack(side="left", padx=10)
+
+        # --- ESTILO CORREGIDO ---
+        ctk.CTkButton(button_frame, text="Sí", width=100, command=self._on_yes, fg_color=COLORS['button']['green'],
+                      hover_color=COLORS['button_hover']['green_h']).pack(side="left", padx=10)
         ctk.CTkButton(button_frame, text="No", width=100, command=self._on_no, fg_color=COLORS['button']['red'],
                       hover_color=COLORS['button_hover']['red_h']).pack(side="left", padx=10)
 
@@ -141,11 +146,10 @@ class ChoiceDialog(BaseDialog):
         return dialog.result
 
 
-# --- NUEVO DIÁLOGO PARA SELECCIÓN MÚLTIPLE ---
 class SelectFoldersDialog(BaseDialog):
     def __init__(self, parent, title):
         super().__init__(parent, title)
-        self.geometry("600x450")
+        self.geometry("500x400")
         self.selected_paths = []
         self._parent = parent
         self.list_item_widgets = []
@@ -156,12 +160,10 @@ class SelectFoldersDialog(BaseDialog):
         main_frame.grid_columnconfigure(0, weight=1)
         main_frame.grid_rowconfigure(1, weight=1)
 
-        # Contenedor para botones de gestión de lista
         top_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         top_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         ctk.CTkButton(top_frame, text=self._parent._tr("dlg_multi_add"), command=self._add_folder).pack(side="left")
 
-        # Contenedor principal para la lista y botones de reordenamiento
         list_area_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         list_area_frame.grid(row=1, column=0, sticky="nsew")
         list_area_frame.grid_columnconfigure(0, weight=1)
@@ -178,7 +180,6 @@ class SelectFoldersDialog(BaseDialog):
         ctk.CTkButton(reorder_button_frame, text="✕", width=30, command=self._remove_selected_folder,
                       fg_color=COLORS['button']['red'], hover_color=COLORS['button_hover']['red_h']).pack(pady=(10, 2))
 
-        # Contenedor para botones de acción finales
         bottom_button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         bottom_button_frame.grid(row=2, column=0, sticky="e", pady=(15, 0))
         ctk.CTkButton(bottom_button_frame, text=self._parent._tr("btn_cancel"), command=self._on_cancel,
@@ -205,7 +206,7 @@ class SelectFoldersDialog(BaseDialog):
 
                 item_frame = ctk.CTkFrame(self.scrollable_frame, fg_color=fg_color, corner_radius=6)
                 item_frame.pack(fill="x", padx=5, pady=3)
-                label = ctk.CTkLabel(item_frame, text=f"{i + 1}. {path}", anchor="w", compound="left", padx=10)
+                label = ctk.CTkLabel(item_frame, text=f"{i + 1}. {path}", anchor="w", compound="left", padx=10, font=("Segoe UI", 10))
                 label.pack(fill="x")
 
                 item_frame.bind("<Button-1>", lambda e, index=i: self._on_item_select(index))
