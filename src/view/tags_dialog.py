@@ -2,6 +2,11 @@ import customtkinter as ctk
 import copy
 from view.dialogs import BaseDialog
 
+# --- Paleta de Colores Estándar (para consistencia) ---
+COLORS = {
+    "button": {"blue": "#3B8ED0", "green": "#3BD056", "red": "#D03B3D"},
+    "button_hover": {"blue_h": "#3073A8", "green_h": "#2FA047", "red_h": "#A03031"}
+}
 
 class TagsConfigDialog(BaseDialog):
     """
@@ -19,11 +24,10 @@ class TagsConfigDialog(BaseDialog):
         self.files_list = copy.deepcopy(initial_files)
 
         self.tag_colors = {
-            "activo": {"fg": "#3B8ED0", "hover": "#3073A8", "text": "#FFFFFF"},
+            "activo": {"fg": COLORS['button']['blue'], "hover": COLORS['button_hover']['blue_h'], "text": "#FFFFFF"},
             "inactivo": {"fg": "#6c757d", "hover": "#5a6268", "text": "#FFFFFF"}
         }
 
-        # Fuente para medir el texto de forma precisa y constante
         self.tag_font = ctk.CTkFont(family="Segoe UI", size=11)
         self.geometry("475x500")
         self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -43,16 +47,16 @@ class TagsConfigDialog(BaseDialog):
         button_frame.grid(row=6, column=0, pady=(20, 0), sticky="ew")
         button_frame.grid_columnconfigure((0, 1), weight=1)
 
-        ok_button = ctk.CTkButton(button_frame, text="Guardar Cambios", command=self._on_ok)
+        # ESTILO: Botón de OK estandarizado
+        ok_button = ctk.CTkButton(button_frame, text="Guardar Cambios", command=self._on_ok,
+                                  fg_color=COLORS['button']['blue'], hover_color=COLORS['button_hover']['blue_h'])
         ok_button.grid(row=0, column=0, padx=5, sticky="e")
 
-        cancel_button = ctk.CTkButton(button_frame, text="Cancelar", command=self._on_cancel, fg_color="#D03B3D",
-                                      hover_color="#A03031")
+        # ESTILO: Botón de Cancelar estandarizado
+        cancel_button = ctk.CTkButton(button_frame, text="Cancelar", command=self._on_cancel,
+                                      fg_color=COLORS['button']['red'], hover_color=COLORS['button_hover']['red_h'])
         cancel_button.grid(row=0, column=1, padx=5, sticky="w")
 
-        # --- CORRECCIÓN: Redibujado inicial diferido ---
-        # Se fuerza una actualización de la geometría y se añade un retraso mayor
-        # para asegurar que la ventana se ha dibujado completamente antes de colocar las etiquetas.
         self.update_idletasks()
         self.after(500, self.redraw_all_tags)
 
@@ -96,7 +100,6 @@ class TagsConfigDialog(BaseDialog):
         current_row.pack(fill="x", anchor="w", pady=(0, 5))
         current_row_width = 0
 
-        # --- AJUSTE FINAL: Valores de espaciado perfectos ---
         PILL_FIXED_WIDTH = 75
         SPACE_BETWEEN_PILLS = 5
 

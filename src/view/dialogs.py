@@ -3,6 +3,11 @@ import os
 from PIL import Image
 from utils import resource_path
 
+# --- Paleta de Colores Estándar (para consistencia) ---
+COLORS = {
+    "button": {"blue": "#3B8ED0", "green": "#3BD056", "red": "#D03B3D"},
+    "button_hover": {"blue_h": "#3073A8", "green_h": "#2FA047", "red_h": "#A03031"}
+}
 
 # --- DIÁLOGOS PERSONALIZADOS (CON ANIMACIONES) ---
 class BaseDialog(ctk.CTkToplevel):
@@ -16,7 +21,7 @@ class BaseDialog(ctk.CTkToplevel):
         self.attributes("-alpha", 0.0)
 
         # Centrar la ventana de diálogo con respecto al padre
-        self.after(10, self._center_window)  # Retraso para asegurar que las dimensiones del padre estén listas
+        self.after(10, self._center_window)
 
         # Intentar establecer el mismo icono que la ventana principal
         def _set_icon():
@@ -64,7 +69,6 @@ class BaseDialog(ctk.CTkToplevel):
             self.destroy()
 
     def _on_ok(self, event=None):
-        # El resultado se establece en las subclases antes de llamar a esto
         self._close_with_fade_out()
 
     def _on_cancel(self, event=None):
@@ -79,14 +83,19 @@ class MessageDialog(BaseDialog):
         super().__init__(parent, title)
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center").pack(fill="x", pady=(0, 20))
-        ok_button = ctk.CTkButton(main_frame, text="OK", width=100, command=self._on_ok)
+        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center", font=("Segoe UI", 13)).pack(fill="x",
+                                                                                                             pady=(0,
+                                                                                                                   20))
+
+        # ESTILO: Botón estandarizado
+        ok_button = ctk.CTkButton(main_frame, text="OK", width=100, command=self._on_ok,
+                                  fg_color=COLORS['button']['blue'], hover_color=COLORS['button_hover']['blue_h'])
         ok_button.pack(pady=(0, 10))
         ok_button.focus_set()
         self.bind("<Return>", self._on_ok)
 
     def _on_ok(self, event=None):
-        self.result = True  # Se establece un resultado para consistencia
+        self.result = True
         super()._on_ok(event)
 
 
@@ -98,15 +107,30 @@ class ConfirmDialog(BaseDialog):
         self.result = False
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center").pack(fill="x", pady=(0, 20))
+        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center", font=("Segoe UI", 13)).pack(fill="x",
+                                                                                                             pady=(0,
+                                                                                                                   20))
+
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.pack()
-        ctk.CTkButton(button_frame, text="Sí", width=100, command=self._on_yes).pack(side="left", padx=10)
-        ctk.CTkButton(button_frame, text="No", width=100, command=self._on_no).pack(side="left", padx=10)
 
-    def _on_yes(self, event=None): self.result = True; self._close_with_fade_out()
+        # ESTILO: Botón de confirmación (Sí) estandarizado
+        ctk.CTkButton(button_frame, text="Sí", width=100, command=self._on_yes,
+                      fg_color=COLORS['button']['blue'], hover_color=COLORS['button_hover']['blue_h']).pack(side="left",
+                                                                                                            padx=10)
 
-    def _on_no(self, event=None): self.result = False; self._close_with_fade_out()
+        # ESTILO: Botón de negación (No) estandarizado con color de peligro
+        ctk.CTkButton(button_frame, text="No", width=100, command=self._on_no,
+                      fg_color=COLORS['button']['red'], hover_color=COLORS['button_hover']['red_h']).pack(side="left",
+                                                                                                          padx=10)
+
+    def _on_yes(self, event=None):
+        self.result = True
+        self._close_with_fade_out()
+
+    def _on_no(self, event=None):
+        self.result = False
+        self._close_with_fade_out()
 
     @classmethod
     def ask(cls, parent, title, message):
@@ -123,13 +147,21 @@ class ChoiceDialog(BaseDialog):
         self.option1_value, self.option2_value = option1_value, option2_value
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-        ctk.CTkLabel(main_frame, text=message, wraplength=350).pack(fill="x", pady=(0, 20))
-        ctk.CTkButton(main_frame, text=option1_text, width=200, command=self._on_option1).pack(pady=5)
-        ctk.CTkButton(main_frame, text=option2_text, width=200, command=self._on_option2).pack(pady=5)
+        ctk.CTkLabel(main_frame, text=message, wraplength=350, font=("Segoe UI", 13)).pack(fill="x", pady=(0, 20))
 
-    def _on_option1(self): self.result = self.option1_value; super()._on_ok()
+        # ESTILO: Botones de opción estandarizados
+        ctk.CTkButton(main_frame, text=option1_text, width=200, command=self._on_option1,
+                      fg_color=COLORS['button']['blue'], hover_color=COLORS['button_hover']['blue_h']).pack(pady=5)
+        ctk.CTkButton(main_frame, text=option2_text, width=200, command=self._on_option2,
+                      fg_color=COLORS['button']['blue'], hover_color=COLORS['button_hover']['blue_h']).pack(pady=5)
 
-    def _on_option2(self): self.result = self.option2_value; super()._on_ok()
+    def _on_option1(self):
+        self.result = self.option1_value
+        super()._on_ok()
+
+    def _on_option2(self):
+        self.result = self.option2_value
+        super()._on_ok()
 
     @classmethod
     def ask(cls, parent, title, message, option1_text, option2_text, option1_value, option2_value):
@@ -183,16 +215,16 @@ class InfographicDialog(ctk.CTkToplevel):
     def _fade_in(self):
         alpha = self.attributes("-alpha")
         if alpha < 1:
-            alpha = min(alpha + 0.1, 1.0);
-            self.attributes("-alpha", alpha);
+            alpha = min(alpha + 0.1, 1.0)
+            self.attributes("-alpha", alpha)
             self.after(15, self._fade_in)
 
     def _close_with_fade_out(self, event=None):
         self.grab_release()
         alpha = self.attributes("-alpha")
         if alpha > 0:
-            alpha = max(alpha - 0.1, 0.0);
-            self.attributes("-alpha", alpha);
+            alpha = max(alpha - 0.1, 0.0)
+            self.attributes("-alpha", alpha)
             self.after(15, self._close_with_fade_out)
         else:
             self.destroy()
