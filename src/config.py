@@ -32,17 +32,21 @@ DEFAULT_CONFIG = {
     "language": "es",
 
     # (Ver > Carpetas) Carpetas a resaltar.
-    "etiquetas_carpetas_importantes": to_tags([]),
+    "etiquetas_carpetas_importantes": to_tags(
+        ["src"]
+    ),
     # (Ver > Archivos) Extensiones a incluir.
     "etiquetas_extensiones_incluidas": to_tags(
-        [".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json", ".xml", ".yml", ".bat", ".ps1"]
+        [".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json"]
     ),
     # (No Ver > Carpetas) Carpetas a ignorar.
     "etiquetas_carpetas_excluidas": to_tags(
         ["__pycache__", "venv", ".venv", "node_modules", ".git", "build", "dist", ".idea"]
     ),
     # (No Ver > Archivos) Nombres de archivo completos a ignorar.
-    "etiquetas_archivos_excluidos": to_tags([]),
+    "etiquetas_archivos_excluidos": to_tags(
+        [".spec", ".DS_Store", "Pipfile", "Pipfile.lock", "package.json", "package-lock.json"]
+    ),
 
     # Los archivos multimedia siguen usando una lista simple porque no son configurables por el usuario.
     "media_extensions": [

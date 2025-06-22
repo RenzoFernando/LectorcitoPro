@@ -170,22 +170,28 @@ class LectorcitoController:
         return True
 
     def create_tree_structure(self):
+        """Crea un reporte con la estructura de árbol de una carpeta, pidiendo primero la opción."""
         if not self._check_destination_path():
-            return
-        source_path = filedialog.askdirectory(title=self.view._tr("btn_create_tree"))
-        if not source_path:
             return
 
         from view.dialogs import ChoiceDialog
+        # 1. Preguntar primero por el tipo de árbol.
         choice = ChoiceDialog.ask(
             parent=self.view, title=self.view._tr("dlg_tree_choice_title"),
             message=self.view._tr("dlg_tree_choice_prompt"),
             option1_text=self.view._tr("dlg_tree_op1"), option2_text=self.view._tr("dlg_tree_op2"),
             option1_value="complete", option2_value="filtered"
         )
+        # Si el usuario cierra el diálogo o cancela, no hacer nada.
         if not choice:
             return
 
+        # 2. Si se eligió una opción, ahora sí pedir la carpeta.
+        source_path = filedialog.askdirectory(title=self.view._tr("btn_create_tree"))
+        if not source_path:
+            return
+
+        # 3. Proceder con la generación del reporte.
         use_filters = (choice == "filtered")
         status, report_path = processor.generate_tree_report(
             source_folder=source_path, output_path=self.config["lecturas_path"], use_config=use_filters,

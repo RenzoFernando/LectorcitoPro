@@ -59,7 +59,14 @@ TRANSLATIONS = {
         "dlg_nover_title": "Configurar qué No Ver",
         "dlg_nover_folder_prompt": "Carpetas a Ignorar por completo (ej: node_modules, .venv):",
         "dlg_nover_file_prompt": "Archivos a Ignorar por nombre completo (ej: license.txt, .env):",
-        "progress_processing_text": "Procesando..."
+        "progress_processing_text": "Procesando...",
+        "tooltip_ver": "Configurar qué carpetas y extensiones incluir en la lectura.",
+        "tooltip_nover": "Configurar qué carpetas y archivos completos ignorar.",
+        "tooltip_tema": "Cambiar entre el tema claro y el oscuro.",
+        "tooltip_idioma": "Cambiar entre Español e Inglés.",
+        "tooltip_restaurar": "Restaurar todas las configuraciones a su estado inicial.",
+        "tooltip_github": "Abrir el repositorio del proyecto en GitHub.",
+        "tooltip_info": "Mostrar el manual de usuario y la información de la aplicación."
     },
     "en": {
         "dlg_read_type_title": "Reading Type",
@@ -119,6 +126,13 @@ TRANSLATIONS = {
         "dlg_nover_title": "Configure what Not to View",
         "dlg_nover_folder_prompt": "Folders to Ignore completely (e.g., node_modules, .venv):",
         "dlg_nover_file_prompt": "Files to Ignore by full name (e.g., license.txt, .env):",
-        "progress_processing_text": "Processing..."
+        "progress_processing_text": "Processing...",
+        "tooltip_ver": "Configure which folders and extensions to include in the reading.",
+        "tooltip_nover": "Configure which folders and full filenames to ignore.",
+        "tooltip_tema": "Toggle between light and dark theme.",
+        "tooltip_idioma": "Switch between English and Spanish.",
+        "tooltip_restaurar": "Restore all settings to their default state.",
+        "tooltip_github": "Open the project repository on GitHub.",
+        "tooltip_info": "Show the user manual and application information."
     }
 }

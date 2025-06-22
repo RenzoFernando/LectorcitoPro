@@ -77,7 +77,7 @@ Buen@s [momento del día] [usuario], por favor seleccione una opción a realizar
 
 1. Corrección de alineación y justificación de todos los elementos de la interfaz (centrado total).
 2. Rediseño visual de botones y sidebars: colores, bordes, sombras y estados de hover.
-3. Mejora en los tooltips y alineación de íconos en barra lateral derecha.
+3. Mejora en los tooltips.
 4. Nuevo selector visual de idioma y tema desde el inicio.
 5. Mayor variedad y personalización de saludos dinámicos según hora del día.
 6. Mejora visual y funcional en la barra de progreso (color, suavidad, animación) y GIf mientras la barra está inactiva.

@@ -9,9 +9,11 @@ import random
 from utils import resource_path
 from view.translations import TRANSLATIONS
 from view.dialogs import MessageDialog, InfographicDialog
+# --- ¡NUEVA IMPORTACIÓN! ---
+from view.tooltip import CustomTooltip
 
 # --- Constantes de la Interfaz ---
-VERSION = "5.9.6"
+VERSION = "5.10.0"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -31,6 +33,7 @@ BTN_W_ICON, BTN_H_ICON = 35, 40
 SIDEBAR_WIDTH = 48
 PROGRESS_W = 357
 
+
 # --- CLASE PRINCIPAL DE LA VISTA ---
 class LectorcitoApp(ctk.CTk):
     def __init__(self, cfg: dict, controller):
@@ -45,6 +48,9 @@ class LectorcitoApp(ctk.CTk):
         self.target_progress = 0
         self.animation_after_id = None
         self.REPO_URL = REPO_URL
+
+        # --- Almacenamiento para instancias de Tooltip ---
+        self.tooltips = {}
 
         # --- Gestión de GIFs ---
         self.gif_names = ["Cat_Working.gif", "Hacker_Coding.gif", "Computer_Coding.gif",
@@ -176,7 +182,8 @@ class LectorcitoApp(ctk.CTk):
     def _create_main_buttons(self, parent):
         self.main_buttons_frame = ctk.CTkFrame(parent, fg_color="transparent")
         self.main_buttons_frame.grid(row=1, column=0, sticky="ew", pady=5)
-        opts = {"width": BTN_W_MAIN, "height": BTN_H_MAIN, "corner_radius": 8, "font": ("Segoe UI", 11, "bold"), "text_color": "#FFFFFF"}
+        opts = {"width": BTN_W_MAIN, "height": BTN_H_MAIN, "corner_radius": 8, "font": ("Segoe UI", 11, "bold"),
+                "text_color": "#FFFFFF"}
         self.main_buttons = {
             "selpath": ctk.CTkButton(self.main_buttons_frame, **opts),
             "choose": ctk.CTkButton(self.main_buttons_frame, **opts),
@@ -257,6 +264,25 @@ class LectorcitoApp(ctk.CTk):
             if key in key_map: btn.configure(text=self._tr(key_map[key]))
         self.btn_cancel.configure(text=self._tr("btn_cancel"))
         self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
+
+        # --- SECCIÓN MODIFICADA/AÑADIDA: ASIGNAR/ACTUALIZAR TOOLTIPS ---
+        tooltip_map = {
+            "ver": "tooltip_ver",
+            "nover": "tooltip_nover",
+            "theme_icon": "tooltip_tema",
+            "traducir": "tooltip_idioma",
+            "restaurar": "tooltip_restaurar",
+            "github": "tooltip_github",
+            "info": "tooltip_info"
+        }
+        for key, btn in self.sidebar_buttons.items():
+            if key in tooltip_map:
+                # Si el tooltip para este botón ya existe, solo actualizamos el texto
+                if key in self.tooltips:
+                    self.tooltips[key].text = self._tr(tooltip_map[key])
+                # Si no existe, creamos una nueva instancia y la guardamos
+                else:
+                    self.tooltips[key] = CustomTooltip(btn, text=self._tr(tooltip_map[key]))
 
     def apply_theme(self):
         is_light = self.current_theme == "Light"
@@ -368,3 +394,4 @@ class LectorcitoApp(ctk.CTk):
             InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
         else:
             self.show_message("error_title", "msg_infographic_error")
+
