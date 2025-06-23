@@ -12,7 +12,7 @@ from view.dialogs import MessageDialog, InfographicDialog
 from view.tooltip import CustomTooltip
 
 # Constantes para la información y apariencia de la UI.
-VERSION = "5.10.4"
+VERSION = "5.10.5"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"

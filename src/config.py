@@ -58,7 +58,7 @@ DEFAULT_CONFIG = {
         '.mp3', '.wav', '.flac', '.ogg',
         '.zip', '.rar', '.7z', '.tar', '.gz',
         '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-        '.exe', '.dll', '.bin', '.iso', '.so', '.dylib'
+        '.exe', '.dll', '.bin', '.iso', '.so', '.dylib', ".cer", ".pfx"
     ]
 }
 
