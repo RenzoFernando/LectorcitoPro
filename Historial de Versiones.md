@@ -1,87 +1,89 @@
 # Historial de Versiones
 
-## Versión 0
+## Versión 0: Funcionalidad Básica
+1.  Implementada la lectura recursiva de directorios para archivos de texto (`.txt`, `.py`, etc.).
+2.  Desarrollada la concatenación del contenido de los archivos en un único reporte de salida.
+3.  Establecido un sistema de nombrado básico para el archivo generado (operación por consola).
+4.  Asignada la extensión `.txt` como predeterminada para todos los reportes.
+5.  Añadida notificación por consola con la ruta de guardado al finalizar el proceso.
 
-1. Lectura recursiva de archivos de texto (`.txt`, `.py`, etc.).
-2. Concatenación del contenido en un único archivo de salida.
-3. Nombre básico del archivo generado (sin interfaz gráfica).
-4. Inclusión de extensión `.txt` predeterminada para el reporte generado.
-5. Impresión por consola del path donde se guardó el archivo final.
+---
 
-## Versión 1
+## Versión 1: Interfaz Gráfica Inicial
+1.  Creada una ventana principal simple con un botón para seleccionar la carpeta de análisis.
+2.  Automatizada la generación de reportes en una subcarpeta estándar denominada `Lecturas`.
+3.  Implementado un formato de versionado para los archivos de salida: `nombre-carpeta_vN.txt`.
+4.  Integrado el ícono de la aplicación (`lector.ico`) en la ventana.
+5.  Añadida una barra de progreso indeterminada para feedback visual durante el análisis.
 
-1. Ventana simple con botón "Elegir carpeta".
-2. Generación del reporte en una carpeta llamada `Lecturas` en la misma ubicación.
-3. Nombre del archivo generado con formato `carpeta_vN.txt`.
-4. Inclusión del ícono `lector.ico`.
-5. Barra de progreso indeterminada.
+---
 
-## Versión 2
+## Versión 2: Mejoras de UI y Funcionalidad
+1.  Añadido el botón "Seleccionar Ruta de Lecturas" para permitir al usuario definir una ubicación de guardado personalizada.
+2.  Implementada la funcionalidad de tema claro/oscuro.
+3.  Agregado un enlace funcional al repositorio del proyecto dentro de la interfaz.
+4.  Corregida la carga del ícono personalizado (`lector.png`) para asegurar su correcta visualización.
+5.  Implementado el botón "Eliminar todas las Lecturas" con su respectivo diálogo de confirmación.
+6.  Mejorado el pie de página (footer) con información de créditos.
+7.  Realizadas optimizaciones visuales en la paleta de colores, tipografía y distribución de elementos.
+8.  Actualizada la barra de progreso a un modo determinado, mostrando el porcentaje de 0 a 100%.
+9.  Desarrollado un sistema de notificaciones emergentes (pop-ups) para los siguientes estados:
+    * **Éxito:** "¡Listo! El contenido fue guardado correctamente."
+    * **Atención:** "Primero debe generar un archivo para poder abrirlo."
+    * **Error:** "Ocurrió un error durante el análisis. Intente con otra carpeta."
+10. Implementado un pie de página dinámico con información de la aplicación:
+    ```
+    Lectorcito Pro v*.*
+    Desarrollado por: Renzo Fernando Mosquera Daza
+    [https://github.com/RenzoFernando/LectorcitoPro.git](https://github.com/RenzoFernando/LectorcitoPro.git)
+    © 2025 [github.com/RenzoFernando](https://github.com/RenzoFernando) – All Rights Reserved.
+    ```
 
-1. Botón "Seleccionar Ruta de Lecturas" para elegir la ubicación de la carpeta `Lecturas`.
-2. Implementación del modo claro/oscuro.
-3. Enlace clickeable al repositorio dentro de la interfaz.
-4. Ícono personalizado (`lector.png`) cargado correctamente en la ventana.
-5. Botón "Eliminar todas las Lecturas" con confirmación.
-6. Mejoras en el pie de página (footer) con créditos.
-7. Mejoras visuales en colores, tipografía y distribución.
-8. Barra de progreso siempre visible con porcentaje (0–100%).
-9. Mensajes emergentes (pop-ups):
-   * Éxito: “¡Listo! El contenido fue guardado correctamente.”
-   * Atención: “Primero debe generar un archivo para poder abrirlo.”
-   * Error: “Ocurrió un error durante el análisis. Intente con otra carpeta.”
-10. Pie de página dinámico con número de versión y enlace al repositorio:
- ```
- Lectorcito Pro v*.*  
- Desarrollado por: Renzo Fernando Mosquera Daza  
- https://github.com/RenzoFernando/LectorcitoPro.git  
- © 2025 github.com/RenzoFernando – All Rights Reserved.
- ```
+---
 
-## Versión 3
+## Versión 3: Personalización y Experiencia de Usuario
+1.  Integrado un mensaje de bienvenida dinámico que varía según la hora del día.
+2.  Añadido soporte completo para multi-idioma (Español/Inglés).
+3.  Implementada la persistencia de preferencias del usuario (rutas, tema, idioma) entre sesiones.
+4.  Solucionado un error que ocurría al seleccionar una carpeta tras haber eliminado el directorio `Lecturas`.
+5.  Habilitada la configuración de filtros para incluir y excluir extensiones y carpetas específicas.
+6.  Añadidos tooltips descriptivos a todos los botones de la barra de configuración lateral.
+7.  Ajustada la alineación de las barras laterales para una mayor consistencia visual.
+8.  Simplificado el pie de página a un formato de copyright estándar:
+    ```
+    Copyright © 2025 - Renzo Fernando - All Rights Reserved.
+    ```
+9.  Mejorada la barra de progreso para un centrado correcto y visualización clara del porcentaje.
+10. Creado un encabezado dinámico con saludo y nombre de usuario:
+    ```
+    LECTORCITO PRO
+    Buen@s [momento del día] [usuario], por favor seleccione una opción a realizar.
+    ```
 
-1. Mensaje de bienvenida dinámico según la hora del día (“¡Buenos días!”, “¡Buenas tardes!”, “¡Buenas noches!”).
-2. Soporte multilenguaje (Español/Inglés).
-3. Persistencia de preferencias para rutas utilizadas anteriormente.
-4. Corrección del error al seleccionar una carpeta después de haber eliminado la carpeta de Lecturas.
-5. Posibilidad de configurar libremente:
-   * Las extensiones de archivos que se desean leer ("Ver").
-   * Las carpetas y extensiones que se desean excluir ("No Ver").
-6. Alineación y descripción emergente (tooltip) para los botones de configuración lateral (Ver, No Ver, Guardar preferencias, Tema claro/oscuro, Idioma, GitHub e Información).
-7. Barra lateral izquierda ajustada al ancho y altura de los botones laterales derechos.
-8. Pie de página simplificado a:
-```
-Copyright © 2025 - Renzo Fernando - All Rights Reserved.
-```
-9. Barra de progreso centrada que no sobrepase el 100% y con porcentaje visible debajo.
-10. Encabezado centrado dinámico:
-```
-LECTORCITO PRO  
-Buen@s [momento del día] [usuario], por favor seleccione una opción a realizar.
-```
+---
 
-## Versión 4
+## Versión 4: Refactorización Arquitectónica y Funciones Clave
+1.  Realizada una reorganización completa del código fuente bajo el patrón de arquitectura MVC.
+2.  Desarrollada una configuración avanzada e independiente para las reglas de inclusión y exclusión.
+3.  Implementada la persistencia de ajustes mediante un archivo JSON estructurado.
+4.  Corregida la visualización del ícono de la aplicación para que sea consistente en todas las sub-ventanas.
+5.  Añadido un diálogo inicial para que el usuario elija entre usar una ruta de guardado por defecto o seleccionarla cada vez.
+6.  Integrado el soporte para cancelar operaciones de lectura en curso de forma segura.
+7.  Implementado un manejo especial para archivos multimedia, los cuales ahora se listan en el reporte.
+8.  Añadida la funcionalidad para generar una vista de la estructura del proyecto en formato de árbol.
+9.  Refinado el manejo de errores para proporcionar mensajes más claros y específicos.
+10. Implementado el guardado silencioso de preferencias y un botón para restaurar los ajustes de fábrica.
 
-1. Reorganización completa del código usando el patrón MVC (Modelo-Vista-Controlador).
-2. Configuración avanzada independiente para carpetas y extensiones ("Ver" / "No Ver").
-3. Mejora en la persistencia de ajustes mediante archivo JSON estructurado.
-4. Corrección del icono personalizado de la aplicación en todas las ventanas y subventanas emergentes.
-5. Pregunta inicial opcional: usar lugar por defecto para guardar los reportes o permitir elegirlo cada vez.
-6. Soporte para cancelar una lectura en curso y eliminar archivos interrumpidos.
-7. Manejo especial para imágenes (`.png`, `.jpg`, `.svg`, etc.), y demas extensiones multimedia y solo solo mostrar su nombre y extensión.
-8. Soporte para estructuras tipo árbol (tree-view) del contenido leído, sin leer archivos.
-9. Mejor manejo de errores y mensajes claros en caso de fallos durante el procesamiento.
-10. Implementar guardado silencioso de preferencias y añadir botón para restaurar ajustes.
+---
 
-## Versión 5 (En desarrollo)
-
-1. Corrección de alineación y justificación de todos los elementos de la interfaz (centrado total).
-2. Rediseño visual de botones y sidebars: colores, bordes, sombras y estados de hover.
-3. Mejora en los tooltips.
-4. Nuevo selector visual de idioma y tema desde el inicio.
-5. Mayor variedad y personalización de saludos dinámicos según hora del día.
-6. Mejora visual y funcional en la barra de progreso (color, suavidad, animación) y GIf mientras la barra está inactiva.
-7. Transiciones suaves y efectos en la interfaz (fade in/out o animaciones ligeras).
-8. Interfaz optimizada para pantallas pequeñas o resolución variable (responsive).
-9. Diálogos “Ver” y “No Ver” con estilo más atractivo y compacto.
-10. Manual visual (infografía dentro del programa o accesible desde el botón de información).
+## Versión 5: Roadmap 
+1.  Finalizar el centrado y justificación de todos los elementos de la interfaz para una alineación perfecta.
+2.  Realizar un rediseño visual de botones y barras laterales, mejorando colores, bordes y efectos `hover`.
+3.  Optimizar la claridad y el posicionamiento de los tooltips.
+4.  Crear un nuevo selector visual para el idioma y el tema en la pantalla de inicio.
+5.  Ampliar la variedad y personalización de los saludos dinámicos.
+6.  Mejorar visual y funcionalmente la barra de progreso, añadiendo un GIF para el estado inactivo.
+7.  Implementar transiciones suaves y animaciones ligeras para mejorar la experiencia de usuario.
+8.  Optimizar la interfaz para un diseño responsivo que se adapte a diferentes resoluciones de pantalla.
+9.  Rediseñar los diálogos de configuración ("Ver" / "No Ver") para un estilo más moderno y compacto.
+10. Integrar un manual de usuario visual (infografía) accesible desde la aplicación.
