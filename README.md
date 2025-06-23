@@ -97,7 +97,6 @@ LectorcitoPro/
         ├── tooltip.py
         ├── translations.py
         └── ui.py
-
 ```
 
 ---
