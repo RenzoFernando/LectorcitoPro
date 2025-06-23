@@ -302,7 +302,7 @@ class InfographicDialog(BaseDialog):
 
         try:
             # Establece un tamaño predeterminado para la ventana
-            self.geometry("500x400")
+            self.geometry("575x400")
 
             # Crea el marco con scroll para la imagen
             scroll_frame = ctk.CTkScrollableFrame(self, label_text="")
@@ -311,7 +311,7 @@ class InfographicDialog(BaseDialog):
             # Carga, redimensiona y muestra la imagen
             pil_image_original = Image.open(image_path)
             original_width, original_height = pil_image_original.size
-            target_width = 450
+            target_width = 525
             ratio = target_width / original_width
             target_height = int(original_height * ratio)
 
