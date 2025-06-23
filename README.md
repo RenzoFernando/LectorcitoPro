@@ -153,7 +153,7 @@ Instrucciones para compilar desde el código fuente
   ### Compilación
   Para generar el archivo `.exe`, ejecute el script de compilación:
   ```batch
-  BUILD.bat
+  build.bat
   ```
   Este se encargará de todo el proceso con PyInstaller y dejará el ejecutable final en la carpeta `descargas/`.
 
