@@ -27,11 +27,6 @@ class BaseDialog(ctk.CTkToplevel):
         self.resizable(False, False)
         self.attributes("-alpha", 0.0)
 
-        # Flag para asegurar que el centrado ocurra solo una vez.
-        self._is_centered = False
-        # Se asocia el evento <Configure> a un método para centrar la ventana de forma segura.
-        self.bind("<Configure>", self._on_configure_center)
-
         # Intenta establecer el icono de la ventana heredado de la ventana padre.
         def _set_icon():
             try:
@@ -46,33 +41,37 @@ class BaseDialog(ctk.CTkToplevel):
         self.result = None
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
         self.bind("<Escape>", self._close_with_fade_out)
-        self.grab_set()
 
-    # Manejador de evento que centra la ventana la primera vez que se dibuja.
-    def _on_configure_center(self, event=None):
-        if not self._is_centered:
-            self._is_centered = True
+        # La lógica de centrado ahora se llama con un retardo para garantizar que
+        # la ventana tenga sus dimensiones finales antes de calcular la posición.
+        self.after(100, self._center_and_fade_in)
+
+    # Rutina que centra la ventana y luego inicia la animación.
+    def _center_and_fade_in(self):
+        try:
+            self.grab_set()
             self._center_window()
-            self.after(10, self._fade_in)
+            self._fade_in()
+        except Exception:
+            # Si la ventana se cierra antes de que este método se ejecute,
+            # puede ocurrir un error. Es seguro ignorarlo.
+            pass
 
     # Centra el diálogo con respecto a la ventana principal.
     def _center_window(self):
-        try:
-            self.update_idletasks()
-            parent_x = self.master.winfo_x()
-            parent_y = self.master.winfo_y()
-            parent_width = self.master.winfo_width()
-            parent_height = self.master.winfo_height()
+        self.update_idletasks()
+        parent_x = self.master.winfo_x()
+        parent_y = self.master.winfo_y()
+        parent_width = self.master.winfo_width()
+        parent_height = self.master.winfo_height()
 
-            dialog_width = self.winfo_width()
-            dialog_height = self.winfo_height()
+        dialog_width = self.winfo_width()
+        dialog_height = self.winfo_height()
 
-            x = parent_x + (parent_width - dialog_width) // 2
-            y = parent_y + (parent_height - dialog_height) // 2
+        x = parent_x + (parent_width - dialog_width) // 2
+        y = parent_y + (parent_height - dialog_height) // 2
 
-            self.geometry(f"+{x}+{y}")
-        except Exception as e:
-            print(f"Error al centrar el diálogo: {e}")
+        self.geometry(f"+{x}+{y}")
 
     # Anima la aparición gradual del diálogo.
     def _fade_in(self):
@@ -99,7 +98,7 @@ class BaseDialog(ctk.CTkToplevel):
 
     # Maneja el evento de cancelación.
     def _on_cancel(self, event=None):
-        self.result = None;
+        self.result = None
         self._close_with_fade_out()
 
 
@@ -112,8 +111,8 @@ class MessageDialog(BaseDialog):
         ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center", font=("Segoe UI", 13)).pack(fill="x", pady=(0,20))
         ok_button = ctk.CTkButton(main_frame, text="OK", width=100, command=self._on_ok,
                                     fg_color=COLORS['button']['blue'], hover_color=COLORS['button_hover']['blue_h'])
-        ok_button.pack(pady=(0, 10));
-        ok_button.focus_set();
+        ok_button.pack(pady=(0, 10))
+        ok_button.focus_set()
         self.bind("<Return>", self._on_ok)
 
     def _on_ok(self, event=None): self.result = True; super()._on_ok(event)
@@ -127,7 +126,7 @@ class ConfirmDialog(BaseDialog):
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
         ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center", font=("Segoe UI", 13)).pack(fill="x", pady=(0,20))
-        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent");
+        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.pack()
 
         ctk.CTkButton(button_frame, text="Sí", width=100, command=self._on_yes, fg_color=COLORS['button']['green'],
@@ -142,8 +141,8 @@ class ConfirmDialog(BaseDialog):
     # Método de clase para mostrar el diálogo y esperar una respuesta.
     @classmethod
     def ask(cls, parent, title, message):
-        dialog = cls(parent, title, message);
-        parent.wait_window(dialog);
+        dialog = cls(parent, title, message)
+        parent.wait_window(dialog)
         return dialog.result
 
 
@@ -168,7 +167,7 @@ class ChoiceDialog(BaseDialog):
     @classmethod
     def ask(cls, parent, title, message, option1_text, option2_text, option1_value, option2_value):
         dialog = cls(parent, title, message, option1_text, option2_text, option1_value, option2_value)
-        parent.wait_window(dialog);
+        parent.wait_window(dialog)
         return dialog.result
 
 
@@ -224,7 +223,7 @@ class SelectFoldersDialog(BaseDialog):
 
         if not self.selected_paths:
             label = ctk.CTkLabel(self.scrollable_frame, text=self._parent._tr("dlg_multi_empty"), text_color="gray")
-            label.pack(pady=10);
+            label.pack(pady=10)
             self.list_item_widgets.append(label)
         else:
             for i, path in enumerate(self.selected_paths):
@@ -234,7 +233,7 @@ class SelectFoldersDialog(BaseDialog):
                 item_frame = ctk.CTkFrame(self.scrollable_frame, fg_color=fg_color, corner_radius=6)
                 item_frame.pack(fill="x", padx=5, pady=3)
                 label = ctk.CTkLabel(item_frame, text=f"{i + 1}. {path}", anchor="w", compound="left", padx=10,
-                                    font=("Segoe UI", 10))
+                                        font=("Segoe UI", 10))
                 label.pack(fill="x")
 
                 item_frame.bind("<Button-1>", lambda e, index=i: self._on_item_select(index))
@@ -290,8 +289,8 @@ class SelectFoldersDialog(BaseDialog):
     # Método de clase para mostrar el diálogo y devolver la lista de rutas.
     @classmethod
     def ask(cls, parent, title):
-        dialog = cls(parent, title);
-        parent.wait_window(dialog);
+        dialog = cls(parent, title)
+        parent.wait_window(dialog)
         return dialog.result
 
 

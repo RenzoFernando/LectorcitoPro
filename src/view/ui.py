@@ -12,7 +12,7 @@ from view.dialogs import MessageDialog, InfographicDialog
 from view.tooltip import CustomTooltip
 
 # Constantes para la información y apariencia de la UI.
-VERSION = "5.10.3"
+VERSION = "5.10.4"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -148,6 +148,27 @@ class LectorcitoApp(ctk.CTk):
         except Exception as e:
             print(f"Error cargando iconos de tema: {e}")
 
+        try:
+            # Según tu indicación: logo_oscuro para tema claro, logo_claro para tema oscuro.
+            logo_light_theme = Image.open(resource_path("logo_oscuro.png"))
+            logo_dark_theme = Image.open(resource_path("logo_claro.png"))
+
+            # Calculamos el tamaño manteniendo la proporción original de la imagen
+            original_width, original_height = logo_light_theme.size
+            target_width = 150  # Ancho deseado para el logo
+            aspect_ratio = original_height / original_width
+            target_height = int(target_width * aspect_ratio)
+
+            # Creamos un único objeto CTkImage que gestionará el cambio de tema automáticamente
+            self.logo_image = ctk.CTkImage(
+                light_image=logo_light_theme,
+                dark_image=logo_dark_theme,
+                size=(target_width, target_height)
+            )
+        except Exception as e:
+            print(f"Error al cargar las imágenes del logo: {e}")
+            self.logo_image = None
+
     # Carga y prepara un GIF aleatorio para la animación.
     def _load_and_prepare_gif(self):
         self.gif_pil_frames = []
@@ -205,7 +226,7 @@ class LectorcitoApp(ctk.CTk):
     def _create_header(self, parent):
         self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
         self.header_frame.grid(row=0, column=0, sticky="ew", pady=(20, 15))
-        self.lbl_title = ctk.CTkLabel(self.header_frame, font=("Segoe UI", 18, "bold"))
+        self.lbl_title = ctk.CTkLabel(self.header_frame, text="", image=self.logo_image)
         self.lbl_title.pack()
         self.lbl_greet = ctk.CTkLabel(self.header_frame, font=("Segoe UI", 13))
         self.lbl_greet.pack()
@@ -287,7 +308,6 @@ class LectorcitoApp(ctk.CTk):
 
     # Actualiza todos los textos de la UI al idioma actual.
     def update_ui_texts(self):
-        self.lbl_title.configure(text=self._tr("title"))
         hour = datetime.datetime.now().hour
         greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
         try:
