@@ -2,9 +2,12 @@
   <img src="https://raw.githubusercontent.com/RenzoFernando/LectorcitoPro/main/recursos/lector.png" alt="Logo de Lectorcito Pro" width="150">
   <h1>Lectorcito Pro</h1>
   <p>
-    <strong>Versión Actual: 5 (Final)</strong><br>
+    <strong>Versión Actual: 5.11.0</strong><br>
     Una herramienta de escritorio profesional para analizar y consolidar proyectos de código fuente en reportes unificados.
   </p>
+  <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest">
+    <img src="https://img.shields.io/github/v/release/RenzoFernando/LectorcitoPro?style=for-the-badge&label=Descargar%20%C3%9Altima%20Versi%C3%B3n" alt="Descargar Última Versión">
+  </a>
 </div>
 
 ---
