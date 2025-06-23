@@ -73,17 +73,30 @@ Una vez generado un reporte, este se guardará en una carpeta llamada `Lecturas`
 ## <a name="estructura"></a>Estructura del Proyecto
 ```
 LectorcitoPro/
-├── descargas/               # Contiene los ejecutables listos para usar.
-├── recursos/                # Iconos, imágenes y GIFs utilizados por la GUI.
-├── src/                     # Código fuente principal de la aplicación.
-│   ├── controller/          # Lógica de control (conexión Vista-Modelo).
-│   ├── model/               # Lógica de negocio (procesamiento de archivos).
-│   └── view/                # Componentes de la interfaz de usuario (ventanas, diálogos).
-├── .gitignore               # Archivos y carpetas ignorados por Git.
-├── BUILD.bat                # Script para compilar la aplicación a un .exe.
-├── README.md                # Documentación del proyecto.
-├── requirements.txt         # Lista de dependencias de Python.
-└── setup_amp.bat            # Script para configurar el entorno de desarrollo.
+├── GuíaCertificados.md
+├── Historial de Versiones.md
+├── README.md
+├── descargas
+│   ├── Lectorcito.py
+│   └── LectorcitoPro.exe
+├── recursos
+├── recursos_externos
+├── requirements.txt
+└── src
+    ├── config.py
+    ├── controller
+    │   ├── controller.py
+    │   └── handlers.py
+    ├── main.py
+    ├── model
+    │   └── processor.py
+    ├── utils.py
+    └── view
+        ├── dialogs.py
+        ├── tags_dialog.py
+        ├── tooltip.py
+        ├── translations.py
+        └── ui.py
 ```
 
 ---
@@ -140,7 +153,7 @@ Instrucciones para compilar desde el código fuente
   ### Compilación
   Para generar el archivo `.exe`, ejecute el script de compilación:
   ```batch
-  BUILD.bat
+  build.bat
   ```
   Este se encargará de todo el proceso con PyInstaller y dejará el ejecutable final en la carpeta `descargas/`.
 
