@@ -4,12 +4,11 @@ import webbrowser
 from tkinter import filedialog
 import config
 from view.dialogs import ConfirmDialog, ChoiceDialog
-# --- Importamos el nuevo diálogo de etiquetas ---
 from view.tags_dialog import TagsConfigDialog
 
 
+# Maneja la selección de la ruta de destino para los reportes.
 def select_destination_path(controller):
-    """Maneja la selección de la ruta de destino para los reportes."""
     choice = ChoiceDialog.ask(
         parent=controller.view, title=controller.view._tr("dlg_dest_choice_title"),
         message=controller.view._tr("dlg_dest_choice_prompt"),
@@ -31,9 +30,8 @@ def select_destination_path(controller):
     save_preferences_silent(controller)
 
 
+# Muestra el diálogo para configurar qué carpetas y extensiones incluir.
 def show_view_config_dialog(controller):
-    """Muestra el nuevo diálogo de etiquetas para configurar qué incluir."""
-    # Obtener las listas actuales del config
     current_folders = controller.config.get("etiquetas_carpetas_importantes", [])
     current_files = controller.config.get("etiquetas_extensiones_incluidas", [])
 
@@ -47,9 +45,7 @@ def show_view_config_dialog(controller):
     )
 
     if result is not None:
-        # El diálogo devuelve las listas de etiquetas modificadas
         new_folders, new_files = result
-        # Asegurarse de que las extensiones tengan el punto inicial
         for tag in new_files:
             if not tag["nombre"].startswith("."):
                 tag["nombre"] = f".{tag['nombre']}"
@@ -59,9 +55,8 @@ def show_view_config_dialog(controller):
         save_preferences_silent(controller)
 
 
+# Muestra el diálogo para configurar qué carpetas y archivos excluir.
 def show_no_view_config_dialog(controller):
-    """Muestra el nuevo diálogo de etiquetas para configurar qué excluir."""
-    # Obtener las listas actuales del config
     current_folders = controller.config.get("etiquetas_carpetas_excluidas", [])
     current_files = controller.config.get("etiquetas_archivos_excluidos", [])
 
@@ -75,38 +70,37 @@ def show_no_view_config_dialog(controller):
     )
 
     if result is not None:
-        # El diálogo devuelve las listas de etiquetas modificadas
         new_folders, new_files = result
         controller.config["etiquetas_carpetas_excluidas"] = new_folders
         controller.config["etiquetas_archivos_excluidos"] = new_files
         save_preferences_silent(controller)
 
 
+# Guarda la configuración actual sin mostrar notificaciones.
 def save_preferences_silent(controller):
-    """Guarda la configuración actual en el archivo JSON."""
     config.save_config(controller.config)
 
 
+# Alterna entre el tema claro y oscuro.
 def toggle_theme(controller):
-    """Cambia entre el tema claro y oscuro."""
     controller.view.current_theme = "Dark" if controller.view.current_theme == "Light" else "Light"
     controller.config["theme"] = controller.view.current_theme
     controller.view.apply_theme()
     save_preferences_silent(controller)
 
 
+# Alterna entre español e inglés.
 def toggle_language(controller):
-    """Cambia entre español e inglés."""
     controller.view.lang = "en" if controller.view.lang == "es" else "es"
     controller.config["language"] = controller.view.lang
     controller.view.update_ui_texts()
     save_preferences_silent(controller)
 
 
+# Restaura todas las configuraciones a sus valores por defecto.
 def restore_default_settings(controller):
-    """Restaura todas las configuraciones a sus valores por defecto."""
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
-                         controller.view._tr("confirm_restore_prompt")):
+                           controller.view._tr("confirm_restore_prompt")):
         config.delete_config_file()
         controller.config = config.load_config()
 
@@ -119,8 +113,8 @@ def restore_default_settings(controller):
         controller.view.show_message("info_title", "msg_restore_success")
 
 
+# Abre la carpeta de destino de los reportes.
 def open_destination_folder(controller):
-    """Abre la carpeta de destino de los reportes."""
     path = controller.config.get("lecturas_path")
     if path and os.path.isdir(path):
         webbrowser.open(os.path.realpath(path))
@@ -128,23 +122,23 @@ def open_destination_folder(controller):
         controller.view.show_message("info_title", "msg_select_dest")
 
 
+# Abre el último reporte generado.
 def open_last_report(controller):
-    """Abre el último reporte generado."""
     if controller.last_report_path and os.path.isfile(controller.last_report_path):
         webbrowser.open(os.path.realpath(controller.last_report_path))
     else:
         controller.view.show_message("info_title", "msg_no_report_yet")
 
 
+# Elimina la carpeta de lecturas y todo su contenido, previa confirmación.
 def delete_all_readings(controller):
-    """Elimina la carpeta de lecturas con todo su contenido."""
     path = controller.config.get("lecturas_path")
     if not (path and os.path.isdir(path)):
         controller.view.show_message("info_title", "msg_select_dest")
         return
 
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_del_title"),
-                         controller.view._tr("confirm_del_prompt")):
+                           controller.view._tr("confirm_del_prompt")):
         try:
             shutil.rmtree(path)
             os.makedirs(path, exist_ok=True)

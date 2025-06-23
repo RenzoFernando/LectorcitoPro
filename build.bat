@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-:: --- Configuracion ---
+REM --- Definicion de variables para la compilacion ---
 set "APP_NAME=LectorcitoPro"
 set "ENTRY_POINT=src/main.py"
 set "ICON_FILE=recursos/lector.ico"
@@ -14,19 +14,18 @@ echo  Compilador para %APP_NAME%
 echo =======================================================
 echo.
 
-:: 1. Instalar/Verificar PyInstaller de forma robusta
+REM --- Verificacion e instalacion de dependencias ---
 echo Verificando PyInstaller...
 pip show pyinstaller > nul 2>&1
 if %errorlevel% neq 0 (
     echo PyInstaller no encontrado. Intentando instalar...
     pip install pyinstaller
-
     echo.
     echo Verificando de nuevo la instalacion de PyInstaller...
     pip show pyinstaller > nul 2>&1
     if %errorlevel% neq 0 (
         echo.
-        echo ERROR: La instalacion de PyInstaller fallo despues del intento.
+        echo ERROR: La instalacion de PyInstaller fallo.
         echo Por favor, ejecute "pip install pyinstaller" manualmente y vuelva a intentarlo.
         goto :eof
     )
@@ -36,14 +35,13 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-:: 1.5 Instalar otras dependencias del proyecto
 echo Verificando dependencias de requirements.txt...
 pip install -r requirements.txt
 echo Dependencias de requirements.txt estan al dia.
 echo.
 
 
-:: 2. Limpiar compilaciones anteriores
+REM --- Limpieza de directorios de compilaciones anteriores ---
 echo Limpiando artefactos de compilaciones anteriores...
 if exist "build" (
     echo  - Borrando carpeta 'build\'
@@ -61,22 +59,21 @@ echo Limpieza completada.
 echo.
 
 
-:: 3. Compilar la aplicacion con PyInstaller
+REM --- Compilacion de la aplicacion con PyInstaller ---
 echo =======================================================
 echo  Iniciando compilacion con PyInstaller...
 echo =======================================================
 echo.
 
-rem Este es el comando clave para empaquetar todo correctamente.
-rem --onefile: Crea un unico archivo ejecutable.
-rem --noconsole: Evita que se abra una ventana de consola al ejecutar la GUI.
-rem --name: Define el nombre del archivo .exe final.
-rem --icon: Asigna el icono al ejecutable.
-rem --add-data: Anade la carpeta de recursos para que las imagenes e iconos se incluyan.
-rem --paths: Anade la carpeta 'src' a la ruta de busqueda de modulos para evitar errores de importacion.
+REM --onefile: Empaqueta todo en un solo archivo ejecutable.
+REM --noconsole: Ejecuta la aplicacion GUI sin una ventana de terminal.
+REM --name: Especifica el nombre del archivo .exe de salida.
+REM --icon: Asigna el icono al ejecutable.
+REM --add-data: Incluye la carpeta de recursos dentro del .exe.
+REM --paths: Agrega la carpeta 'src' para resolver importaciones locales.
 pyinstaller --onefile --noconsole --name "%APP_NAME%" --icon="%ICON_FILE%" --add-data="%RESOURCES_FOLDER%;%RESOURCES_FOLDER%" --paths src "%ENTRY_POINT%"
 
-:: 4. Verificar si la compilacion fue exitosa
+REM --- Verificacion del resultado de la compilacion ---
 if %errorlevel% neq 0 (
     echo.
     echo ******************************************************
@@ -91,13 +88,12 @@ echo  Compilacion exitosa!
 echo =======================================================
 echo.
 
-:: 5. Mover el ejecutable a la carpeta de descargas
+REM --- Organizacion del archivo ejecutable ---
 echo Moviendo %APP_NAME%.exe a la carpeta '%OUTPUT_FOLDER%'...
 if not exist "%OUTPUT_FOLDER%" (
     mkdir "%OUTPUT_FOLDER%"
 )
 
-rem Usamos move y verificamos el resultado
 move "dist\%APP_NAME%.exe" "%OUTPUT_FOLDER%\"
 if %errorlevel% neq 0 (
     echo.
@@ -107,7 +103,7 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-:: 6. Limpieza final de carpetas temporales
+REM --- Limpieza final de archivos temporales ---
 echo Limpiando archivos temporales restantes...
 rmdir /s /q build
 del "%APP_NAME%.spec"
@@ -121,3 +117,5 @@ echo.
 
 pause
 endlocal
+
+:: .\build.bat

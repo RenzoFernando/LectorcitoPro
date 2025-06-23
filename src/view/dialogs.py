@@ -4,7 +4,7 @@ from tkinter import filedialog
 from PIL import Image
 from utils import resource_path
 
-# --- Paleta de Colores Estándar (para consistencia) ---
+# Paleta de colores centralizada para consistencia en los diálogos.
 COLORS = {
     "light": {"bg": "#EBEBEB", "text": "#000000", "left_bar": "#1A1E22", "progress_bar": "#D9D9D9"},
     "dark": {"bg": "#1A1E22", "text": "#FFFFFF", "left_bar": "#EBEBEB", "progress_bar": "#333333"},
@@ -15,10 +15,11 @@ COLORS = {
     "list_item": {"selected_bg": "#3B8ED0", "normal_bg": "transparent"}
 }
 
-# --- DIÁLOGOS PERSONALIZADOS (CON ANIMACIONES) ---
-class BaseDialog(ctk.CTkToplevel):
-    """Clase base para todos los diálogos personalizados con efectos de aparición/desaparición."""
 
+# Clase base para todos los diálogos con animaciones de entrada y salida.
+class BaseDialog(ctk.CTkToplevel):
+
+    # Configura la ventana base del diálogo (título, posición, etc.).
     def __init__(self, parent, title: str):
         super().__init__(parent)
         self.transient(parent)
@@ -27,6 +28,7 @@ class BaseDialog(ctk.CTkToplevel):
         self.attributes("-alpha", 0.0)
         self.after(10, self._center_window)
 
+        # Intenta establecer el icono de la ventana heredado de la ventana padre.
         def _set_icon():
             try:
                 if hasattr(parent, '_icon_path') and parent._icon_path and os.path.exists(parent._icon_path):
@@ -41,6 +43,7 @@ class BaseDialog(ctk.CTkToplevel):
         self.after(20, self._fade_in)
         self.grab_set()
 
+    # Centra el diálogo con respecto a la ventana principal.
     def _center_window(self):
         try:
             self.update_idletasks()
@@ -53,6 +56,7 @@ class BaseDialog(ctk.CTkToplevel):
         except Exception as e:
             print(f"Error al centrar el diálogo: {e}")
 
+    # Anima la aparición gradual del diálogo.
     def _fade_in(self):
         alpha = self.attributes("-alpha")
         if alpha < 1:
@@ -60,6 +64,7 @@ class BaseDialog(ctk.CTkToplevel):
             self.attributes("-alpha", alpha)
             self.after(15, self._fade_in)
 
+    # Anima la desaparición gradual del diálogo y lo destruye.
     def _close_with_fade_out(self, event=None):
         self.grab_release()
         alpha = self.attributes("-alpha")
@@ -70,21 +75,22 @@ class BaseDialog(ctk.CTkToplevel):
         else:
             self.destroy()
 
+    # Maneja el evento de confirmación (botón OK, Enter).
     def _on_ok(self, event=None):
         self._close_with_fade_out()
 
+    # Maneja el evento de cancelación.
     def _on_cancel(self, event=None):
         self.result = None; self._close_with_fade_out()
 
 
+# Diálogo simple para mostrar un mensaje con un botón de "OK".
 class MessageDialog(BaseDialog):
     def __init__(self, parent, title, message):
         super().__init__(parent, title)
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center", font=("Segoe UI", 13)).pack(fill="x",
-                                                                                                             pady=(0,
-                                                                                                                   20))
+        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center", font=("Segoe UI", 13)).pack(fill="x", pady=(0, 20))
         ok_button = ctk.CTkButton(main_frame, text="OK", width=100, command=self._on_ok,
                                   fg_color=COLORS['button']['blue'], hover_color=COLORS['button_hover']['blue_h'])
         ok_button.pack(pady=(0, 10));
@@ -94,19 +100,17 @@ class MessageDialog(BaseDialog):
     def _on_ok(self, event=None): self.result = True; super()._on_ok(event)
 
 
+# Diálogo de confirmación con opciones "Sí" y "No".
 class ConfirmDialog(BaseDialog):
     def __init__(self, parent, title, message):
         super().__init__(parent, title)
         self.result = False
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
         main_frame.pack(expand=True, fill="both", padx=20, pady=20)
-        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center", font=("Segoe UI", 13)).pack(fill="x",
-                                                                                                             pady=(0,
-                                                                                                                   20))
+        ctk.CTkLabel(main_frame, text=message, wraplength=350, justify="center", font=("Segoe UI", 13)).pack(fill="x", pady=(0, 20))
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent");
         button_frame.pack()
 
-        # --- ESTILO CORREGIDO ---
         ctk.CTkButton(button_frame, text="Sí", width=100, command=self._on_yes, fg_color=COLORS['button']['green'],
                       hover_color=COLORS['button_hover']['green_h']).pack(side="left", padx=10)
         ctk.CTkButton(button_frame, text="No", width=100, command=self._on_no, fg_color=COLORS['button']['red'],
@@ -116,6 +120,7 @@ class ConfirmDialog(BaseDialog):
 
     def _on_no(self, event=None): self.result = False; self._close_with_fade_out()
 
+    # Método de clase para mostrar el diálogo y esperar una respuesta.
     @classmethod
     def ask(cls, parent, title, message):
         dialog = cls(parent, title, message);
@@ -123,6 +128,7 @@ class ConfirmDialog(BaseDialog):
         return dialog.result
 
 
+# Diálogo que presenta dos opciones personalizables.
 class ChoiceDialog(BaseDialog):
     def __init__(self, parent, title, message, option1_text, option2_text, option1_value, option2_value):
         super().__init__(parent, title)
@@ -139,6 +145,7 @@ class ChoiceDialog(BaseDialog):
 
     def _on_option2(self): self.result = self.option2_value; super()._on_ok()
 
+    # Método de clase para mostrar el diálogo y devolver el valor de la opción elegida.
     @classmethod
     def ask(cls, parent, title, message, option1_text, option2_text, option1_value, option2_value):
         dialog = cls(parent, title, message, option1_text, option2_text, option1_value, option2_value)
@@ -146,6 +153,7 @@ class ChoiceDialog(BaseDialog):
         return dialog.result
 
 
+# Diálogo para seleccionar, ordenar y eliminar múltiples rutas de carpetas.
 class SelectFoldersDialog(BaseDialog):
     def __init__(self, parent, title):
         super().__init__(parent, title)
@@ -155,6 +163,7 @@ class SelectFoldersDialog(BaseDialog):
         self.list_item_widgets = []
         self.currently_selected_index = -1
 
+        # Construcción de la interfaz del diálogo.
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
         main_frame.pack(expand=True, fill="both", padx=15, pady=15)
         main_frame.grid_columnconfigure(0, weight=1)
@@ -169,8 +178,7 @@ class SelectFoldersDialog(BaseDialog):
         list_area_frame.grid_columnconfigure(0, weight=1)
         list_area_frame.grid_rowconfigure(0, weight=1)
 
-        self.scrollable_frame = ctk.CTkScrollableFrame(list_area_frame,
-                                                       label_text=self._parent._tr("dlg_multi_list_title"))
+        self.scrollable_frame = ctk.CTkScrollableFrame(list_area_frame, label_text=self._parent._tr("dlg_multi_list_title"))
         self.scrollable_frame.grid(row=0, column=0, sticky="nsew")
 
         reorder_button_frame = ctk.CTkFrame(list_area_frame, fg_color="transparent")
@@ -183,14 +191,13 @@ class SelectFoldersDialog(BaseDialog):
         bottom_button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         bottom_button_frame.grid(row=2, column=0, sticky="e", pady=(15, 0))
         ctk.CTkButton(bottom_button_frame, text=self._parent._tr("btn_cancel"), command=self._on_cancel,
-                      fg_color=COLORS['button']['red'], hover_color=COLORS['button_hover']['red_h']).pack(side="left",
-                                                                                                          padx=10)
+                      fg_color=COLORS['button']['red'], hover_color=COLORS['button_hover']['red_h']).pack(side="left", padx=10)
         ctk.CTkButton(bottom_button_frame, text=self._parent._tr("dlg_multi_process"), command=self._on_process,
-                      fg_color=COLORS['button']['green'], hover_color=COLORS['button_hover']['green_h']).pack(
-            side="left")
+                      fg_color=COLORS['button']['green'], hover_color=COLORS['button_hover']['green_h']).pack(side="left")
 
         self._update_folder_list()
 
+    # Redibuja la lista de carpetas seleccionadas.
     def _update_folder_list(self):
         for widget in self.list_item_widgets: widget.destroy()
         self.list_item_widgets.clear()
@@ -213,10 +220,12 @@ class SelectFoldersDialog(BaseDialog):
                 label.bind("<Button-1>", lambda e, index=i: self._on_item_select(index))
                 self.list_item_widgets.append(item_frame)
 
+    # Maneja la selección de un elemento en la lista.
     def _on_item_select(self, index):
         self.currently_selected_index = index
         self._update_folder_list()
 
+    # Añade una nueva carpeta a la lista.
     def _add_folder(self):
         path = filedialog.askdirectory(title=self._parent._tr("dlg_multi_add_title"))
         if path and path not in self.selected_paths:
@@ -224,28 +233,30 @@ class SelectFoldersDialog(BaseDialog):
             self.currently_selected_index = len(self.selected_paths) - 1
             self._update_folder_list()
 
+    # Elimina la carpeta actualmente seleccionada.
     def _remove_selected_folder(self):
         if 0 <= self.currently_selected_index < len(self.selected_paths):
             self.selected_paths.pop(self.currently_selected_index)
             self.currently_selected_index = -1
             self._update_folder_list()
 
+    # Mueve la carpeta seleccionada una posición hacia arriba.
     def _move_up(self):
         if 0 < self.currently_selected_index < len(self.selected_paths):
             idx = self.currently_selected_index
-            self.selected_paths[idx], self.selected_paths[idx - 1] = self.selected_paths[idx - 1], self.selected_paths[
-                idx]
+            self.selected_paths[idx], self.selected_paths[idx - 1] = self.selected_paths[idx - 1], self.selected_paths[idx]
             self.currently_selected_index -= 1
             self._update_folder_list()
 
+    # Mueve la carpeta seleccionada una posición hacia abajo.
     def _move_down(self):
         if -1 <= self.currently_selected_index < len(self.selected_paths) - 1:
             idx = self.currently_selected_index
-            self.selected_paths[idx], self.selected_paths[idx + 1] = self.selected_paths[idx + 1], self.selected_paths[
-                idx]
+            self.selected_paths[idx], self.selected_paths[idx + 1] = self.selected_paths[idx + 1], self.selected_paths[idx]
             self.currently_selected_index += 1
             self._update_folder_list()
 
+    # Confirma la selección de carpetas y cierra el diálogo.
     def _on_process(self):
         if self.selected_paths:
             self.result = self.selected_paths
@@ -253,6 +264,7 @@ class SelectFoldersDialog(BaseDialog):
             self.result = None
         self._close_with_fade_out()
 
+    # Método de clase para mostrar el diálogo y devolver la lista de rutas.
     @classmethod
     def ask(cls, parent, title):
         dialog = cls(parent, title);
@@ -260,6 +272,7 @@ class SelectFoldersDialog(BaseDialog):
         return dialog.result
 
 
+# Diálogo para mostrar una imagen infográfica con scroll.
 class InfographicDialog(ctk.CTkToplevel):
     def __init__(self, parent, title: str, image_path: str):
         super().__init__(parent)

@@ -1,5 +1,6 @@
 import random
 
+# Centraliza todos los textos de la interfaz para facilitar la traducción (i18n).
 TRANSLATIONS = {
     "es": {
         "dlg_read_type_title": "Tipo de Lectura",
@@ -48,11 +49,11 @@ TRANSLATIONS = {
         "msg_delete_success": "Contenido de '{}' eliminado con éxito.",
         "msg_delete_error": "No se pudo eliminar la carpeta:\n{}",
         "greet_m": ["¡Buenos días!", "¡Un café y a programar!", "¿Listo para un nuevo día?",
-                    "¡Que tengas una mañana productiva!"],
+                      "¡Que tengas una mañana productiva!"],
         "greet_a": ["¡Buenas tardes!", "Espero que tu día vaya de maravilla.", "¡A seguir dándole al código!",
-                    "La tarde es para crear."],
+                      "La tarde es para crear."],
         "greet_n": ["¡Buenas noches!", "Un último vistazo antes de descansar.", "¡Que el código te acompañe!",
-                    "Es hora de compilar sueños."],
+                      "Es hora de compilar sueños."],
         "dlg_ver_title": "Configurar qué Ver",
         "dlg_ver_folder_prompt": "Carpetas a resaltar como Importantes (ej: src, utils):",
         "dlg_ver_file_prompt": "Extensiones de archivo a Leer (ej: .py, .md):",
@@ -117,11 +118,11 @@ TRANSLATIONS = {
         "msg_delete_success": "Contents of '{}' deleted successfully.",
         "msg_delete_error": "Could not delete the folder:\n{}",
         "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?",
-                    "Have a productive morning!"],
+                      "Have a productive morning!"],
         "greet_a": ["Good afternoon!", "Hope your day is going great.", "Let's keep pushing that code!",
-                    "The afternoon is for creating."],
+                      "The afternoon is for creating."],
         "greet_n": ["Good evening!", "One last look before logging off.", "May the code be with you.",
-                    "Time to compile some dreams."],
+                      "Time to compile some dreams."],
         "dlg_ver_title": "Configure what to View",
         "dlg_ver_folder_prompt": "Folders to highlight as Important (e.g., src, utils):",
         "dlg_ver_file_prompt": "File extensions to Read (e.g., .py, .md):",

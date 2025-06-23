@@ -8,21 +8,24 @@ APP_AUTHOR = "APPS_RenzoFernando"
 CFG_NAME = "config.json"
 
 # --- Rutas de Configuración ---
+# Define el directorio de configuración del usuario usando appdirs para compatibilidad multiplataforma.
 _config_dir = user_config_dir(APP_NAME, APP_AUTHOR, roaming=True)
 os.makedirs(_config_dir, exist_ok=True)
 CONFIG_FILE_PATH = os.path.join(_config_dir, CFG_NAME)
 
+# Define y crea la ruta por defecto para guardar los reportes.
 DEFAULT_LECTURAS_PATH = os.path.join(_config_dir, "Lecturas")
 os.makedirs(DEFAULT_LECTURAS_PATH, exist_ok=True)
 
 
 # --- Estructura de Etiqueta por Defecto ---
+# Convierte una lista simple de strings a una lista de diccionarios para las etiquetas.
 def to_tags(items: list[str]) -> list[dict]:
-    """Convierte una lista de strings a la nueva estructura de etiquetas."""
     return [{"nombre": item, "estado": "activo"} for item in items]
 
 
-# --- Configuración por Defecto (Nuevo Formato de Etiquetas) ---
+# --- Configuración por Defecto ---
+# Diccionario con todos los ajustes predeterminados de la aplicación.
 DEFAULT_CONFIG = {
     "use_default_path": True,
     "custom_lecturas_path": "",
@@ -31,24 +34,24 @@ DEFAULT_CONFIG = {
     "theme": "Light",
     "language": "es",
 
-    # (Ver > Carpetas) Carpetas a resaltar.
+    # Carpetas a resaltar en el reporte.
     "etiquetas_carpetas_importantes": to_tags(
         ["src"]
     ),
-    # (Ver > Archivos) Extensiones a incluir.
+    # Extensiones de archivo a leer.
     "etiquetas_extensiones_incluidas": to_tags(
         [".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json"]
     ),
-    # (No Ver > Carpetas) Carpetas a ignorar.
+    # Carpetas a ignorar durante la lectura.
     "etiquetas_carpetas_excluidas": to_tags(
-        ["__pycache__", "env", "venv", ".venv", "node_modules", ".git", "build", "dist", ".idea"]
+        ["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]
     ),
-    # (No Ver > Archivos) Nombres de archivo completos a ignorar.
+    # Archivos específicos a ignorar por nombre.
     "etiquetas_archivos_excluidos": to_tags(
-        [".spec", ".DS_Store", "Pipfile", "Pipfile.lock", "package.json", "package-lock.json"]
+        ["Pipfile.lock", "package.json", "package-lock.json"]
     ),
 
-    # Los archivos multimedia siguen usando una lista simple porque no son configurables por el usuario.
+    # Extensiones de archivos multimedia y otros binarios que no se deben leer.
     "media_extensions": [
         '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.ico', '.webp',
         '.mp4', '.mkv', '.avi', '.mov', '.webm',
@@ -62,10 +65,9 @@ DEFAULT_CONFIG = {
 
 # --- Funciones de Manejo de Configuración ---
 
+# Migra una configuración de formato antiguo (listas simples) al nuevo formato (lista de etiquetas).
 def _migrate_config(config_data: dict) -> dict:
-    """Migra una configuración antigua al nuevo formato de etiquetas si es necesario."""
     migrated = False
-    # Mapeo de claves antiguas a nuevas
     migration_map = {
         "important_folders": "etiquetas_carpetas_importantes",
         "text_extensions": "etiquetas_extensiones_incluidas",
@@ -74,7 +76,7 @@ def _migrate_config(config_data: dict) -> dict:
     }
     for old_key, new_key in migration_map.items():
         if old_key in config_data and isinstance(config_data[old_key], list):
-            # Si el primer elemento no es un diccionario, asumimos que es el formato antiguo
+            # Comprueba si la lista no está en el nuevo formato de diccionarios.
             if not config_data[old_key] or not isinstance(config_data[old_key][0], dict):
                 config_data[new_key] = to_tags(config_data[old_key])
                 del config_data[old_key]
@@ -84,30 +86,30 @@ def _migrate_config(config_data: dict) -> dict:
     return config_data
 
 
+# Carga la configuración desde el archivo JSON.
 def load_config() -> dict:
-    """Carga la configuración desde JSON. Si no existe o está corrupto, usa los valores por defecto."""
     if os.path.exists(CONFIG_FILE_PATH):
         try:
             with open(CONFIG_FILE_PATH, 'r', encoding="utf-8") as f:
                 data = json.load(f)
 
-            # Migrar si es un formato antiguo
+            # Intenta migrar la configuración si es de un formato antiguo.
             data = _migrate_config(data)
 
-            # Asegura que todas las claves del DEFAULT_CONFIG existan en la configuración cargada.
+            # Asegura que todas las claves por defecto existan en el archivo cargado.
             config_completa = DEFAULT_CONFIG.copy()
             config_completa.update(data)
             return config_completa
         except (json.JSONDecodeError, TypeError):
-            # Si hay un error, se retorna una copia de la configuración por defecto.
+            # Si el archivo está corrupto, retorna la configuración por defecto.
             return DEFAULT_CONFIG.copy()
     return DEFAULT_CONFIG.copy()
 
 
+# Guarda el diccionario de configuración en el archivo JSON.
 def save_config(config: dict):
-    """Guarda el diccionario de configuración actual en el archivo JSON."""
     try:
-        # Crea una copia para no guardar claves que no deben persistir (como las de migración)
+        # Usa una copia para asegurar que solo se guarden las claves relevantes.
         config_to_save = DEFAULT_CONFIG.copy()
         config_to_save.update(config)
 
@@ -117,8 +119,8 @@ def save_config(config: dict):
         print(f"Error al guardar la configuración: {e}")
 
 
+# Elimina el archivo de configuración para restaurar los valores por defecto.
 def delete_config_file():
-    """Elimina el archivo de configuración JSON si existe para restaurar los valores por defecto."""
     try:
         if os.path.exists(CONFIG_FILE_PATH):
             os.remove(CONFIG_FILE_PATH)

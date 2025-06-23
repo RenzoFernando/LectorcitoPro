@@ -3,17 +3,16 @@ import threading
 from time import sleep
 
 
+# Extrae los nombres de las etiquetas activas desde la configuración.
 def _get_active_tags(config: dict, key: str) -> set:
-    """Extrae los nombres de las etiquetas activas de una lista de configuración."""
     tag_list = config.get(key, [])
     return {tag['nombre'] for tag in tag_list if tag.get('estado') == 'activo'}
 
 
+# Cuenta los archivos a procesar aplicando las reglas de exclusión.
 def _count_files_to_process(folder: str, config: dict) -> int:
-    """Cuenta de forma eficiente el número de archivos que se procesarán, respetando las exclusiones."""
     file_count = 0
 
-    # Extraer nombres de las etiquetas activas
     extensions_to_include = _get_active_tags(config, "etiquetas_extensiones_incluidas")
     extensions_to_check = extensions_to_include.union(set(config.get("media_extensions", [])))
     folders_to_exclude = _get_active_tags(config, "etiquetas_carpetas_excluidas")
@@ -21,12 +20,12 @@ def _count_files_to_process(folder: str, config: dict) -> int:
 
     try:
         for root, dirs, files in os.walk(folder, topdown=True):
-            # Filtrar directorios para no explorarlos
+            # Evita explorar directorios excluidos.
             dirs[:] = [d for d in dirs if d not in folders_to_exclude]
+
             for filename in files:
                 if filename in files_to_exclude:
                     continue
-                # Comprobar si alguna extensión coincide
                 if any(filename.lower().endswith(ext) for ext in extensions_to_check):
                     file_count += 1
     except OSError as e:
@@ -35,6 +34,7 @@ def _count_files_to_process(folder: str, config: dict) -> int:
     return file_count
 
 
+# Genera un reporte consolidado de los archivos en un directorio.
 def generate_report(
         source_folder: str,
         output_path: str,
@@ -42,16 +42,11 @@ def generate_report(
         cancel_event: threading.Event,
         progress_callback: callable
 ) -> tuple[str, str | None]:
-    """
-    Genera un reporte de contenidos de archivos con un diseño visual mejorado,
-    respetando la nueva lógica de Ver/No Ver.
-    Devuelve una tupla (status, path). Status: 'success', 'cancelled', 'no_files', 'error'.
-    """
     total_files = _count_files_to_process(source_folder, config)
     if total_files == 0:
         return "no_files", None
 
-    # Obtener listas de etiquetas activas para el procesamiento
+    # Obtiene las listas de filtros activos desde la configuración.
     important_folders = _get_active_tags(config, "etiquetas_carpetas_importantes")
     text_ext = _get_active_tags(config, "etiquetas_extensiones_incluidas")
     media_ext = set(config.get("media_extensions", []))
@@ -60,6 +55,7 @@ def generate_report(
 
     folder_name = os.path.basename(os.path.normpath(source_folder))
     version = 1
+    # Genera un nombre de archivo versionado para no sobrescribir reportes.
     while True:
         report_filename = f"{folder_name}_v{version}.txt"
         final_report_path = os.path.join(output_path, report_filename)
@@ -69,7 +65,7 @@ def generate_report(
     processed_files = 0
     try:
         with open(final_report_path, "w", encoding="utf-8") as outfile:
-            # --- ENCABEZADO MEJORADO ---
+            # Escribe el encabezado principal del reporte.
             outfile.write("=" * 80 + "\n")
             outfile.write(f" LECTORCITO PRO - REPORTE DE PROYECTO\n")
             outfile.write(f" PROYECTO: {folder_name}\n")
@@ -81,6 +77,7 @@ def generate_report(
                 dirs[:] = [d for d in dirs if d not in excluded_folders]
                 files.sort()
 
+                # Filtra los archivos del directorio actual según la configuración.
                 files_in_dir = []
                 for filename in files:
                     if filename in excluded_files: continue
@@ -91,7 +88,7 @@ def generate_report(
 
                 if not files_in_dir: continue
 
-                # --- FORMATO PARA CARPETAS (SIN EMOJIS) ---
+                # Escribe la cabecera para la carpeta actual.
                 relative_path = os.path.relpath(root, source_folder)
                 folder_name_display = relative_path if relative_path != '.' else 'RAÍZ DEL PROYECTO'
                 highlight = " [IMPORTANTE]" if os.path.basename(root) in important_folders else ""
@@ -101,6 +98,7 @@ def generate_report(
                 for filename, is_text, is_media in files_in_dir:
                     if cancel_event.is_set(): break
 
+                    # Actualiza el progreso y notifica a la vista.
                     current_file_rel_path = os.path.join(folder_name_display, filename)
                     processed_files += 1
                     if progress_callback:
@@ -112,9 +110,8 @@ def generate_report(
                     file_path = os.path.join(root, filename)
                     outfile.write(f"  ● Archivo: {filename}\n")
 
-                    # --- LÓGICA DE CONTENIDO AJUSTADA ---
+                    # Escribe el contenido del archivo si es de texto.
                     if is_text:
-                        # Si es un archivo de texto, se muestra el bloque de contenido completo.
                         outfile.write("    " + ("-" * 74) + "\n")
                         outfile.write("    >> INICIO DEL CONTENIDO\n\n")
                         try:
@@ -125,8 +122,8 @@ def generate_report(
                             outfile.write(f"    [Error al leer el archivo: {e}]\n")
                         outfile.write(f"\n\n    << FIN DEL CONTENIDO\n")
                         outfile.write("    " + ("-" * 74) + "\n\n\n")
+                    # Si es multimedia, solo deja un espacio.
                     elif is_media:
-                        # Si es un archivo multimedia, solo se añade un espacio para separarlo del siguiente.
                         outfile.write("\n")
 
                 if cancel_event.is_set(): break
@@ -135,6 +132,7 @@ def generate_report(
         if os.path.exists(final_report_path): os.remove(final_report_path)
         return "error", None
 
+    # Si se canceló el proceso, elimina el archivo incompleto.
     if cancel_event.is_set():
         if os.path.exists(final_report_path): os.remove(final_report_path)
         return "cancelled", None
@@ -142,10 +140,10 @@ def generate_report(
     return "success", final_report_path
 
 
+# Genera un reporte con la estructura de árbol de un directorio.
 def generate_tree_report(
         source_folder: str, output_path: str, use_config: bool, config: dict
 ) -> tuple[str, str | None]:
-    """Genera un reporte de árbol de directorios con el nuevo estilo visual."""
     folder_name = os.path.basename(os.path.normpath(source_folder))
     version = 1
     while True:
@@ -164,13 +162,14 @@ def generate_tree_report(
         return "error", None
 
 
+# Función recursiva para construir y escribir la estructura del árbol.
 def _build_tree_recursive(current_path, prefix, outfile, use_config, config):
-    """Función recursiva para construir el árbol con el nuevo estilo visual."""
     try:
         elements = sorted(os.listdir(current_path))
     except OSError:
         return
 
+    # Filtra los elementos si está activada la opción de usar configuración.
     if use_config:
         excluded_folders = _get_active_tags(config, "etiquetas_carpetas_excluidas")
         excluded_files = _get_active_tags(config, "etiquetas_archivos_excluidos")
@@ -188,7 +187,7 @@ def _build_tree_recursive(current_path, prefix, outfile, use_config, config):
                     filtered_elements.append(elem)
         elements = filtered_elements
 
-    # --- NUEVA LÓGICA DE PUNTEROS PARA EL ÁRBOL ---
+    # Dibuja los conectores del árbol y llama recursivamente para los directorios.
     pointers = ['├── '] * (len(elements) - 1) + ['└── ']
     for pointer, element in zip(pointers, elements):
         outfile.write(prefix + pointer + element + '\n')
