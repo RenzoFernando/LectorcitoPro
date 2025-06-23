@@ -18,8 +18,8 @@ class TagsConfigDialog(BaseDialog):
 
     # Inicializa el diálogo con las listas de etiquetas existentes.
     def __init__(self, parent, title: str,
-                 folders_prompt: str, initial_folders: list,
-                 files_prompt: str, initial_files: list):
+                    folders_prompt: str, initial_folders: list,
+                    files_prompt: str, initial_files: list):
         super().__init__(parent, title)
 
         self.folders_list = copy.deepcopy(initial_folders)
@@ -32,7 +32,7 @@ class TagsConfigDialog(BaseDialog):
         }
 
         self.tag_font = ctk.CTkFont(family="Segoe UI", size=11)
-        self.geometry("475x500")
+        self.geometry("475x475")
         self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.main_frame.pack(expand=True, fill="both", padx=15, pady=15)
         self.main_frame.grid_columnconfigure(0, weight=1)
@@ -50,11 +50,11 @@ class TagsConfigDialog(BaseDialog):
         button_frame.grid_columnconfigure((0, 1), weight=1)
 
         ok_button = ctk.CTkButton(button_frame, text="Guardar Cambios", command=self._on_ok,
-                                  fg_color=COLORS['button']['green'], hover_color=COLORS['button_hover']['green_h'])
+                                    fg_color=COLORS['button']['green'], hover_color=COLORS['button_hover']['green_h'])
         ok_button.grid(row=0, column=0, padx=5, sticky="e")
 
         cancel_button = ctk.CTkButton(button_frame, text="Cancelar", command=self._on_cancel,
-                                      fg_color=COLORS['button']['red'], hover_color=COLORS['button_hover']['red_h'])
+                                    fg_color=COLORS['button']['red'], hover_color=COLORS['button_hover']['red_h'])
         cancel_button.grid(row=0, column=1, padx=5, sticky="w")
 
         self.update_idletasks()
@@ -64,7 +64,7 @@ class TagsConfigDialog(BaseDialog):
     def _create_tag_section(self, section_index, prompt, section_id):
         base_row = section_index * 3
         ctk.CTkLabel(self.main_frame, text=prompt, font=("Segoe UI", 12, "bold")).grid(row=base_row, column=0,
-                                                                                       sticky="w", pady=(15, 2))
+                                                                                    sticky="w", pady=(15, 2))
         scroll_frame = ctk.CTkScrollableFrame(self.main_frame, label_text="")
         scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew")
 
@@ -122,8 +122,8 @@ class TagsConfigDialog(BaseDialog):
         label = ctk.CTkLabel(pill_frame, text=tag_name, text_color=colors["text"], font=self.tag_font)
         label.pack(side="left", padx=(10, 4), pady=4)
         close_button = ctk.CTkButton(pill_frame, text="✕", width=20, height=20, corner_radius=10,
-                                     text_color=colors["text"], fg_color="transparent", hover_color=colors["hover"],
-                                     command=lambda i=index, l=tag_list: self._delete_tag(i, l))
+                                        text_color=colors["text"], fg_color="transparent", hover_color=colors["hover"],
+                                        command=lambda i=index, l=tag_list: self._delete_tag(i, l))
         close_button.pack(side="right", padx=(0, 6), pady=4)
         pill_frame.bind("<Button-1>", lambda e, i=index, l=tag_list: self._toggle_tag_state(e, i, l))
         label.bind("<Button-1>", lambda e, i=index, l=tag_list: self._toggle_tag_state(e, i, l))

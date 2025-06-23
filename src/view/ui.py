@@ -12,7 +12,7 @@ from view.dialogs import MessageDialog, InfographicDialog
 from view.tooltip import CustomTooltip
 
 # Constantes para la información y apariencia de la UI.
-VERSION = "5.10.2"
+VERSION = "5.10.3"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -49,13 +49,12 @@ class LectorcitoApp(ctk.CTk):
         self.target_progress = 0
         self.animation_after_id = None
         self.REPO_URL = REPO_URL
-
         self.tooltips = {}
 
         # Configuración para la animación de GIFs.
         self.gif_names = ["Cat_Working.gif", "Hacker_Coding.gif", "Computer_Coding.gif",
-                          "Mad_Artificial_Intelligence.gif", "Thinking_Working.gif", "Ctrl_C_V.gif",
-                          "Coding_Coffee.gif"]
+                            "Mad_Artificial_Intelligence.gif", "Thinking_Working.gif", "Ctrl_C_V.gif",
+                            "Coding_Coffee.gif"]
         self.gif_pil_frames = []
         self.gif_frame_index = 0
         self.gif_animation_after_id = None
@@ -71,12 +70,37 @@ class LectorcitoApp(ctk.CTk):
         if os.path.exists(self._icon_path):
             self.iconbitmap(self._icon_path)
 
+        # Flag para asegurar que el centrado ocurra solo una vez.
+        self._is_centered = False
+        # Se asocia el evento <Configure> a un método para centrar la ventana de forma segura.
+        self.bind("<Configure>", self._on_configure_center)
+
         self._load_image_assets()
         self._build_ui()
         self.update_ui_texts()
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
-        self.after(50, self._fade_in)
+
+    # Manejador de evento que centra la ventana la primera vez que se dibuja.
+    def _on_configure_center(self, event=None):
+        if not self._is_centered:
+            self._is_centered = True
+            self._center_on_screen()
+            self.after(10, self._fade_in)
+
+    # Calcula y aplica las coordenadas para centrar la ventana en la pantalla.
+    def _center_on_screen(self):
+        try:
+            self.update_idletasks()
+            screen_width = self.winfo_screenwidth()
+            screen_height = self.winfo_screenheight()
+            window_width = self.winfo_width()
+            window_height = self.winfo_height()
+            x = (screen_width // 2) - (window_width // 2)
+            y = (screen_height // 2) - (window_height // 2)
+            self.geometry(f'+{x}+{y}')
+        except Exception as e:
+            print(f"Error al centrar la ventana principal: {e}")
 
     # Anima la aparición gradual de la ventana.
     def _fade_in(self):
@@ -114,7 +138,7 @@ class LectorcitoApp(ctk.CTk):
                 img_for_dark_theme = Image.open(resource_path(f"{key}_oscuro.png"))
                 img_for_light_theme = Image.open(resource_path(f"{key}_claro.png"))
                 self.icons[key] = ctk.CTkImage(light_image=img_for_light_theme, dark_image=img_for_dark_theme,
-                                               size=(22, 22))
+                                                size=(22, 22))
             except Exception as e:
                 print(f"Error cargando icono '{key}': {e}")
                 self.icons[key] = None
@@ -198,7 +222,7 @@ class LectorcitoApp(ctk.CTk):
             "create_tree": ctk.CTkButton(self.main_buttons_frame, **opts),
             "openlect": ctk.CTkButton(self.main_buttons_frame, **opts),
             "openlast": ctk.CTkButton(self.main_buttons_frame, **opts, fg_color=COLORS['button']['green'],
-                                      hover_color=COLORS['button_hover']['green_h']),
+                                    hover_color=COLORS['button_hover']['green_h']),
             "delete": ctk.CTkButton(self.main_buttons_frame, **opts, fg_color=COLORS['button']['red'],
                                     hover_color=COLORS['button_hover']['red_h'])
         }
@@ -259,7 +283,7 @@ class LectorcitoApp(ctk.CTk):
         self.footer_frame = ctk.CTkFrame(self, height=30, corner_radius=0)
         self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="sew")
         ctk.CTkLabel(self.footer_frame, text=f"Copyright © {YEAR} - {AUTHOR} - All Rights Reserved.",
-                     font=("Segoe UI", 9)).place(relx=0.5, rely=0.5, anchor="center")
+                        font=("Segoe UI", 9)).place(relx=0.5, rely=0.5, anchor="center")
 
     # Actualiza todos los textos de la UI al idioma actual.
     def update_ui_texts(self):
@@ -273,7 +297,7 @@ class LectorcitoApp(ctk.CTk):
         greeting = self._tr(greet_key)
         self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
         key_map = {"selpath": "btn_sel_lecturas", "choose": "btn_choose_folder", "create_tree": "btn_create_tree",
-                   "openlect": "btn_open_lecturas", "openlast": "btn_open_last", "delete": "btn_del"}
+                    "openlect": "btn_open_lecturas", "openlast": "btn_open_last", "delete": "btn_del"}
         for key, btn in self.main_buttons.items():
             if key in key_map: btn.configure(text=self._tr(key_map[key]))
         self.btn_cancel.configure(text=self._tr("btn_cancel"))
@@ -325,8 +349,7 @@ class LectorcitoApp(ctk.CTk):
         w, h = self.canvas_left.winfo_width(), self.canvas_left.winfo_height()
         if w > 1 and h > 1:
             color = COLORS['dark']['text'] if self.current_theme == "Light" else COLORS['light']['text']
-            self.canvas_left.create_text(w / 2, h / 2, text=f"Lectorcito Pro v{VERSION}", angle=90,
-                                         font=("Segoe UI", 10, "bold"), fill=color)
+            self.canvas_left.create_text(w / 2, h / 2, text=f"Lectorcito Pro v{VERSION}", angle=90, font=("Segoe UI", 10, "bold"), fill=color)
 
     # Anima suavemente la barra de progreso hacia su valor objetivo.
     def _animate_progress(self):
@@ -409,8 +432,7 @@ class LectorcitoApp(ctk.CTk):
             self.btn_cancel.grid(row=3, column=0, pady=(10, 10), sticky="s")
         else:
             self.progress_bar.stop()
-            for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file,
-                           self.btn_cancel):
+            for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file, self.btn_cancel):
                 widget.grid_forget()
 
             self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew", rowspan=4)

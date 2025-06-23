@@ -100,7 +100,7 @@ def toggle_language(controller):
 # Restaura todas las configuraciones a sus valores por defecto.
 def restore_default_settings(controller):
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
-                           controller.view._tr("confirm_restore_prompt")):
+                            controller.view._tr("confirm_restore_prompt")):
         config.delete_config_file()
         controller.config = config.load_config()
 
@@ -138,7 +138,7 @@ def delete_all_readings(controller):
         return
 
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_del_title"),
-                           controller.view._tr("confirm_del_prompt")):
+                            controller.view._tr("confirm_del_prompt")):
         try:
             shutil.rmtree(path)
             os.makedirs(path, exist_ok=True)
