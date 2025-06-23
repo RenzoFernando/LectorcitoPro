@@ -26,7 +26,6 @@ class LectorcitoController:
     def _assign_commands(self):
         """Asigna los comandos de los widgets a sus manejadores correspondientes."""
         self.view.main_buttons["selpath"].configure(command=lambda: handlers.select_destination_path(self))
-        # El botón "choose" ahora llama al nuevo flujo de selección
         self.view.main_buttons["choose"].configure(command=self.select_reading_type)
         self.view.main_buttons["create_tree"].configure(command=self.create_tree_structure)
         self.view.main_buttons["openlect"].configure(command=lambda: handlers.open_destination_folder(self))
@@ -83,7 +82,7 @@ class LectorcitoController:
         from view.dialogs import SelectFoldersDialog
         paths = SelectFoldersDialog.ask(parent=self.view, title=self.view._tr("dlg_multi_folder_title"))
 
-        if paths:  # Si el usuario presiona "Procesar", la lista no será None
+        if paths:
             self.config["last_read_folder"] = paths[0]
             self.start_batch_processing(paths)
 
@@ -138,6 +137,18 @@ class LectorcitoController:
     def _on_processing_finished(self, status: str, reports_generated: int = 0):
         """Manejador para cuando el procesamiento (único o en lote) finaliza."""
         if status == "success":
+            self.view.set_progress(100)
+
+        delay = 400 if status == 'success' else 0
+        self.view.after(delay, self._finalize_ui_and_message, status, reports_generated)
+
+    def _finalize_ui_and_message(self, status: str, reports_generated: int):
+        """Oculta la UI de progreso y muestra el mensaje final para lecturas normales."""
+        self.is_processing = False
+        self.cancel_event = None
+        self.view.toggle_ui_for_processing(is_active=False)
+
+        if status == "success":
             if reports_generated > 1:
                 self.view.show_message("info_title", "msg_batch_done", reports_generated)
             elif reports_generated == 1:
@@ -151,10 +162,6 @@ class LectorcitoController:
             if status in message_map:
                 title_key, msg_key = message_map[status]
                 self.view.show_message(title_key, msg_key)
-
-        self.is_processing = False
-        self.cancel_event = None
-        self.view.toggle_ui_for_processing(is_active=False)
 
     def _safe_progress_update(self, percentage: float, file_context: str):
         self.view.after(0, self.view.set_progress, percentage, file_context)
@@ -170,35 +177,56 @@ class LectorcitoController:
         return True
 
     def create_tree_structure(self):
-        """Crea un reporte con la estructura de árbol de una carpeta, pidiendo primero la opción."""
-        if not self._check_destination_path():
+        """Crea un reporte de árbol de directorios de forma asíncrona con barra de progreso."""
+        if self.is_processing or not self._check_destination_path():
             return
 
         from view.dialogs import ChoiceDialog
-        # 1. Preguntar primero por el tipo de árbol.
         choice = ChoiceDialog.ask(
             parent=self.view, title=self.view._tr("dlg_tree_choice_title"),
             message=self.view._tr("dlg_tree_choice_prompt"),
             option1_text=self.view._tr("dlg_tree_op1"), option2_text=self.view._tr("dlg_tree_op2"),
             option1_value="complete", option2_value="filtered"
         )
-        # Si el usuario cierra el diálogo o cancela, no hacer nada.
         if not choice:
             return
 
-        # 2. Si se eligió una opción, ahora sí pedir la carpeta.
         source_path = filedialog.askdirectory(title=self.view._tr("btn_create_tree"))
         if not source_path:
             return
 
-        # 3. Proceder con la generación del reporte.
-        use_filters = (choice == "filtered")
+        self.is_processing = True
+        self.view.toggle_ui_for_processing(is_active=True, mode='indeterminate',
+                                           text=self.view._tr("progress_generating_tree"))
+
+        thread = threading.Thread(
+            target=self._tree_thread_target, args=(source_path, choice == "filtered"), daemon=True
+        )
+        thread.start()
+
+    def _tree_thread_target(self, source_path: str, use_filters: bool):
+        """Hilo para generar el árbol de directorios."""
         status, report_path = processor.generate_tree_report(
             source_folder=source_path, output_path=self.config["lecturas_path"], use_config=use_filters,
             config=self.config
         )
+        self.view.after(0, self._on_tree_generation_finished, status, report_path)
 
+    def _on_tree_generation_finished(self, status: str, report_path: str | None):
+        """Manejador para cuando la generación del árbol finaliza."""
         if status == "success":
+            self.view.toggle_ui_for_processing(is_active=True, mode='determinate')
+            self.view.set_progress(100, self.view._tr("progress_done"))
+
+        delay = 400 if status == 'success' else 0
+        self.view.after(delay, self._finalize_tree_ui_and_message, status, report_path)
+
+    def _finalize_tree_ui_and_message(self, status: str, report_path: str | None):
+        """Oculta la UI y muestra el mensaje para la generación de árbol."""
+        self.is_processing = False
+        self.view.toggle_ui_for_processing(is_active=False)
+
+        if status == "success" and report_path:
             self.last_report_path = report_path
             self.view.show_message("info_title", "msg_tree_done", os.path.basename(report_path))
         else:

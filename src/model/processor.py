@@ -43,7 +43,8 @@ def generate_report(
         progress_callback: callable
 ) -> tuple[str, str | None]:
     """
-    Genera un reporte de contenidos de archivos, respetando la nueva lógica de Ver/No Ver.
+    Genera un reporte de contenidos de archivos con un diseño visual mejorado,
+    respetando la nueva lógica de Ver/No Ver.
     Devuelve una tupla (status, path). Status: 'success', 'cancelled', 'no_files', 'error'.
     """
     total_files = _count_files_to_process(source_folder, config)
@@ -68,7 +69,12 @@ def generate_report(
     processed_files = 0
     try:
         with open(final_report_path, "w", encoding="utf-8") as outfile:
-            outfile.write(f"REPORTE DE ARCHIVOS EN: {source_folder}\n\n")
+            # --- ENCABEZADO MEJORADO ---
+            outfile.write("=" * 80 + "\n")
+            outfile.write(f" LECTORCITO PRO - REPORTE DE PROYECTO\n")
+            outfile.write(f" PROYECTO: {folder_name}\n")
+            outfile.write(f" RUTA: {source_folder}\n")
+            outfile.write("=" * 80 + "\n\n")
 
             for root, dirs, files in os.walk(source_folder, topdown=True):
                 if cancel_event.is_set(): break
@@ -85,10 +91,12 @@ def generate_report(
 
                 if not files_in_dir: continue
 
+                # --- FORMATO PARA CARPETAS (SIN EMOJIS) ---
                 relative_path = os.path.relpath(root, source_folder)
-                folder_name_display = relative_path if relative_path != '.' else '.'
-                highlight = " (CARPETA IMPORTANTE)" if os.path.basename(root) in important_folders else ""
-                outfile.write(f"Carpeta: {folder_name_display}{highlight}\n")
+                folder_name_display = relative_path if relative_path != '.' else 'RAÍZ DEL PROYECTO'
+                highlight = " [IMPORTANTE]" if os.path.basename(root) in important_folders else ""
+                outfile.write(f"■ CARPETA: {folder_name_display}{highlight}\n")
+                outfile.write(f"└" + ("─" * 78) + "\n\n")
 
                 for filename, is_text, is_media in files_in_dir:
                     if cancel_event.is_set(): break
@@ -102,20 +110,24 @@ def generate_report(
                     sleep(0.01)
 
                     file_path = os.path.join(root, filename)
-                    outfile.write(f"    Archivo: {filename}\n")
-                    outfile.write(f"    -------- CONTENIDO --------\n")
+                    outfile.write(f"  ● Archivo: {filename}\n")
 
+                    # --- LÓGICA DE CONTENIDO AJUSTADA ---
                     if is_text:
+                        # Si es un archivo de texto, se muestra el bloque de contenido completo.
+                        outfile.write("    " + ("-" * 74) + "\n")
+                        outfile.write("    >> INICIO DEL CONTENIDO\n\n")
                         try:
                             with open(file_path, 'r', encoding='utf-8', errors='ignore') as infile:
                                 for line in infile:
                                     outfile.write(f"    {line}")
                         except Exception as e:
                             outfile.write(f"    [Error al leer el archivo: {e}]\n")
+                        outfile.write(f"\n\n    << FIN DEL CONTENIDO\n")
+                        outfile.write("    " + ("-" * 74) + "\n\n\n")
                     elif is_media:
-                        outfile.write("    (Archivo multimedia, contenido no incluido)\n")
-
-                    outfile.write(f"\n    -------- FIN --------\n\n")
+                        # Si es un archivo multimedia, solo se añade un espacio para separarlo del siguiente.
+                        outfile.write("\n")
 
                 if cancel_event.is_set(): break
     except Exception as e:
@@ -133,6 +145,7 @@ def generate_report(
 def generate_tree_report(
         source_folder: str, output_path: str, use_config: bool, config: dict
 ) -> tuple[str, str | None]:
+    """Genera un reporte de árbol de directorios con el nuevo estilo visual."""
     folder_name = os.path.basename(os.path.normpath(source_folder))
     version = 1
     while True:
@@ -152,6 +165,7 @@ def generate_tree_report(
 
 
 def _build_tree_recursive(current_path, prefix, outfile, use_config, config):
+    """Función recursiva para construir el árbol con el nuevo estilo visual."""
     try:
         elements = sorted(os.listdir(current_path))
     except OSError:
@@ -174,6 +188,7 @@ def _build_tree_recursive(current_path, prefix, outfile, use_config, config):
                     filtered_elements.append(elem)
         elements = filtered_elements
 
+    # --- NUEVA LÓGICA DE PUNTEROS PARA EL ÁRBOL ---
     pointers = ['├── '] * (len(elements) - 1) + ['└── ']
     for pointer, element in zip(pointers, elements):
         outfile.write(prefix + pointer + element + '\n')

@@ -41,7 +41,7 @@ DEFAULT_CONFIG = {
     ),
     # (No Ver > Carpetas) Carpetas a ignorar.
     "etiquetas_carpetas_excluidas": to_tags(
-        ["__pycache__", "venv", ".venv", "node_modules", ".git", "build", "dist", ".idea"]
+        ["__pycache__", "env", "venv", ".venv", "node_modules", ".git", "build", "dist", ".idea"]
     ),
     # (No Ver > Archivos) Nombres de archivo completos a ignorar.
     "etiquetas_archivos_excluidos": to_tags(

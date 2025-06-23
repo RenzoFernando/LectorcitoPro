@@ -13,7 +13,7 @@ from view.dialogs import MessageDialog, InfographicDialog
 from view.tooltip import CustomTooltip
 
 # --- Constantes de la Interfaz ---
-VERSION = "5.10.0"
+VERSION = "5.10.1"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -200,10 +200,11 @@ class LectorcitoApp(ctk.CTk):
         self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent")
         self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=(1, 1))
         self.progress_frame.grid_columnconfigure(0, weight=1)
-        self.progress_frame.grid_rowconfigure(0, weight=1)
+        self.progress_frame.grid_rowconfigure(1, weight=1)
+        self.progress_frame.grid_rowconfigure(3, weight=1)
 
         self.progress_content_wrapper = ctk.CTkFrame(self.progress_frame, fg_color="transparent")
-        self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew")
+        self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew", rowspan=4)
         self.lbl_gif_animation = ctk.CTkLabel(self.progress_content_wrapper, text="")
         self.lbl_gif_animation.pack(expand=True)
 
@@ -277,10 +278,8 @@ class LectorcitoApp(ctk.CTk):
         }
         for key, btn in self.sidebar_buttons.items():
             if key in tooltip_map:
-                # Si el tooltip para este botón ya existe, solo actualizamos el texto
                 if key in self.tooltips:
                     self.tooltips[key].text = self._tr(tooltip_map[key])
-                # Si no existe, creamos una nueva instancia y la guardamos
                 else:
                     self.tooltips[key] = CustomTooltip(btn, text=self._tr(tooltip_map[key]))
 
@@ -294,11 +293,10 @@ class LectorcitoApp(ctk.CTk):
         self._paint_left_sidebar_text()
         self.progress_bar.configure(fg_color=theme['progress_bar'])
 
-        # Actualiza los colores de hover de los botones de la barra lateral al cambiar de tema
         btn_fg_color = COLORS['dark']['bg'] if is_light else COLORS['light']['bg']
         btn_hover_color = COLORS['sidebar_hover']['light'] if is_light else COLORS['sidebar_hover']['dark']
         for key, btn in self.sidebar_buttons.items():
-            if key != "theme_icon":  # El botón del tema tiene su propia lógica
+            if key != "theme_icon":
                 btn.configure(fg_color=btn_fg_color, hover_color=btn_hover_color)
 
         self.sidebar_buttons['theme_icon'].configure(
@@ -321,7 +319,7 @@ class LectorcitoApp(ctk.CTk):
         if abs(diff) < 0.1:
             self.current_progress = self.target_progress
         else:
-            self.current_progress += diff * 0.1;
+            self.current_progress += diff * 0.1
             self.animation_after_id = self.after(20, self._animate_progress)
         self.progress_bar.set(self.current_progress / 100)
 
@@ -338,10 +336,16 @@ class LectorcitoApp(ctk.CTk):
         new_target = int(percentage)
         if new_target != self.target_progress or force_color:
             self.target_progress = new_target
-            color = COLORS['progress_colors']['done'] if self.target_progress >= 90 else COLORS['progress_colors'][
+            color = COLORS['progress_colors']['done'] if self.target_progress >= 99 else COLORS['progress_colors'][
                 'mid'] if self.target_progress >= 50 else COLORS['progress_colors']['start']
             self.progress_bar.configure(progress_color=color)
-        self.lbl_percent.configure(text=f"{self.target_progress}%")
+
+        # Actualiza el texto del porcentaje solo si la barra está en modo determinado
+        if self.progress_bar.cget("mode") == "determinate":
+            self.lbl_percent.configure(text=f"{self.target_progress}%")
+        else:
+            self.lbl_percent.configure(text="")
+
         if file_context: self.lbl_current_file.configure(text=file_context)
         if self.animation_after_id is None: self._animate_progress()
 
@@ -351,30 +355,47 @@ class LectorcitoApp(ctk.CTk):
             self._animate_gif()
         self.gif_change_timer_id = self.after(GIF_CHANGE_INTERVAL_MS, self._change_and_reschedule_gif)
 
-    def toggle_ui_for_processing(self, is_active: bool):
+    def toggle_ui_for_processing(self, is_active: bool, mode: str = 'determinate', text: str = None):
+        """Activa o desactiva la interfaz de procesamiento."""
         state = "disabled" if is_active else "normal"
         for btn in self.main_buttons.values(): btn.configure(state=state)
         for btn in self.sidebar_buttons.values(): btn.configure(state=state)
-        if self.gif_change_timer_id: self.after_cancel(self.gif_change_timer_id); self.gif_change_timer_id = None
+
+        if self.gif_change_timer_id:
+            self.after_cancel(self.gif_change_timer_id)
+            self.gif_change_timer_id = None
 
         if is_active:
-            if self.gif_animation_after_id: self.after_cancel(
-                self.gif_animation_after_id); self.gif_animation_after_id = None
-            self.progress_content_wrapper.grid_forget()
-            self.set_progress(0)
+            if self.gif_animation_after_id:
+                self.after_cancel(self.gif_animation_after_id)
+                self.gif_animation_after_id = None
+            self.progress_content_wrapper.grid_remove()
 
-            self.progress_frame.grid_rowconfigure(3, weight=1)
-            self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
-            self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
+            self.progress_bar.configure(mode=mode)
             self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
-            self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
-            self.btn_cancel.grid(row=3, column=0, pady=(5, 10), sticky="s")
+
+            if mode == 'indeterminate':
+                self.progress_bar.start()
+                self.lbl_progress_status.configure(text=text if text else "")
+                self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(15, 0), sticky="s")
+                self.lbl_percent.grid_forget()
+                self.lbl_current_file.grid_forget()
+            else:  # determinate
+                self.progress_bar.stop()
+                self.set_progress(0)
+                self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
+                self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
+                self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
+                self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
+
+            self.btn_cancel.grid(row=3, column=0, pady=(10, 10), sticky="s")
         else:
+            self.progress_bar.stop()
             for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file,
                            self.btn_cancel):
                 widget.grid_forget()
 
-            self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew")
+            self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew", rowspan=4)
             self.after(50, self._load_and_prepare_gif)
 
             def show_gif():
@@ -383,7 +404,7 @@ class LectorcitoApp(ctk.CTk):
                     self.gif_change_timer_id = self.after(GIF_CHANGE_INTERVAL_MS, self._change_and_reschedule_gif)
 
             self.after(60, show_gif)
-            self.after(1000, lambda: self.set_progress(0))
+            self.after(100, lambda: self.set_progress(0))
 
     def show_message(self, title_key: str, message_key: str, *args):
         MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
@@ -394,4 +415,3 @@ class LectorcitoApp(ctk.CTk):
             InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
         else:
             self.show_message("error_title", "msg_infographic_error")
-
