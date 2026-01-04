@@ -36,7 +36,7 @@ class TagsConfigDialog(BaseDialog):
 
         ok_button = ctk.CTkButton(
             button_frame,
-            text="Guardar Cambios",
+            text=self._tr("btn_save_changes"),
             command=self._on_ok,
             fg_color=COLORS["button"]["green"],
             hover_color=COLORS["button_hover"]["green_h"],
@@ -45,7 +45,7 @@ class TagsConfigDialog(BaseDialog):
 
         cancel_button = ctk.CTkButton(
             button_frame,
-            text="Cancelar",
+            text=self._tr("btn_cancel"),
             command=self._on_cancel,
             fg_color=COLORS["button"]["red"],
             hover_color=COLORS["button_hover"]["red_h"],

@@ -4,8 +4,8 @@ import sys
 
 def resource_path(relative_path: str) -> str:
     """
-    Obtiene la ruta correcta a los recursos tanto en desarrollo como cuando se
-    ejecuta desde un binario de PyInstaller.
+    Resolve the correct path to packaged resources both in development and when
+    running from a PyInstaller binary.
     """
     try:
         base_path = sys._MEIPASS  # type: ignore

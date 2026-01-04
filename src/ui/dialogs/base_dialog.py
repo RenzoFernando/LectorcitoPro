@@ -12,6 +12,7 @@ class BaseDialog(ctk.CTkToplevel):
         self.title(title)
         self.resizable(False, False)
         self.attributes("-alpha", 0.0)
+        self._tr = getattr(parent, "_tr", lambda key, *args: key)
 
         def _set_icon():
             try:
@@ -84,7 +85,7 @@ class MessageDialog(BaseDialog):
         )
         ok_button = ctk.CTkButton(
             main_frame,
-            text="OK",
+            text=self._tr("btn_ok"),
             width=100,
             command=self._on_ok,
             fg_color=COLORS["button"]["blue"],
@@ -113,7 +114,7 @@ class ConfirmDialog(BaseDialog):
 
         ctk.CTkButton(
             button_frame,
-            text="Sí",
+            text=self._tr("btn_yes"),
             width=100,
             command=self._on_yes,
             fg_color=COLORS["button"]["green"],
@@ -121,7 +122,7 @@ class ConfirmDialog(BaseDialog):
         ).pack(side="left", padx=10)
         ctk.CTkButton(
             button_frame,
-            text="No",
+            text=self._tr("btn_no"),
             width=100,
             command=self._on_no,
             fg_color=COLORS["button"]["red"],
