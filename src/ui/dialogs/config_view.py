@@ -63,7 +63,7 @@ class TagsConfigDialog(BaseDialog):
         scroll_frame = ctk.CTkScrollableFrame(self.main_frame, label_text="")
         scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew")
 
-        entry = ctk.CTkEntry(self.main_frame, placeholder_text="Escribir y presionar Enter para añadir...")
+        entry = ctk.CTkEntry(self.main_frame, placeholder_text=self._tr("placeholder_add_tag"))
         entry.grid(row=base_row + 2, column=0, sticky="ew", pady=(5, 0))
 
         if section_id == "folders":

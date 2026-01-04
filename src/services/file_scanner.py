@@ -21,7 +21,7 @@ class FileEntry:
 
 
 def _get_active_tags(config: AppSettings | dict, key: str) -> Set[str]:
-    tag_list = (config.get(key, []) if isinstance(config, dict) else config.get(key, []))
+    tag_list = config.get(key, []) if hasattr(config, "get") else []
     return {tag["nombre"] for tag in tag_list if tag.get("estado") == "activo"}
 
 

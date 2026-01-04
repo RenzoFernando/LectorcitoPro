@@ -99,7 +99,7 @@ class MainWindow(ctk.CTk):
             y = (screen_height // 2) - (window_height // 2)
             self.geometry(f"+{x}+{y}")
         except Exception as e:
-            logger.error("Error al centrar la ventana principal: %s", e)
+            logger.error("Error centering main window: %s", e)
 
     def _fade_in(self):
         alpha = self.attributes("-alpha")
