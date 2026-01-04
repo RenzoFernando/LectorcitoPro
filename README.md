@@ -76,30 +76,43 @@ Una vez generado un reporte, este se guardará en una carpeta llamada `Lecturas`
 ## <a name="estructura"></a>Estructura del Proyecto
 ```
 LectorcitoPro/
-├── GuíaCertificados.md
-├── Historial de Versiones.md
-├── README.md
-├── descargas
-│   ├── Lectorcito.py
-│   └── LectorcitoPro.exe
-├── recursos
-├── recursos_externos
+├── descargas/
+├── recursos/
+├── logs/
 ├── requirements.txt
-└── src
-    ├── config.py
-    ├── controller
-    │   ├── controller.py
-    │   └── handlers.py
-    ├── main.py
-    ├── model
-    │   └── processor.py
-    ├── utils.py
-    └── view
-        ├── dialogs.py
-        ├── tags_dialog.py
-        ├── tooltip.py
-        ├── translations.py
-        └── ui.py
+├── main.py
+└── src/
+    ├── core/
+    │   ├── config_manager.py
+    │   ├── constants.py
+    │   ├── i18n.py
+    │   └── logger.py
+    ├── domain/
+    │   ├── enums.py
+    │   └── settings.py
+    ├── services/
+    │   ├── file_scanner.py
+    │   ├── report_writer.py
+    │   ├── resource_loader.py
+    │   └── tree_generator.py
+    ├── ui/
+    │   ├── main_window.py
+    │   ├── theme_manager.py
+    │   ├── components/
+    │   │   ├── buttons.py
+    │   │   ├── header.py
+    │   │   ├── progress.py
+    │   │   ├── sidebar.py
+    │   │   └── tooltip.py
+    │   └── dialogs/
+    │       ├── base_dialog.py
+    │       ├── config_view.py
+    │       ├── folder_selector.py
+    │       └── info_view.py
+    ├── utils/
+    │   ├── path_utils.py
+    │   └── string_utils.py
+    └── app_controller.py
 ```
 
 ---
