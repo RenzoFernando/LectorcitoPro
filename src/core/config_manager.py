@@ -5,6 +5,7 @@ from typing import Dict, Iterable
 from appdirs import user_config_dir
 
 from core.constants import APP_AUTHOR, APP_NAME
+from core.logger import get_logger
 from domain.settings import AppSettings, Tag
 
 CFG_NAME = "config.json"
@@ -15,6 +16,7 @@ CONFIG_FILE_PATH = os.path.join(_config_dir, CFG_NAME)
 
 DEFAULT_LECTURAS_PATH = os.path.join(_config_dir, "Lecturas")
 os.makedirs(DEFAULT_LECTURAS_PATH, exist_ok=True)
+logger = get_logger(__name__)
 
 
 def _to_tags(items: Iterable[str]):
@@ -58,7 +60,7 @@ def _migrate_config(config_data: Dict) -> Dict:
                 del config_data[old_key]
                 migrated = True
     if migrated:
-        print("Configuración migrada al nuevo formato de etiquetas.")
+        logger.info("Configuración migrada al nuevo formato de etiquetas.")
     return config_data
 
 
@@ -84,7 +86,7 @@ def save_config(config: AppSettings | Dict):
         with open(CONFIG_FILE_PATH, 'w', encoding="utf-8") as f:
             json.dump(config_to_save, f, indent=4, ensure_ascii=False)
     except Exception as e:
-        print(f"Error al guardar la configuración: {e}")
+        logger.error("Error al guardar la configuración: %s", e)
 
 
 def delete_config_file():
@@ -92,4 +94,4 @@ def delete_config_file():
         if os.path.exists(CONFIG_FILE_PATH):
             os.remove(CONFIG_FILE_PATH)
     except Exception as e:
-        print(f"Error al eliminar el archivo de configuración: {e}")
+        logger.error("Error al eliminar el archivo de configuración: %s", e)

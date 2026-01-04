@@ -1,8 +1,11 @@
 import os
 from dataclasses import dataclass
-from typing import Iterable, List, Set
+from typing import Generator, Iterable, List, Set
 
+from core.logger import get_logger
 from domain.settings import AppSettings
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -39,12 +42,12 @@ def count_files_to_process(folder: str, config: AppSettings | dict) -> int:
                 if any(filename.lower().endswith(ext) for ext in extensions_to_check):
                     file_count += 1
     except OSError as e:
-        print(f"Error al contar archivos en {folder}: {e}")
+        logger.error("Error al contar archivos en %s: %s", folder, e)
         return 0
     return file_count
 
 
-def scan_files(folder: str, config: AppSettings | dict) -> Iterable[FileEntry]:
+def scan_files(folder: str, config: AppSettings | dict) -> Generator[FileEntry, None, None]:
     text_ext = _get_active_tags(config, "etiquetas_extensiones_incluidas")
     media_ext = set(config.get("media_extensions", []))
     excluded_folders = _get_active_tags(config, "etiquetas_carpetas_excluidas")

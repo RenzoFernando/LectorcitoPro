@@ -6,7 +6,10 @@ from typing import Dict, List, Tuple
 import customtkinter as ctk
 from PIL import Image
 
+from core.logger import get_logger
 from utils.path_utils import resource_path
+
+logger = get_logger(__name__)
 
 
 def load_dual_icon(light_name: str, dark_name: str, size: Tuple[int, int]) -> ctk.CTkImage | None:
@@ -15,7 +18,7 @@ def load_dual_icon(light_name: str, dark_name: str, size: Tuple[int, int]) -> ct
         dark_img = Image.open(resource_path(dark_name))
         return ctk.CTkImage(light_image=light_img, dark_image=dark_img, size=size)
     except Exception as e:
-        print(f"Error cargando iconos {light_name}/{dark_name}: {e}")
+        logger.error("Error cargando iconos %s/%s: %s", light_name, dark_name, e)
         return None
 
 
@@ -24,7 +27,7 @@ def load_single_icon(name: str, size: Tuple[int, int]) -> ctk.CTkImage | None:
         img = Image.open(resource_path(name))
         return ctk.CTkImage(img, size=size)
     except Exception as e:
-        print(f"Error cargando icono {name}: {e}")
+        logger.error("Error cargando icono %s: %s", name, e)
         return None
 
 
@@ -40,7 +43,7 @@ def load_icon_set(keys: Tuple[str, ...], size=(22, 22)) -> Dict[str, ctk.CTkImag
                 size=size,
             )
         except Exception as e:
-            print(f"Error cargando icono '{key}': {e}")
+            logger.error("Error cargando icono '%s': %s", key, e)
             icons[key] = None
     return icons
 
@@ -66,5 +69,5 @@ def load_gif_frames(gif_name: str, max_width: int, max_height: int) -> Tuple[Lis
                 resized_frame = frame_rgba.resize(gif_size, Image.Resampling.LANCZOS)
                 frames.append(resized_frame)
     except Exception as e:
-        print(f"Error al cargar o redimensionar el GIF {gif_name}: {e}")
+        logger.error("Error al cargar o redimensionar el GIF %s: %s", gif_name, e)
     return frames, delay

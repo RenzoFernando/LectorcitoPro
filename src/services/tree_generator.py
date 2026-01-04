@@ -1,7 +1,10 @@
 import os
 
+from core.logger import get_logger
 from domain.settings import AppSettings
 from services.file_scanner import _get_active_tags
+
+logger = get_logger(__name__)
 
 
 def generate_tree_report(
@@ -22,7 +25,7 @@ def generate_tree_report(
             _build_tree_recursive(source_folder, "", f, use_config, config)
         return "success", final_report_path
     except Exception as e:
-        print(f"Error al generar el árbol de directorios: {e}")
+        logger.error("Error al generar el árbol de directorios: %s", e)
         return "error", None
 
 

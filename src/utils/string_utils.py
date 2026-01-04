@@ -1,2 +1,2 @@
-def safe_title(text: str) -> str:
-    return text.strip().title() if isinstance(text, str) else ""
+def safe_title(text: str | None) -> str:
+    return text.strip().title() if text is not None else ""

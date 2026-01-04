@@ -2,8 +2,11 @@ import os
 import threading
 from time import sleep
 
+from core.logger import get_logger
 from domain.settings import AppSettings
 from services.file_scanner import _get_active_tags, count_files_to_process
+
+logger = get_logger(__name__)
 
 
 def generate_report(
@@ -97,7 +100,7 @@ def generate_report(
                 if cancel_event and cancel_event.is_set():
                     break
     except Exception as e:
-        print(f"Error crítico al generar el reporte: {e}")
+        logger.error("Error crítico al generar el reporte: %s", e)
         if os.path.exists(final_report_path):
             os.remove(final_report_path)
         return "error", None

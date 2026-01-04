@@ -21,6 +21,7 @@ from core.constants import (
     YEAR,
 )
 from core.i18n import I18n
+from core.logger import get_logger
 from services.resource_loader import load_dual_icon, load_gif_frames, load_icon_set, load_single_icon
 from ui.components.buttons import create_main_buttons
 from ui.components.header import create_header
@@ -29,6 +30,8 @@ from ui.components.sidebar import create_left_sidebar, create_right_sidebar
 from ui.components.tooltip import CustomTooltip
 from ui.dialogs.info_view import InfographicDialog
 from utils.path_utils import resource_path
+
+logger = get_logger(__name__)
 
 
 class MainWindow(ctk.CTk):
@@ -96,7 +99,7 @@ class MainWindow(ctk.CTk):
             y = (screen_height // 2) - (window_height // 2)
             self.geometry(f"+{x}+{y}")
         except Exception as e:
-            print(f"Error al centrar la ventana principal: {e}")
+            logger.error("Error al centrar la ventana principal: %s", e)
 
     def _fade_in(self):
         alpha = self.attributes("-alpha")
@@ -141,7 +144,7 @@ class MainWindow(ctk.CTk):
             else:
                 self.logo_image = None
         except Exception as e:
-            print(f"Error al cargar las imágenes del logo: {e}")
+            logger.error("Error al cargar las imágenes del logo: %s", e)
             self.logo_image = None
 
     def _load_and_prepare_gif(self):
@@ -161,7 +164,7 @@ class MainWindow(ctk.CTk):
             self.gif_pil_frames = frames
             self.gif_delay = delay
         except Exception as e:
-            print(f"Error al cargar o redimensionar el GIF: {e}")
+            logger.error("Error al cargar o redimensionar el GIF: %s", e)
             self.gif_pil_frames = []
 
     def _build_ui(self):

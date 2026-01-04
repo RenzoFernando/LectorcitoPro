@@ -3,6 +3,9 @@ import os
 import customtkinter as ctk
 
 from core.constants import COLORS
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class BaseDialog(ctk.CTkToplevel):
@@ -19,7 +22,7 @@ class BaseDialog(ctk.CTkToplevel):
                 if hasattr(parent, "_icon_path") and parent._icon_path and os.path.exists(parent._icon_path):
                     self.iconbitmap(parent._icon_path)
             except Exception as e:
-                print(f"Error al establecer el icono de la sub-ventana: {e}")
+                logger.error("Error al establecer el icono de la sub-ventana: %s", e)
 
         self.after(200, _set_icon)
         self.result = None
