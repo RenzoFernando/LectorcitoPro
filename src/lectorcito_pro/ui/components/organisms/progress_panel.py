@@ -1,0 +1,1 @@
+"""Organism: progress panel (placeholder)."""

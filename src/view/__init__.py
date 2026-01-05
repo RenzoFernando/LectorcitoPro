@@ -1,1 +1,0 @@
-# Marca el directorio 'view' como un paquete de Python.

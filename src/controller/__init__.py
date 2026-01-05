@@ -1,1 +1,0 @@
-# Marca el directorio 'controller' como un paquete de Python, permitiendo importaciones.

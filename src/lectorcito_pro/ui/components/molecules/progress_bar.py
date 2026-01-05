@@ -1,0 +1,1 @@
+"""Molecule: progress bar (placeholder)."""

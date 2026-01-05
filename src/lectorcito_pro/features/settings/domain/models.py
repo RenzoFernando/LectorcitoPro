@@ -1,0 +1,1 @@
+"""Modelos de settings (placeholder)."""

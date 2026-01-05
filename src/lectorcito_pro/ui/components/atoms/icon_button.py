@@ -1,0 +1,1 @@
+"""Atoms: icon button (placeholder)."""
