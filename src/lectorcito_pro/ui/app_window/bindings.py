@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 import os
 import shutil
 import threading
 import webbrowser
-from tkinter import filedialog
 
 from ...config import store as config_store
-from ...features.reports.application.generate_report import generate_report
-from ...features.tree.application.generate_tree import generate_tree_report
+from ...features.reports.ui.controller import ReportsUIController
+from ...features.settings.application.update_filters import normalize_extension_tags
+from ...features.settings.application.update_language import toggle_language
+from ...features.settings.application.update_theme import toggle_theme
+from ...features.tree.ui.controller import TreeUIController
+from ...infra.os_integration.file_dialogs import ask_directory
+from ...infra.os_integration.open_path import open_path
 from .main_window import LectorcitoApp
 from ..dialogs.choice import ChoiceDialog
 from ..dialogs.confirm import ConfirmDialog
@@ -18,9 +24,14 @@ class LectorcitoController:
     def __init__(self):
         self.config = config_store.load_config()
         self.view = LectorcitoApp(self.config, self)
-        self.last_report_path = None
+
+        # Controladores por feature (adaptadores)
+        self.reports = ReportsUIController()
+        self.tree = TreeUIController()
+
+        self.last_report_path: str | None = None
         self.is_processing = False
-        self.cancel_event = None
+        self.cancel_event: threading.Event | None = None
         self._assign_commands()
 
     def _assign_commands(self):
@@ -44,6 +55,9 @@ class LectorcitoController:
     def run(self):
         self.view.mainloop()
 
+    # -------------------------------------------------------------------------
+    # Persistencia / paths
+    # -------------------------------------------------------------------------
     def _update_active_lecturas_path(self):
         if self.config.get("use_default_path", True):
             self.config["lecturas_path"] = config_store.DEFAULT_LECTURAS_PATH
@@ -61,6 +75,9 @@ class LectorcitoController:
         except Exception:
             pass
 
+    # -------------------------------------------------------------------------
+    # Selección de destino
+    # -------------------------------------------------------------------------
     def select_destination_path(self):
         choice = ChoiceDialog.ask(
             parent=self.view,
@@ -75,9 +92,11 @@ class LectorcitoController:
         if choice == "default":
             self.config["use_default_path"] = True
             self.view.show_message("info_title", "dest_set_default_msg")
+
         elif choice == "custom":
-            path = filedialog.askdirectory(title=self.view._tr("btn_sel_lecturas"))
+            path = ask_directory(title=self.view._tr("btn_sel_lecturas"))
             if path:
+                # Misma lógica que el original: crea subcarpeta "Lecturas" dentro del destino seleccionado
                 custom_path = os.path.join(path, "Lecturas")
                 self.config.update({"use_default_path": False, "custom_lecturas_path": custom_path})
                 self.view.show_message("info_title", "dest_set_custom_msg", custom_path)
@@ -92,6 +111,9 @@ class LectorcitoController:
             return False
         return True
 
+    # -------------------------------------------------------------------------
+    # Lectura (single/multiple)
+    # -------------------------------------------------------------------------
     def select_reading_type(self):
         if self.is_processing or not self._check_destination_path():
             return
@@ -112,7 +134,7 @@ class LectorcitoController:
             self.select_multiple_folders_to_read()
 
     def select_single_folder_to_read(self):
-        folder_path = filedialog.askdirectory(title=self.view._tr("btn_choose_folder"))
+        folder_path = ask_directory(title=self.view._tr("btn_choose_folder"))
         if folder_path:
             self.start_batch_processing([folder_path])
 
@@ -123,7 +145,7 @@ class LectorcitoController:
             self._save_preferences_silent()
             self.start_batch_processing(paths)
 
-    def start_batch_processing(self, folder_paths: list):
+    def start_batch_processing(self, folder_paths: list[str]):
         if self.is_processing:
             return
 
@@ -133,12 +155,15 @@ class LectorcitoController:
         self.is_processing = True
         self.cancel_event = threading.Event()
         self.view.toggle_ui_for_processing(is_active=True)
+
         thread = threading.Thread(
-            target=self._batch_processing_thread_target, args=(folder_paths, self.cancel_event), daemon=True
+            target=self._batch_processing_thread_target,
+            args=(folder_paths, self.cancel_event),
+            daemon=True,
         )
         thread.start()
 
-    def _batch_processing_thread_target(self, folder_paths: list, cancel_event: threading.Event):
+    def _batch_processing_thread_target(self, folder_paths: list[str], cancel_event: threading.Event):
         overall_status = "success"
         reports_generated = 0
         total_folders = len(folder_paths)
@@ -152,7 +177,7 @@ class LectorcitoController:
             context_prefix = f"[{i + 1}/{total_folders}] " if total_folders > 1 else ""
             self.view.after(0, self.view.set_progress, 0, f"{context_prefix}{folder_name}")
 
-            status, report_path = generate_report(
+            status, report_path = self.reports.generate(
                 source_folder=folder_path,
                 output_path=self.config["lecturas_path"],
                 config=self.config,
@@ -205,6 +230,9 @@ class LectorcitoController:
         title_key, msg_key = message_map.get(status, ("error_title", "msg_error_generic"))
         self.view.show_message(title_key, msg_key)
 
+    # -------------------------------------------------------------------------
+    # Árbol
+    # -------------------------------------------------------------------------
     def create_tree_structure(self):
         if self.is_processing or not self._check_destination_path():
             return
@@ -221,20 +249,26 @@ class LectorcitoController:
         if not choice:
             return
 
-        source_path = filedialog.askdirectory(title=self.view._tr("btn_create_tree"))
+        source_path = ask_directory(title=self.view._tr("btn_create_tree"))
         if not source_path:
             return
 
         self.is_processing = True
         self.view.toggle_ui_for_processing(
-            is_active=True, mode="indeterminate", text=self.view._tr("progress_generating_tree")
+            is_active=True,
+            mode="indeterminate",
+            text=self.view._tr("progress_generating_tree"),
         )
 
-        thread = threading.Thread(target=self._tree_thread_target, args=(source_path, choice == "filtered"), daemon=True)
+        thread = threading.Thread(
+            target=self._tree_thread_target,
+            args=(source_path, choice == "filtered"),
+            daemon=True,
+        )
         thread.start()
 
     def _tree_thread_target(self, source_path: str, use_filters: bool):
-        status, report_path = generate_tree_report(
+        status, report_path = self.tree.generate(
             source_folder=source_path,
             output_path=self.config["lecturas_path"],
             use_config=use_filters,
@@ -260,6 +294,9 @@ class LectorcitoController:
         else:
             self.view.show_message("error_title", "msg_error_generic")
 
+    # -------------------------------------------------------------------------
+    # Configuración (tags)
+    # -------------------------------------------------------------------------
     def show_view_config_dialog(self):
         current_folders = self.config.get("etiquetas_carpetas_importantes", [])
         current_files = self.config.get("etiquetas_extensiones_incluidas", [])
@@ -277,11 +314,7 @@ class LectorcitoController:
             return
 
         new_folders, new_files = result
-
-        for tag in new_files:
-            nombre = str(tag.get("nombre", "")).strip()
-            if nombre and not nombre.startswith("."):
-                tag["nombre"] = f".{nombre}"
+        normalize_extension_tags(new_files)
 
         self.config["etiquetas_carpetas_importantes"] = new_folders
         self.config["etiquetas_extensiones_incluidas"] = new_files
@@ -308,18 +341,24 @@ class LectorcitoController:
         self.config["etiquetas_archivos_excluidos"] = new_files
         self._save_preferences_silent()
 
+    # -------------------------------------------------------------------------
+    # Tema/Idioma
+    # -------------------------------------------------------------------------
     def toggle_theme(self):
-        self.view.current_theme = "Dark" if self.view.current_theme == "Light" else "Light"
+        self.view.current_theme = toggle_theme(self.view.current_theme)
         self.config["theme"] = self.view.current_theme
         self.view.apply_theme()
         self._save_preferences_silent()
 
     def toggle_language(self):
-        self.view.lang = "en" if self.view.lang == "es" else "es"
+        self.view.lang = toggle_language(self.view.lang)
         self.config["language"] = self.view.lang
         self.view.update_ui_texts()
         self._save_preferences_silent()
 
+    # -------------------------------------------------------------------------
+    # Restaurar / abrir / eliminar
+    # -------------------------------------------------------------------------
     def restore_default_settings(self):
         confirm = ConfirmDialog.ask(
             self.view,
@@ -344,13 +383,13 @@ class LectorcitoController:
     def open_destination_folder(self):
         path = self.config.get("lecturas_path")
         if path and os.path.isdir(path):
-            webbrowser.open(os.path.realpath(path))
+            open_path(path)
         else:
             self.view.show_message("info_title", "msg_select_dest")
 
     def open_last_report(self):
         if self.last_report_path and os.path.isfile(self.last_report_path):
-            webbrowser.open(os.path.realpath(self.last_report_path))
+            open_path(self.last_report_path)
         else:
             self.view.show_message("info_title", "msg_no_report_yet")
 
@@ -360,7 +399,11 @@ class LectorcitoController:
             self.view.show_message("info_title", "msg_select_dest")
             return
 
-        confirm = ConfirmDialog.ask(self.view, self.view._tr("confirm_del_title"), self.view._tr("confirm_del_prompt"))
+        confirm = ConfirmDialog.ask(
+            self.view,
+            self.view._tr("confirm_del_title"),
+            self.view._tr("confirm_del_prompt"),
+        )
         if not confirm:
             return
 

@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+
 from appdirs import user_config_dir
 
-# --- Constantes de la Aplicación ---
-APP_NAME = "LectorcitoPro"
-APP_AUTHOR = "APPS_RenzoFernando"
-CFG_NAME = "config.json"
+from ..core.constants import APP_AUTHOR, APP_NAME, CFG_NAME
 
 # --- Rutas de Configuración ---
 CONFIG_DIR = user_config_dir(APP_NAME, APP_AUTHOR, roaming=True)
@@ -32,18 +30,10 @@ DEFAULT_CONFIG = {
     "last_read_folder": "",
     "theme": "Light",
     "language": "es",
-    "etiquetas_carpetas_importantes": to_tags(
-        ["src"]
-    ),
-    "etiquetas_extensiones_incluidas": to_tags(
-        [".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json"]
-    ),
-    "etiquetas_carpetas_excluidas": to_tags(
-        ["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]
-    ),
-    "etiquetas_archivos_excluidos": to_tags(
-        ["Pipfile.lock", "package.json", "package-lock.json"]
-    ),
+    "etiquetas_carpetas_importantes": to_tags(["src"]),
+    "etiquetas_extensiones_incluidas": to_tags([".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json"]),
+    "etiquetas_carpetas_excluidas": to_tags(["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]),
+    "etiquetas_archivos_excluidos": to_tags(["Pipfile.lock", "package.json", "package-lock.json"]),
     "media_extensions": [
         ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp", ".svg", ".ico",
         ".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv", ".webm",
@@ -58,21 +48,70 @@ DEFAULT_CONFIG = {
         ".ttf", ".otf", ".woff", ".woff2",
         ".psd", ".ai", ".eps",
         ".bak", ".tmp", ".log", ".dat",
-        ".cer", ".crt", ".pem", ".key", ".pfx"
-    ]
+        ".cer", ".crt", ".pem", ".key", ".pfx",
+    ],
 }
 
 
 def _migrate_config(config_data: dict) -> dict:
-    """Migra configuraciones viejas a la estructura actual (compatibilidad)."""
-    def convert_tags(key: str):
-        if key in config_data and isinstance(config_data[key], list):
-            config_data[key] = to_tags(config_data[key])
+    """Migra configuraciones viejas a la estructura actual (compatibilidad).
 
-    convert_tags("etiquetas_carpetas_importantes")
-    convert_tags("etiquetas_extensiones_incluidas")
-    convert_tags("etiquetas_carpetas_excluidas")
-    convert_tags("etiquetas_archivos_excluidos")
+    Compatibilidades soportadas:
+    - Tags legacy como lista de strings: ["src", ".py", ...]
+    - Tags actuales como lista de dicts: [{"nombre": "src", "estado": "activo"}, ...]
+    - Mezclas (se normaliza sin romper).
+    - Recuperación básica de configuraciones dañadas donde "nombre" quedó anidado como dict.
+    """
+
+    def _normalize_tag_dict(x: dict) -> dict:
+        raw_name = x.get("nombre", "")
+        # Recuperación de casos dañados: {"nombre": {"nombre": ".py", "estado": "activo"}, ...}
+        if isinstance(raw_name, dict):
+            raw_name = raw_name.get("nombre", "")
+
+        raw_state = x.get("estado", "activo")
+        if isinstance(raw_state, dict):
+            raw_state = raw_state.get("estado", "activo")
+
+        name = str(raw_name).strip()
+        state = (raw_state or "activo") if isinstance(raw_state, str) else "activo"
+        return {"nombre": name, "estado": state}
+
+    def ensure_tag_dicts(value):
+        if not isinstance(value, list):
+            return value
+
+        if not value:
+            return value
+
+        # Caso moderno: lista de dicts
+        if all(isinstance(x, dict) for x in value):
+            return [_normalize_tag_dict(x) for x in value]
+
+        # Caso legacy: lista de strings
+        if all(isinstance(x, str) for x in value):
+            return to_tags([x.strip() for x in value if x.strip()])
+
+        # Caso mixto: normalizar elemento por elemento
+        normalized: list[dict] = []
+        for x in value:
+            if isinstance(x, dict):
+                normalized.append(_normalize_tag_dict(x))
+            elif isinstance(x, str):
+                name = x.strip()
+                if name:
+                    normalized.append({"nombre": name, "estado": "activo"})
+        return normalized
+
+    for key in (
+        "etiquetas_carpetas_importantes",
+        "etiquetas_extensiones_incluidas",
+        "etiquetas_carpetas_excluidas",
+        "etiquetas_archivos_excluidos",
+    ):
+        if key in config_data:
+            config_data[key] = ensure_tag_dicts(config_data.get(key))
+
     return config_data
 
 

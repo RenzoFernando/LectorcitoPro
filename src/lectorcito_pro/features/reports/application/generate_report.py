@@ -1,33 +1,12 @@
+from __future__ import annotations
+
 import os
 import threading
 from time import sleep
 
-
-def _get_active_tags(config: dict, key: str) -> set:
-    tag_list = config.get(key, [])
-    return {tag["nombre"] for tag in tag_list if tag.get("estado") == "activo"}
-
-
-def _count_files_to_process(folder: str, config: dict) -> int:
-    file_count = 0
-
-    extensions_to_include = _get_active_tags(config, "etiquetas_extensiones_incluidas")
-    extensions_to_check = extensions_to_include.union(set(config.get("media_extensions", [])))
-    folders_to_exclude = _get_active_tags(config, "etiquetas_carpetas_excluidas")
-    files_to_exclude = _get_active_tags(config, "etiquetas_archivos_excluidos")
-
-    try:
-        for root, dirs, files in os.walk(folder, topdown=True):
-            dirs[:] = [d for d in dirs if d not in folders_to_exclude]
-            for filename in files:
-                if filename in files_to_exclude:
-                    continue
-                if any(filename.lower().endswith(ext) for ext in extensions_to_check):
-                    file_count += 1
-    except OSError:
-        return 0
-
-    return file_count
+from ....infra.filesystem.file_reader import read_text_file
+from ....infra.filesystem.scanner import count_files_to_process, iter_directories_with_files
+from ..domain.filters import build_filters
 
 
 def generate_report(
@@ -37,7 +16,18 @@ def generate_report(
     cancel_event: threading.Event | None = None,
     progress_callback=None,
 ) -> tuple[str, str | None]:
-    total_files = _count_files_to_process(source_folder, config)
+    """Genera el reporte consolidado del proyecto.
+
+    ✅ Mantiene el mismo comportamiento y formato del reporte original.
+    - Recorre el proyecto recursivamente.
+    - Aplica filtros configurables.
+    - Incluye archivos de texto con su contenido.
+    - Lista archivos multimedia (sin incluir contenido).
+    - Soporta cancelación y progreso.
+    """
+    filters = build_filters(config)
+
+    total_files = count_files_to_process(source_folder, filters)
     if total_files == 0:
         return "no_files", None
 
@@ -45,12 +35,6 @@ def generate_report(
         return "cancelled", None
 
     os.makedirs(output_path, exist_ok=True)
-
-    important_folders = _get_active_tags(config, "etiquetas_carpetas_importantes")
-    included_exts = _get_active_tags(config, "etiquetas_extensiones_incluidas")
-    media_exts = set(config.get("media_extensions", []))
-    excluded_folders = _get_active_tags(config, "etiquetas_carpetas_excluidas")
-    excluded_files = _get_active_tags(config, "etiquetas_archivos_excluidos")
 
     folder_name = os.path.basename(os.path.normpath(source_folder))
     version = 1
@@ -72,33 +56,18 @@ def generate_report(
             outfile.write(f" RUTA: {source_folder}\n")
             outfile.write("=" * 80 + "\n\n")
 
-            for root, dirs, files in os.walk(source_folder, topdown=True):
+            for root, scanned_files in iter_directories_with_files(source_folder, filters, cancel_event=cancel_event):
                 if cancel_event and cancel_event.is_set():
                     break
 
-                dirs[:] = [d for d in dirs if d not in excluded_folders]
-                files.sort()
-
-                files_in_dir: list[tuple[str, bool, bool]] = []
-                for filename in files:
-                    if filename in excluded_files:
-                        continue
-                    is_text = any(filename.lower().endswith(ext) for ext in included_exts)
-                    is_media = any(filename.lower().endswith(ext) for ext in media_exts)
-                    if is_text or is_media:
-                        files_in_dir.append((filename, is_text, is_media))
-
-                if not files_in_dir:
-                    continue
-
                 relative_path = os.path.relpath(root, source_folder)
                 folder_name_display = relative_path if relative_path != "." else "RAÍZ DEL PROYECTO"
-                highlight = " [IMPORTANTE]" if os.path.basename(root) in important_folders else ""
+                highlight = " [IMPORTANTE]" if os.path.basename(root) in filters.important_folders else ""
 
                 outfile.write(f"■ CARPETA: {folder_name_display}{highlight}\n")
-                outfile.write(f"└" + ("─" * 78) + "\n\n")
+                outfile.write("└" + ("─" * 78) + "\n\n")
 
-                for filename, is_text, is_media in files_in_dir:
+                for item in scanned_files:
                     if cancel_event and cancel_event.is_set():
                         break
 
@@ -106,28 +75,28 @@ def generate_report(
                     progress = (processed_files / total_files) * 100
 
                     if progress_callback:
-                        progress_callback(progress, filename)
+                        progress_callback(progress, item.name)
 
                     sleep(0.01)
 
-                    file_path = os.path.join(root, filename)
-                    outfile.write(f"  ● Archivo: {filename}\n")
+                    file_path = os.path.join(root, item.name)
+                    outfile.write(f"  ● Archivo: {item.name}\n")
 
-                    if is_text:
+                    if item.is_text:
                         outfile.write("    " + ("-" * 74) + "\n")
                         outfile.write("    >> INICIO DEL CONTENIDO\n\n")
                         try:
-                            with open(file_path, "r", encoding="utf-8", errors="ignore") as infile:
-                                for line in infile:
-                                    outfile.write(f"    {line}")
+                            content = read_text_file(file_path, encoding="utf-8")
+                            for line in content.splitlines(True):
+                                outfile.write(f"    {line}")
                         except Exception as e:
                             outfile.write(f"    [Error al leer el archivo: {e}]\n")
 
                         # Igual al original: 2 saltos de línea antes del cierre + separador final
-                        outfile.write(f"\n\n    << FIN DEL CONTENIDO\n")
+                        outfile.write("\n\n    << FIN DEL CONTENIDO\n")
                         outfile.write("    " + ("-" * 74) + "\n\n")
 
-                    elif is_media:
+                    elif item.is_media:
                         # Igual al original: no imprime contenido adicional
                         outfile.write("\n")
 
@@ -140,7 +109,7 @@ def generate_report(
             pass
         return "error", None
 
-    # En el original GUI, al cancelar se elimina el reporte parcial. :contentReference[oaicite:6]{index=6}
+    # En el original GUI, al cancelar se elimina el reporte parcial.
     if cancel_event and cancel_event.is_set():
         try:
             if os.path.exists(final_report_path):
