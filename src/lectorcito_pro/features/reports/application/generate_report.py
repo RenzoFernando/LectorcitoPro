@@ -34,11 +34,10 @@ def generate_report(
     source_folder: str,
     output_path: str,
     config: dict,
-    cancel_event: threading.Event,
-    progress_callback: callable,
+    cancel_event: threading.Event | None = None,
+    progress_callback=None,
 ) -> tuple[str, str | None]:
     total_files = _count_files_to_process(source_folder, config)
-
     if total_files == 0:
         return "no_files", None
 
@@ -56,7 +55,7 @@ def generate_report(
     folder_name = os.path.basename(os.path.normpath(source_folder))
     version = 1
     while True:
-        report_filename = f"{folder_name}_v{version}.txt"
+        report_filename = f"Reporte_{folder_name}_v{version}.txt"
         final_report_path = os.path.join(output_path, report_filename)
         if not os.path.exists(final_report_path):
             break
@@ -66,6 +65,7 @@ def generate_report(
 
     try:
         with open(final_report_path, "w", encoding="utf-8") as outfile:
+            # Encabezado (mismo formato del viejo/original)
             outfile.write("=" * 80 + "\n")
             outfile.write(" LECTORCITO PRO - REPORTE DE PROYECTO\n")
             outfile.write(f" PROYECTO: {folder_name}\n")
@@ -74,24 +74,19 @@ def generate_report(
 
             for root, dirs, files in os.walk(source_folder, topdown=True):
                 if cancel_event and cancel_event.is_set():
-                    return "cancelled", None
+                    break
 
                 dirs[:] = [d for d in dirs if d not in excluded_folders]
                 files.sort()
 
-                files_in_dir = []
+                files_in_dir: list[tuple[str, bool, bool]] = []
                 for filename in files:
                     if filename in excluded_files:
                         continue
-
-                    ext = os.path.splitext(filename)[1].lower()
-                    is_media = ext in media_exts
-                    is_text = ext in included_exts and not is_media
-
-                    if not (is_text or is_media):
-                        continue
-
-                    files_in_dir.append((filename, is_text, is_media))
+                    is_text = any(filename.lower().endswith(ext) for ext in included_exts)
+                    is_media = any(filename.lower().endswith(ext) for ext in media_exts)
+                    if is_text or is_media:
+                        files_in_dir.append((filename, is_text, is_media))
 
                 if not files_in_dir:
                     continue
@@ -101,30 +96,26 @@ def generate_report(
                 highlight = " [IMPORTANTE]" if os.path.basename(root) in important_folders else ""
 
                 outfile.write(f"■ CARPETA: {folder_name_display}{highlight}\n")
-                outfile.write("└" + ("─" * 78) + "\n\n")
+                outfile.write(f"└" + ("─" * 78) + "\n\n")
 
                 for filename, is_text, is_media in files_in_dir:
                     if cancel_event and cancel_event.is_set():
-                        return "cancelled", None
+                        break
 
-                    current_file_rel_path = os.path.join(folder_name_display, filename)
                     processed_files += 1
+                    progress = (processed_files / total_files) * 100
 
                     if progress_callback:
-                        progress = (processed_files / total_files) * 100
-                        progress_callback(progress, current_file_rel_path)
+                        progress_callback(progress, filename)
 
                     sleep(0.01)
 
                     file_path = os.path.join(root, filename)
                     outfile.write(f"  ● Archivo: {filename}\n")
 
-                    outfile.write("    " + ("-" * 74) + "\n")
-                    outfile.write("    >> INICIO DEL CONTENIDO\n\n")
-
-                    if is_media:
-                        outfile.write(f"    [MEDIA] {file_path}\n")
-                    elif is_text:
+                    if is_text:
+                        outfile.write("    " + ("-" * 74) + "\n")
+                        outfile.write("    >> INICIO DEL CONTENIDO\n\n")
                         try:
                             with open(file_path, "r", encoding="utf-8", errors="ignore") as infile:
                                 for line in infile:
@@ -132,9 +123,30 @@ def generate_report(
                         except Exception as e:
                             outfile.write(f"    [Error al leer el archivo: {e}]\n")
 
-                    outfile.write("\n    << FIN DEL CONTENIDO\n\n")
+                        # Igual al original: 2 saltos de línea antes del cierre + separador final
+                        outfile.write(f"\n\n    << FIN DEL CONTENIDO\n")
+                        outfile.write("    " + ("-" * 74) + "\n\n")
 
-            return "success", final_report_path
+                    elif is_media:
+                        # Igual al original: no imprime contenido adicional
+                        outfile.write("\n")
 
-    except Exception:
+    except Exception as e:
+        print(f"[Error] Se produjo una excepción al escribir el reporte: {e}")
+        try:
+            if os.path.exists(final_report_path):
+                os.remove(final_report_path)
+        except Exception:
+            pass
         return "error", None
+
+    # En el original GUI, al cancelar se elimina el reporte parcial. :contentReference[oaicite:6]{index=6}
+    if cancel_event and cancel_event.is_set():
+        try:
+            if os.path.exists(final_report_path):
+                os.remove(final_report_path)
+        except Exception:
+            pass
+        return "cancelled", None
+
+    return "success", final_report_path
