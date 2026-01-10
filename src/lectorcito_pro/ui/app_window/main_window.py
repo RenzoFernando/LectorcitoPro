@@ -160,6 +160,7 @@ class LectorcitoApp(ctk.CTk):
                 self._safe_destroy()
 
     def _safe_destroy(self):
+        # Cancel any pending callbacks to avoid TclError on teardown.
         try:
             for after_id in list(self.after_info()):
                 try:
@@ -168,6 +169,8 @@ class LectorcitoApp(ctk.CTk):
                     pass
         except Exception:
             pass
+        if not self.winfo_exists():
+            return
         try:
             ctk.CTk.destroy(self)
         except Exception:

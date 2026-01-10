@@ -122,11 +122,11 @@ class CustomTooltip:
             if self.tooltip_window and self.tooltip_window.winfo_exists():
                 try:
                     self._cancel_afters(self.tooltip_window)
-                    self.tooltip_window.after_idle(self.tooltip_window.destroy)
+                    self.tooltip_window.after_idle(self._safe_destroy)
                 except Exception:
                     try:
                         self._cancel_afters(self.tooltip_window)
-                        self.tooltip_window.destroy()
+                        self._safe_destroy()
                     except (TclError, Exception):
                         pass
             self.tooltip_window = None
@@ -152,11 +152,11 @@ class CustomTooltip:
         if self.tooltip_window and self.tooltip_window.winfo_exists():
             try:
                 self._cancel_afters(self.tooltip_window)
-                self.tooltip_window.after_idle(self.tooltip_window.destroy)
+                self.tooltip_window.after_idle(self._safe_destroy)
             except Exception:
                 try:
                     self._cancel_afters(self.tooltip_window)
-                    self.tooltip_window.destroy()
+                    self._safe_destroy()
                 except Exception:
                     pass
         self.tooltip_window = None
@@ -174,4 +174,11 @@ class CustomTooltip:
                 except Exception:
                     pass
         except Exception:
+            pass
+
+    def _safe_destroy(self):
+        try:
+            if self.tooltip_window and self.tooltip_window.winfo_exists():
+                self.tooltip_window.destroy()
+        except TclError:
             pass

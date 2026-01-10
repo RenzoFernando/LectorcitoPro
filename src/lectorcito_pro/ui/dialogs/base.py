@@ -119,6 +119,8 @@ class BaseDialog(ctk.CTkToplevel):
 
     def _safe_destroy(self):
         self._cancel_all_afters()
+        if not self.winfo_exists():
+            return
         try:
             if self._fade_job:
                 try:
@@ -133,6 +135,15 @@ class BaseDialog(ctk.CTkToplevel):
             super().destroy()
         except tk.TclError:
             # Evitar crash por doble-destroy / callbacks Tcl.
+            pass
+
+    def destroy(self):
+        """Destruir de forma segura evitando TclError por callbacks pendientes."""
+        self._cancel_all_afters()
+        try:
+            if self.winfo_exists():
+                super().destroy()
+        except tk.TclError:
             pass
 
     def _cancel_all_afters(self):
