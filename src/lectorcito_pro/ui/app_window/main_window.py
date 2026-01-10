@@ -344,6 +344,10 @@ class LectorcitoApp(ctk.CTk):
         self.footer_frame.grid(row=1, column=1, sticky="ew")
 
     def update_ui_texts(self):
+        # Prevent updating UI when window is being destroyed
+        if self._closing or not self.winfo_exists():
+            return
+        
         hour = datetime.datetime.now().hour
         greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
         try:
@@ -351,13 +355,31 @@ class LectorcitoApp(ctk.CTk):
         except OSError:
             user = "User"
         greeting = self._tr(greet_key)
-        self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
+        
+        try:
+            self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
+        except Exception as e:
+            print(f"Error updating greeting label: {e}")
+            return
+        
         key_map = {"selpath": "btn_sel_lecturas", "choose": "btn_choose_folder", "create_tree": "btn_create_tree",
                     "openlect": "btn_open_lecturas", "openlast": "btn_open_last", "delete": "btn_del"}
         for key, btn in self.main_buttons.items():
-            if key in key_map: btn.configure(text=self._tr(key_map[key]))
-        self.btn_cancel.configure(text=self._tr("btn_cancel"))
-        self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
+            if key in key_map:
+                try:
+                    btn.configure(text=self._tr(key_map[key]))
+                except Exception:
+                    pass
+        
+        try:
+            self.btn_cancel.configure(text=self._tr("btn_cancel"))
+        except Exception:
+            pass
+        
+        try:
+            self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
+        except Exception:
+            pass
 
         tooltip_map = {
             "ver": "tooltip_ver",
@@ -370,10 +392,13 @@ class LectorcitoApp(ctk.CTk):
         }
         for key, btn in self.sidebar_buttons.items():
             if key in tooltip_map:
-                if key in self.tooltips:
-                    self.tooltips[key].text = self._tr(tooltip_map[key])
-                else:
-                    self.tooltips[key] = CustomTooltip(btn, text=self._tr(tooltip_map[key]))
+                try:
+                    if key in self.tooltips:
+                        self.tooltips[key].text = self._tr(tooltip_map[key])
+                    else:
+                        self.tooltips[key] = CustomTooltip(btn, text=self._tr(tooltip_map[key]))
+                except Exception:
+                    pass
 
     def apply_theme(self):
         is_light = self.current_theme == "Light"
@@ -495,12 +520,24 @@ class LectorcitoApp(ctk.CTk):
             self.after(100, lambda: self.set_progress(0))
 
     def show_message(self, title_key: str, message_key: str, *args):
-        MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
+        # Prevent creating dialogs when window is being destroyed
+        if self._closing or not self.winfo_exists():
+            return
+        try:
+            MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
+        except Exception as e:
+            print(f"Error showing message dialog: {e}")
 
     def show_app_info(self):
-        from ...features.help.application.open_manual import get_infographic_path
-        image_path = get_infographic_path()
-        if os.path.exists(image_path):
-            InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
-        else:
-            self.show_message("error_title", "msg_infographic_error")
+        # Prevent creating dialogs when window is being destroyed
+        if self._closing or not self.winfo_exists():
+            return
+        try:
+            from ...features.help.application.open_manual import get_infographic_path
+            image_path = get_infographic_path()
+            if os.path.exists(image_path):
+                InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
+            else:
+                self.show_message("error_title", "msg_infographic_error")
+        except Exception as e:
+            print(f"Error showing app info: {e}")

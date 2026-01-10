@@ -16,6 +16,10 @@ class BaseDialog(ctk.CTkToplevel):
     """
 
     def __init__(self, parent, title: str):
+        # Check if parent window still exists and is not being destroyed
+        if not parent.winfo_exists() or getattr(parent, '_closing', False):
+            raise RuntimeError("Cannot create dialog: parent window is being destroyed")
+        
         super().__init__(parent)
 
         self.transient(parent)
