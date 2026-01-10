@@ -85,6 +85,7 @@ class BaseDialog(ctk.CTkToplevel):
         if self._closing:
             return
         self._closing = True
+        self._cancel_all_afters()
 
         try:
             self.grab_release()
@@ -117,6 +118,7 @@ class BaseDialog(ctk.CTkToplevel):
                 self._safe_destroy()
 
     def _safe_destroy(self):
+        self._cancel_all_afters()
         try:
             if self._fade_job:
                 try:
@@ -131,6 +133,17 @@ class BaseDialog(ctk.CTkToplevel):
             super().destroy()
         except tk.TclError:
             # Evitar crash por doble-destroy / callbacks Tcl.
+            pass
+
+    def _cancel_all_afters(self):
+        """Cancela todos los callbacks `after` pendientes para evitar bad window path."""
+        try:
+            for after_id in list(self.after_info()):
+                try:
+                    self.after_cancel(after_id)
+                except Exception:
+                    pass
+        except Exception:
             pass
 
     def _on_ok(self, event=None):

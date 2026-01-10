@@ -158,6 +158,14 @@ class LectorcitoApp(ctk.CTk):
 
     def _safe_destroy(self):
         try:
+            for after_id in list(self.after_info()):
+                try:
+                    self.after_cancel(after_id)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        try:
             ctk.CTk.destroy(self)
         except Exception:
             # Último recurso: evitar crash en cierre
