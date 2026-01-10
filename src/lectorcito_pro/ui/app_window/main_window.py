@@ -419,24 +419,40 @@ class LectorcitoApp(ctk.CTk):
                 pass
 
     def apply_theme(self):
+        # Check if window is being destroyed or already destroyed
+        if not self.winfo_exists() or getattr(self, "_closing", False):
+            return
+            
         is_light = self.current_theme == "Light"
         set_theme(self.current_theme)
         theme = COLORS['light' if is_light else 'dark']
-        self.configure(fg_color=theme['bg'])
-        self.side_left.configure(fg_color=theme['left_bar'])
-        self.canvas_left.configure(bg=theme['left_bar'])
-        self._paint_left_sidebar_text()
-        self.progress_bar.configure(fg_color=theme['progress_bar'])
+        
+        try:
+            self.configure(fg_color=theme['bg'])
+            self.side_left.configure(fg_color=theme['left_bar'])
+            self.canvas_left.configure(bg=theme['left_bar'])
+            self._paint_left_sidebar_text()
+            self.progress_bar.configure(fg_color=theme['progress_bar'])
+        except Exception:
+            pass
 
         btn_fg_color = COLORS['dark']['bg'] if is_light else COLORS['light']['bg']
         btn_hover_color = COLORS['sidebar_hover']['light'] if is_light else COLORS['sidebar_hover']['dark']
         for key, btn in self.sidebar_buttons.items():
-            if key != "theme_icon":
-                btn.configure(fg_color=btn_fg_color, hover_color=btn_hover_color)
+            try:
+                if btn.winfo_exists():
+                    if key != "theme_icon":
+                        btn.configure(fg_color=btn_fg_color, hover_color=btn_hover_color)
+            except Exception:
+                pass
 
-        self.sidebar_buttons['theme_icon'].configure(
-            image=self.icons.get('moon') if is_light else self.icons.get('sun'),
-            fg_color=btn_fg_color, hover_color=btn_hover_color)
+        try:
+            if self.sidebar_buttons['theme_icon'].winfo_exists():
+                self.sidebar_buttons['theme_icon'].configure(
+                    image=self.icons.get('moon') if is_light else self.icons.get('sun'),
+                    fg_color=btn_fg_color, hover_color=btn_hover_color)
+        except Exception:
+            pass
 
         try:
             # Footer (barra inferior) - cubrir todo el ancho y mantener buen contraste
@@ -456,23 +472,48 @@ class LectorcitoApp(ctk.CTk):
             self.canvas_left.create_text(w / 2, h / 2, text=f"Lectorcito Pro v{VERSION}", angle=90, font=("Segoe UI", 10, "bold"), fill=color)
 
     def _animate_progress(self):
-        if self.animation_after_id: self.after_cancel(self.animation_after_id); self.animation_after_id = None
+        # Check if window is being destroyed or already destroyed
+        if not self.winfo_exists() or getattr(self, "_closing", False):
+            return
+            
+        if self.animation_after_id:
+            try:
+                self.after_cancel(self.animation_after_id)
+            except Exception:
+                pass
+            self.animation_after_id = None
         diff = self.target_progress - self.current_progress
         if abs(diff) < 0.1:
             self.current_progress = self.target_progress
         else:
             self.current_progress += diff * 0.1
             self.animation_after_id = self.after(20, self._animate_progress)
-        self.progress_bar.set(self.current_progress / 100)
+        try:
+            if self.progress_bar.winfo_exists():
+                self.progress_bar.set(self.current_progress / 100)
+        except Exception:
+            pass
 
     def _animate_gif(self):
-        if self.gif_animation_after_id: self.after_cancel(self.gif_animation_after_id)
+        # Check if window is being destroyed or already destroyed
+        if not self.winfo_exists() or getattr(self, "_closing", False):
+            return
+            
+        if self.gif_animation_after_id:
+            try:
+                self.after_cancel(self.gif_animation_after_id)
+            except Exception:
+                pass
         if self.gif_pil_frames:
-            pil_frame = self.gif_pil_frames[self.gif_frame_index]
-            ctk_image = ctk.CTkImage(light_image=pil_frame, dark_image=pil_frame, size=pil_frame.size)
-            self.lbl_gif_animation.configure(image=ctk_image)
-            self.gif_frame_index = (self.gif_frame_index + 1) % len(self.gif_pil_frames)
-            self.gif_animation_after_id = self.after(self.gif_delay, self._animate_gif)
+            try:
+                if self.lbl_gif_animation.winfo_exists():
+                    pil_frame = self.gif_pil_frames[self.gif_frame_index]
+                    ctk_image = ctk.CTkImage(light_image=pil_frame, dark_image=pil_frame, size=pil_frame.size)
+                    self.lbl_gif_animation.configure(image=ctk_image)
+                    self.gif_frame_index = (self.gif_frame_index + 1) % len(self.gif_pil_frames)
+                    self.gif_animation_after_id = self.after(self.gif_delay, self._animate_gif)
+            except Exception:
+                pass
 
     def _start_idle_status_animation(self):
         self._idle_waiting_index = 0
@@ -496,68 +537,137 @@ class LectorcitoApp(ctk.CTk):
             self._idle_status_after_id = None
 
     def set_progress(self, percentage, file_context=None, force_color=False):
+        # Check if window is being destroyed or already destroyed
+        if not self.winfo_exists() or getattr(self, "_closing", False):
+            return
+            
         new_target = int(percentage)
         if new_target != self.target_progress or force_color:
             self.target_progress = new_target
             color = COLORS['progress_colors']['done'] if self.target_progress >= 99 else COLORS['progress_colors'][
                 'mid'] if self.target_progress >= 50 else COLORS['progress_colors']['start']
-            self.progress_bar.configure(progress_color=color)
+            try:
+                if self.progress_bar.winfo_exists():
+                    self.progress_bar.configure(progress_color=color)
+            except Exception:
+                pass
 
-        if self.progress_bar.cget("mode") == "determinate":
-            self.lbl_percent.configure(text=f"{self.target_progress}%")
-        else:
-            self.lbl_percent.configure(text="")
+        try:
+            if self.progress_bar.winfo_exists() and self.progress_bar.cget("mode") == "determinate":
+                if self.lbl_percent.winfo_exists():
+                    self.lbl_percent.configure(text=f"{self.target_progress}%")
+            else:
+                if self.lbl_percent.winfo_exists():
+                    self.lbl_percent.configure(text="")
+        except Exception:
+            pass
 
-        if file_context: self.lbl_current_file.configure(text=file_context)
+        try:
+            if file_context and self.lbl_current_file.winfo_exists():
+                self.lbl_current_file.configure(text=file_context)
+        except Exception:
+            pass
         if self.animation_after_id is None: self._animate_progress()
 
     def _change_and_reschedule_gif(self):
         self.gif_change_timer_id = None
 
     def toggle_ui_for_processing(self, is_active: bool, mode: str = 'determinate', text: str = None):
+        # Check if window is being destroyed or already destroyed
+        if not self.winfo_exists() or getattr(self, "_closing", False):
+            return
+            
         state = "disabled" if is_active else "normal"
-        for btn in self.main_buttons.values(): btn.configure(state=state)
-        for btn in self.sidebar_buttons.values(): btn.configure(state=state)
+        for btn in self.main_buttons.values():
+            try:
+                if btn.winfo_exists():
+                    btn.configure(state=state)
+            except Exception:
+                pass
+        for btn in self.sidebar_buttons.values():
+            try:
+                if btn.winfo_exists():
+                    btn.configure(state=state)
+            except Exception:
+                pass
 
         self._stop_idle_status_animation()
 
         if is_active:
             if self.gif_animation_after_id:
-                self.after_cancel(self.gif_animation_after_id)
+                try:
+                    self.after_cancel(self.gif_animation_after_id)
+                except Exception:
+                    pass
                 self.gif_animation_after_id = None
 
-            self.progress_bar.configure(mode=mode)
-            self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
+            try:
+                if self.progress_bar.winfo_exists():
+                    self.progress_bar.configure(mode=mode)
+                    self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
+            except Exception:
+                pass
 
             if mode == 'indeterminate':
-                self.progress_bar.start()
-                self.lbl_progress_status.configure(text=text if text else "")
-                self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(15, 0), sticky="s")
-                self.lbl_percent.grid_forget()
-                self.lbl_current_file.grid_forget()
+                try:
+                    if self.progress_bar.winfo_exists():
+                        self.progress_bar.start()
+                    if self.lbl_progress_status.winfo_exists():
+                        self.lbl_progress_status.configure(text=text if text else "")
+                        self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(15, 0), sticky="s")
+                    if self.lbl_percent.winfo_exists():
+                        self.lbl_percent.grid_forget()
+                    if self.lbl_current_file.winfo_exists():
+                        self.lbl_current_file.grid_forget()
+                except Exception:
+                    pass
             else:
-                self.progress_bar.stop()
-                self.set_progress(0)
-                self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
-                self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
-                self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
-                self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
+                try:
+                    if self.progress_bar.winfo_exists():
+                        self.progress_bar.stop()
+                    self.set_progress(0)
+                    if self.lbl_progress_status.winfo_exists():
+                        self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
+                        self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
+                    if self.lbl_percent.winfo_exists():
+                        self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
+                    if self.lbl_current_file.winfo_exists():
+                        self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
+                except Exception:
+                    pass
 
-            self.btn_cancel.grid(row=3, column=0, pady=(10, 10), sticky="s")
+            try:
+                if self.btn_cancel.winfo_exists():
+                    self.btn_cancel.grid(row=3, column=0, pady=(10, 10), sticky="s")
+            except Exception:
+                pass
         else:
-            self.progress_bar.stop()
-            for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file, self.btn_cancel):
-                widget.grid_forget()
-            self.progress_bar.configure(mode='determinate')
-            self.set_progress(0, None, True)
-            self.lbl_progress_status.configure(text=self._idle_waiting_variants[0])
-            self.lbl_percent.configure(text="0%")
-            self.lbl_current_file.configure(text="")
+            try:
+                if self.progress_bar.winfo_exists():
+                    self.progress_bar.stop()
+                for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file, self.btn_cancel):
+                    if widget.winfo_exists():
+                        widget.grid_forget()
+                if self.progress_bar.winfo_exists():
+                    self.progress_bar.configure(mode='determinate')
+                self.set_progress(0, None, True)
+                if self.lbl_progress_status.winfo_exists():
+                    self.lbl_progress_status.configure(text=self._idle_waiting_variants[0])
+                if self.lbl_percent.winfo_exists():
+                    self.lbl_percent.configure(text="0%")
+                if self.lbl_current_file.winfo_exists():
+                    self.lbl_current_file.configure(text="")
 
-            self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
-            self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
-            self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
-            self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
+                if self.lbl_progress_status.winfo_exists():
+                    self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
+                if self.lbl_percent.winfo_exists():
+                    self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
+                if self.progress_bar.winfo_exists():
+                    self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
+                if self.lbl_current_file.winfo_exists():
+                    self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
+            except Exception:
+                pass
 
             self._start_idle_status_animation()
 
