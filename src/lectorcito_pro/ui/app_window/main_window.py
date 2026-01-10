@@ -1,6 +1,7 @@
 
 import customtkinter as ctk
 from tkinter import Canvas
+import tkinter as tk
 from PIL import Image
 import datetime
 import os
@@ -358,7 +359,7 @@ class LectorcitoApp(ctk.CTk):
         
         try:
             self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
-        except Exception as e:
+        except tk.TclError as e:
             print(f"Error updating greeting label: {e}")
             return
         
@@ -368,17 +369,17 @@ class LectorcitoApp(ctk.CTk):
             if key in key_map:
                 try:
                     btn.configure(text=self._tr(key_map[key]))
-                except Exception:
+                except tk.TclError:
                     pass
         
         try:
             self.btn_cancel.configure(text=self._tr("btn_cancel"))
-        except Exception:
+        except tk.TclError:
             pass
         
         try:
             self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
-        except Exception:
+        except tk.TclError:
             pass
 
         tooltip_map = {
@@ -397,7 +398,7 @@ class LectorcitoApp(ctk.CTk):
                         self.tooltips[key].text = self._tr(tooltip_map[key])
                     else:
                         self.tooltips[key] = CustomTooltip(btn, text=self._tr(tooltip_map[key]))
-                except Exception:
+                except tk.TclError:
                     pass
 
     def apply_theme(self):
@@ -525,7 +526,7 @@ class LectorcitoApp(ctk.CTk):
             return
         try:
             MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
-        except Exception as e:
+        except (tk.TclError, RuntimeError) as e:
             print(f"Error showing message dialog: {e}")
 
     def show_app_info(self):
@@ -539,5 +540,5 @@ class LectorcitoApp(ctk.CTk):
                 InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
             else:
                 self.show_message("error_title", "msg_infographic_error")
-        except Exception as e:
+        except (tk.TclError, RuntimeError) as e:
             print(f"Error showing app info: {e}")
