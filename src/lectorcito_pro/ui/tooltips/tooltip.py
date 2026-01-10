@@ -18,6 +18,7 @@ class CustomTooltip:
         self.tooltip_window = None
         self.show_id = None
         self.hide_id = None
+        self.widget.bind("<Destroy>", self.on_destroy, add="+")
 
         self.widget.bind("<Enter>", self.on_enter)
         self.widget.bind("<Leave>", self.on_leave)
@@ -26,7 +27,10 @@ class CustomTooltip:
     def on_enter(self, event=None):
         if self.hide_id:
             try:
-                self.widget.after_cancel(self.hide_id)
+                if self.tooltip_window and self.tooltip_window.winfo_exists():
+                    self.tooltip_window.after_cancel(self.hide_id)
+                else:
+                    self.widget.after_cancel(self.hide_id)
             except Exception:
                 pass
             self.hide_id = None
@@ -45,14 +49,21 @@ class CustomTooltip:
         self.hide_tooltip()
 
     def show_tooltip(self):
-        if not self.widget.winfo_exists():
+        try:
+            if not self.widget.winfo_exists():
+                return
+            root_window = self.widget.winfo_toplevel()
+            if not root_window or not root_window.winfo_exists():
+                return
+            x = self.widget.winfo_rootx() + 25
+            y = self.widget.winfo_rooty() + 25
+        except Exception:
             return
 
-        x = self.widget.winfo_rootx() + 25
-        y = self.widget.winfo_rooty() + 25
-
-        root_window = self.widget.winfo_toplevel()
-        self.tooltip_window = ctk.CTkToplevel(root_window)
+        try:
+            self.tooltip_window = ctk.CTkToplevel(root_window)
+        except Exception:
+            return
         self.tooltip_window.wm_overrideredirect(True)
         self.tooltip_window.attributes("-topmost", True)
         self.tooltip_window.attributes("-alpha", 0.0)
@@ -131,3 +142,7 @@ class CustomTooltip:
                 except Exception:
                     pass
         self.tooltip_window = None
+
+    def on_destroy(self, event=None):
+        """Handler para destrucción del widget base."""
+        self.cleanup()
