@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import customtkinter as ctk
@@ -47,22 +48,69 @@ class BaseDialog(ctk.CTkToplevel):
         self.after(100, self._center_and_fade_in)
 
     def _center_and_fade_in(self):
-        # Centrar diálogo sobre el parent
+        """Centra el diálogo sobre su ventana padre; si todavía no hay tamaño, centra en pantalla."""
         try:
             self.update_idletasks()
-            parent = self.master
-            px = parent.winfo_rootx()
-            py = parent.winfo_rooty()
-            pw = parent.winfo_width()
-            ph = parent.winfo_height()
-            w = self.winfo_width()
-            h = self.winfo_height()
-            x = px + (pw - w) // 2
-            y = py + (ph - h) // 2
-            self.geometry(f"+{x}+{y}")
         except Exception:
             pass
 
+        # Tamaño del diálogo (usa reqwidth/reqheight como fallback)
+        try:
+            w = self.winfo_width()
+            h = self.winfo_height()
+        except Exception:
+            w, h = 400, 250
+
+        try:
+            req_w = self.winfo_reqwidth()
+            req_h = self.winfo_reqheight()
+            if w <= 1:
+                w = req_w
+            if h <= 1:
+                h = req_h
+        except Exception:
+            pass
+
+        # Intentar centrar sobre el parent, si está "realizado".
+        x = y = None
+        try:
+            parent = self.master
+            if parent is not None and parent.winfo_exists():
+                parent.update_idletasks()
+                pw = parent.winfo_width()
+                ph = parent.winfo_height()
+                px = parent.winfo_rootx()
+                py = parent.winfo_rooty()
+
+                if pw > 50 and ph > 50:
+                    x = px + (pw // 2) - (w // 2)
+                    y = py + (ph // 2) - (h // 2)
+        except Exception:
+            x = y = None
+
+        # Fallback: centrar en pantalla
+        if x is None or y is None:
+            try:
+                sw = self.winfo_screenwidth()
+                sh = self.winfo_screenheight()
+                x = (sw // 2) - (w // 2)
+                y = (sh // 2) - (h // 2)
+            except Exception:
+                x, y = 100, 100
+
+        # Mantener el diálogo dentro de los límites de la pantalla
+        try:
+            sw = self.winfo_screenwidth()
+            sh = self.winfo_screenheight()
+            margin = 10
+            x = max(margin, min(x, sw - w - margin))
+            y = max(margin, min(y, sh - h - margin))
+        except Exception:
+            pass
+
+        self.geometry(f"+{x}+{y}")
+
+        # Continuar con la animación de entrada (fade-in) si aplica
         self._fade_in_step()
 
     def _fade_in_step(self):

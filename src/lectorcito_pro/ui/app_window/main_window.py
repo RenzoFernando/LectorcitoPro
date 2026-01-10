@@ -1,4 +1,5 @@
 
+
 import customtkinter as ctk
 from tkinter import Canvas
 from PIL import Image
@@ -63,7 +64,7 @@ class LectorcitoApp(ctk.CTk):
         self._close_after_id = None
         self._idle_status_after_id = None
         self._idle_waiting_index = 0
-        self._idle_waiting_variants = ("Esperando lectura.", "Esperando lectura..", "Esperando lectura...")
+        self._idle_waiting_variants = ("Esperando lectura [.]","Esperando lectura [..]","Esperando lectura [...]")
 
 
         self.title("Lectorcito Pro")
@@ -117,7 +118,7 @@ class LectorcitoApp(ctk.CTk):
         self._closing = True
 
         # Cancelar jobs programados (progress/gif/fade)
-        for attr in ("animation_after_id", "gif_animation_after_id", "gif_change_timer_id", "_close_after_id"):
+        for attr in ("animation_after_id", "gif_animation_after_id", "gif_change_timer_id", "_close_after_id", "_idle_status_after_id"):
             job_id = getattr(self, attr, None)
             if job_id:
                 try:
@@ -285,8 +286,6 @@ class LectorcitoApp(ctk.CTk):
         self.main_buttons = self.home_page.main_buttons
 
         self.progress_frame = self.home_page.progress_panel
-        self.progress_content_wrapper = self.home_page.progress_panel.progress_content_wrapper
-        self.lbl_gif_animation = self.home_page.progress_panel.lbl_gif_animation
         self.lbl_progress_status = self.home_page.progress_panel.lbl_progress_status
         self.lbl_percent = self.home_page.progress_panel.lbl_percent
         self.progress_bar = self.home_page.progress_panel.progress_bar
@@ -356,7 +355,7 @@ class LectorcitoApp(ctk.CTk):
         """Footer usando el componente Footer."""
         footer_text = f"Copyright ©{YEAR} - {AUTHOR} {self._tr(' - All rights reserved')}"
         self.footer_frame = Footer(self, text=footer_text)
-        self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="ew")
+        self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="ew", padx=0, pady=0)
 
     def update_ui_texts(self):
         hour = datetime.datetime.now().hour
@@ -373,7 +372,7 @@ class LectorcitoApp(ctk.CTk):
             if key in key_map: btn.configure(text=self._tr(key_map[key]))
             btn.configure(width=BTN_W_MAIN, height=BTN_H_MAIN)
         self.btn_cancel.configure(text=self._tr("btn_cancel"))
-        self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
+        self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
 
         tooltip_map = {
             "ver": "tooltip_ver",
@@ -410,6 +409,14 @@ class LectorcitoApp(ctk.CTk):
         self.sidebar_buttons['theme_icon'].configure(
             image=self.icons.get('moon') if is_light else self.icons.get('sun'),
             fg_color=btn_fg_color, hover_color=btn_hover_color)
+
+        try:
+            # Footer (barra inferior) - cubrir todo el ancho y mantener buen contraste
+            footer_text_color = COLORS["dark"]["text"] if self.current_theme == "Light" else COLORS["light"]["text"]
+            self.footer_frame.configure(fg_color=theme["left_bar"])
+            self.footer_frame.lbl.configure(text_color=footer_text_color)
+        except Exception:
+            pass
 
         self.set_progress(self.target_progress, None, True)
 
@@ -490,7 +497,6 @@ class LectorcitoApp(ctk.CTk):
             if self.gif_animation_after_id:
                 self.after_cancel(self.gif_animation_after_id)
                 self.gif_animation_after_id = None
-            self.progress_content_wrapper.grid_remove()
 
             self.progress_bar.configure(mode=mode)
             self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
@@ -504,7 +510,7 @@ class LectorcitoApp(ctk.CTk):
             else:
                 self.progress_bar.stop()
                 self.set_progress(0)
-                self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
+                self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
                 self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
                 self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
                 self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
@@ -514,7 +520,6 @@ class LectorcitoApp(ctk.CTk):
             self.progress_bar.stop()
             for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file, self.btn_cancel):
                 widget.grid_forget()
-            self.progress_content_wrapper.grid_forget()
             self.progress_bar.configure(mode='determinate')
             self.set_progress(0, None, True)
             self.lbl_progress_status.configure(text=self._idle_waiting_variants[0])

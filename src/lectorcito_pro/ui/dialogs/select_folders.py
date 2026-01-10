@@ -93,7 +93,11 @@ class MultiFolderSelectDialog(BaseDialog):
         self._update_folder_list()
 
     def _add_folder(self):
-        path = filedialog.askdirectory(title=self._parent._tr("dlg_multi_add_title"), initialdir=self._initial_dir or None)
+        path = filedialog.askdirectory(
+            title=self._parent._tr("dlg_multi_add_title"),
+            initialdir=self._initial_dir or None,
+            parent=self
+        )
         if path and path not in self.selected_paths:
             self.selected_paths.append(path)
             self.currently_selected_index = len(self.selected_paths) - 1

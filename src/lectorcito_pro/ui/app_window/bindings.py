@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import os
@@ -6,7 +5,7 @@ import shutil
 import threading
 import webbrowser
 
-from ...config import store as config_store
+from ...config import store as config_store, save_config
 from ...features.reports.ui.controller import ReportsUIController
 from ...features.settings.application.update_filters import normalize_extension_tags
 from ...features.settings.application.update_language import toggle_language
@@ -24,16 +23,25 @@ from ..dialogs.tags_config import TagsConfigDialog
 class LectorcitoController:
     def __init__(self):
         self.config = config_store.load_config()
+
+        # --- FIX: Inicializar estado ANTES de crear la vista ---
+        self.is_processing = False
+        self.cancel_event: threading.Event | None = None
+        self.last_report_path: str | None = None
+        # -------------------------------------------------------
+
+        # Ahora sí es seguro crear la vista, pues ya existe self.is_processing
         self.view = LectorcitoApp(self.config, self)
 
         # Controladores por feature (adaptadores)
         self.reports = ReportsUIController()
         self.tree = TreeUIController()
 
-        self.last_report_path: str | None = None
-        self.is_processing = False
-        self.cancel_event: threading.Event | None = None
+        # Asignar comandos finales
         self._assign_commands()
+
+        # Evita abrir la misma ventana varias veces por clicks rápidos
+        self._dialog_lock: set[str] = set()
 
     def _assign_commands(self):
         self.view.main_buttons["selpath"].configure(command=self.select_destination_path)
@@ -54,7 +62,15 @@ class LectorcitoController:
         self.view.btn_cancel.configure(command=self.cancel_processing)
 
     def run(self):
-        self.view.mainloop()
+        try:
+            self.view.mainloop()
+        except KeyboardInterrupt:
+            # Si se corta con Ctrl+C, intentamos cerrar limpio para evitar errores de Tcl.
+            try:
+                if self.view.winfo_exists():
+                    self.view._safe_destroy()
+            except Exception:
+                pass
 
     # -------------------------------------------------------------------------
     # Persistencia / paths
@@ -95,7 +111,7 @@ class LectorcitoController:
             self.view.show_message("info_title", "dest_set_default_msg")
 
         elif choice == "custom":
-            path = ask_directory(title=self.view._tr("btn_sel_lecturas"))
+            path = ask_directory(title=self.view._tr("btn_sel_lecturas"), parent=self.view)
             if path:
                 # Misma lógica que el original: crea subcarpeta "Lecturas" dentro del destino seleccionado
                 custom_path = os.path.join(path, "Lecturas")
@@ -116,26 +132,34 @@ class LectorcitoController:
     # Lectura (single/multiple)
     # -------------------------------------------------------------------------
     def select_reading_type(self):
-        if self.is_processing or not self._check_destination_path():
+        """Abre el selector de tipo de lectura."""
+        if "select_reading_type" in self._dialog_lock:
             return
+        self._dialog_lock.add("select_reading_type")
+        try:
+            choice = ChoiceDialog.ask(
+                parent=self.view,
+                title=self.view._tr("dlg_read_type_title"),
+                message=self.view._tr("dlg_read_type_prompt"),
+                option1_text=self.view._tr("dlg_read_type_op1"),
+                option2_text=self.view._tr("dlg_read_type_op2"),
+                option1_value="folder",
+                option2_value="multi"
+            )
 
-        choice = ChoiceDialog.ask(
-            parent=self.view,
-            title=self.view._tr("dlg_read_type_title"),
-            message=self.view._tr("dlg_read_type_prompt"),
-            option1_text=self.view._tr("dlg_read_type_op1"),
-            option2_text=self.view._tr("dlg_read_type_op2"),
-            option1_value="single",
-            option2_value="multiple",
-        )
+            # SOLUCIÓN DEFINITIVA:
+            # Usamos 'after' para desacoplar el cierre del diálogo 1
+            # de la apertura del diálogo 2. Esto evita la condición de carrera.
+            if choice == "folder":
+                self.view.after(150, self.select_single_folder_to_read)
+            elif choice == "multi":
+                self.view.after(150, self.select_multiple_folders_to_read)
 
-        if choice == "single":
-            self.select_single_folder_to_read()
-        elif choice == "multiple":
-            self.select_multiple_folders_to_read()
+        finally:
+            self._dialog_lock.discard("select_reading_type")
 
     def select_single_folder_to_read(self):
-        folder_path = ask_directory(title=self.view._tr("btn_choose_folder"))
+        folder_path = ask_directory(title=self.view._tr("btn_choose_folder"), parent=self.view)
         if folder_path:
             self.start_batch_processing([folder_path])
 
@@ -250,7 +274,7 @@ class LectorcitoController:
         if not choice:
             return
 
-        source_path = ask_directory(title=self.view._tr("btn_create_tree"))
+        source_path = ask_directory(title=self.view._tr("btn_create_tree"), parent=self.view)
         if not source_path:
             return
 
@@ -299,52 +323,67 @@ class LectorcitoController:
     # Configuración (tags)
     # -------------------------------------------------------------------------
     def show_view_config_dialog(self):
-        current_folders = self.config.get("etiquetas_carpetas_importantes", [])
-        current_files = self.config.get("etiquetas_extensiones_incluidas", [])
-
-        result = TagsConfigDialog.get_input(
-            parent=self.view,
-            title=self.view._tr("dlg_ver_title"),
-            folders_prompt=self.view._tr("dlg_ver_folder_prompt"),
-            initial_folders=current_folders,
-            files_prompt=self.view._tr("dlg_ver_file_prompt"),
-            initial_files=current_files,
-        )
-
-        if result is None:
+        """Abre el diálogo de configuración 'Ver'."""
+        if "view_config" in self._dialog_lock:
             return
+        self._dialog_lock.add("view_config")
+        try:
+            # FIX: Use correct keys from defaults.py
+            current_folders = self.config.get("etiquetas_carpetas_importantes", [])
+            current_files = self.config.get("etiquetas_extensiones_incluidas", [])
 
-        new_folders, new_files = result
-        normalize_extension_tags(new_files)
+            # FIX: Call with new signature (folders + files)
+            result = TagsConfigDialog.get_input(
+                parent=self.view,
+                title=self.view._tr("dlg_ver_title"),
+                folders_prompt=self.view._tr("dlg_ver_folder_prompt"),
+                initial_folders=current_folders,
+                files_prompt=self.view._tr("dlg_ver_file_prompt"),
+                initial_files=current_files
+            )
 
-        self.config["etiquetas_carpetas_importantes"] = new_folders
-        self.config["etiquetas_extensiones_incluidas"] = new_files
-        self._save_preferences_silent()
+            if result is not None:
+                new_folders, new_files = result
+                # Update config
+                self.config["etiquetas_carpetas_importantes"] = new_folders
+                # Normalize extensions (ensure they start with .)
+                self.config["etiquetas_extensiones_incluidas"] = self.reports.normalize_extensions(new_files)
+
+                config_store.save_config(self.config)
+                self.view.show_message("info_title", "msg_done")
+        finally:
+            self._dialog_lock.discard("view_config")
 
     def show_no_view_config_dialog(self):
-        current_folders = self.config.get("etiquetas_carpetas_excluidas", [])
-        current_files = self.config.get("etiquetas_archivos_excluidos", [])
-
-        result = TagsConfigDialog.get_input(
-            parent=self.view,
-            title=self.view._tr("dlg_nover_title"),
-            folders_prompt=self.view._tr("dlg_nover_folder_prompt"),
-            initial_folders=current_folders,
-            files_prompt=self.view._tr("dlg_nover_file_prompt"),
-            initial_files=current_files,
-        )
-
-        if result is None:
+        """Abre el diálogo de configuración 'No ver'."""
+        if "no_view_config" in self._dialog_lock:
             return
+        self._dialog_lock.add("no_view_config")
+        try:
+            # FIX: Use correct keys from defaults.py
+            current_folders = self.config.get("etiquetas_carpetas_excluidas", [])
+            current_files = self.config.get("etiquetas_archivos_excluidos", [])
 
-        new_folders, new_files = result
-        self.config["etiquetas_carpetas_excluidas"] = new_folders
-        self.config["etiquetas_archivos_excluidos"] = new_files
-        self._save_preferences_silent()
+            # FIX: Call with new signature
+            result = TagsConfigDialog.get_input(
+                parent=self.view,
+                title=self.view._tr("dlg_nover_title"),
+                folders_prompt=self.view._tr("dlg_nover_folder_prompt"),
+                initial_folders=current_folders,
+                files_prompt=self.view._tr("dlg_nover_file_prompt"),
+                initial_files=current_files
+            )
 
-    # -------------------------------------------------------------------------
-    # Tema/Idioma
-    # -------------------------------------------------------------------------
+            if result is not None:
+                new_folders, new_files = result
+                self.config["etiquetas_carpetas_excluidas"] = new_folders
+                self.config["etiquetas_archivos_excluidos"] = new_files
+
+                config_store.save_config(self.config)
+                self.view.show_message("info_title", "msg_done")
+        finally:
+            self._dialog_lock.discard("no_view_config")
+
     def toggle_theme(self):
         self.view.current_theme = toggle_theme(self.view.current_theme)
         self.config["theme"] = self.view.current_theme

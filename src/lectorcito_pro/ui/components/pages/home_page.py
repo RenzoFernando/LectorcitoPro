@@ -16,7 +16,7 @@ import customtkinter as ctk
 from ..atoms.buttons import colored_main_button, main_button
 from ..organisms.header import Header
 from ..organisms.progress_panel import ProgressPanel
-from ...theme.palette import COLORS, PROGRESS_W
+from ...theme.palette import COLORS, PROGRESS_W, BTN_H_MAIN
 
 
 class HomePage(ctk.CTkFrame):
@@ -35,10 +35,12 @@ class HomePage(ctk.CTkFrame):
         self.main_buttons_frame.grid(row=1, column=0, sticky="ew", pady=5)
 
         self.main_buttons = {
-            "selpath": main_button(self.main_buttons_frame),
-            "choose": main_button(self.main_buttons_frame),
-            "create_tree": main_button(self.main_buttons_frame),
-            "openlect": main_button(self.main_buttons_frame),
+            # FIX: Added text="" to all main_button calls
+            "selpath": main_button(self.main_buttons_frame, text=""),
+            "choose": main_button(self.main_buttons_frame, text=""),
+            "create_tree": main_button(self.main_buttons_frame, text=""),
+            "openlect": main_button(self.main_buttons_frame, text=""),
+
             "openlast": colored_main_button(
                 self.main_buttons_frame,
                 text="",
@@ -53,7 +55,8 @@ class HomePage(ctk.CTkFrame):
             ),
         }
         for btn in self.main_buttons.values():
-            btn.pack(pady=3, fill="x", expand=True)
+            btn.pack(pady=3, fill="x")
+            btn.configure(height=BTN_H_MAIN)
 
         # Panel de progreso
         self.progress_panel = ProgressPanel(self, width=PROGRESS_W, height=135)

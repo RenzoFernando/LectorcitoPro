@@ -1,59 +1,48 @@
-"""UI Organism: ProgressPanel.
-
-Encapsula el área central inferior:
-- GIF (idle/procesando)
-- Barra de progreso (labels + bar)
-- Botón Cancelar
-
-La animación GIF y la lógica de progreso se mantienen en `main_window.py`;
-este organismo sólo construye y expone los widgets.
-"""
-
 from __future__ import annotations
 
 import customtkinter as ctk
 
-from ...theme.palette import BTN_H_MAIN, BTN_W_MAIN
-from ..molecules.progress_bar import ProgressWidgets
+from ...theme.palette import BTN_W_MAIN, BTN_H_MAIN
 
 
 class ProgressPanel(ctk.CTkFrame):
-    def __init__(self, parent, *, width: int | None = None, height: int | None = None):
-        super().__init__(parent, fg_color="transparent", width=width, height=height)
-        if width or height:
-            # Mantener geometría estable como en la UI original.
-            self.grid_propagate(False)
+    """
+    Panel de progreso (sin GIFs).
 
+    Nota: La lógica de mostrar/ocultar widgets la controla `main_window.py` con:
+    - toggle_ui_for_processing(...)
+    - set_progress(...)
+    """
+
+    def __init__(self, parent, width: int, height: int = 135):
+        super().__init__(parent, width=width, height=height, corner_radius=10)
+        self.grid_propagate(False)
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_rowconfigure(3, weight=1)
 
-        # Wrapper para GIF/idle
-        self.progress_content_wrapper = ctk.CTkFrame(self, fg_color="transparent")
-        self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew", rowspan=4)
+        # Estado / % (fila 0)
+        self.lbl_progress_status = ctk.CTkLabel(self, text="", font=("Segoe UI", 11, "bold"))
+        self.lbl_percent = ctk.CTkLabel(self, text="0%", font=("Segoe UI", 11, "bold"))
 
-        self.lbl_gif_animation = ctk.CTkLabel(self.progress_content_wrapper, text="Lectorcito Pro")
-        self.lbl_gif_animation.pack(expand=True)
+        # Barra (fila 1)
+        self.progress_bar = ctk.CTkProgressBar(self, height=10, corner_radius=8, mode="determinate")
+        self.progress_bar.set(0)
 
-        # Progreso + labels
-        self.widgets = ProgressWidgets.build(self)
+        # Archivo actual (fila 2)
+        self.lbl_current_file = ctk.CTkLabel(self, text="", font=("Segoe UI", 9))
 
-        # Botón cancelar (el command se asigna desde el controller)
-        self.btn_cancel = ctk.CTkButton(self, width=BTN_W_MAIN, height=BTN_H_MAIN)
+        # Botón cancelar (fila 3, se muestra solo cuando hay procesamiento)
+        self.btn_cancel = ctk.CTkButton(
+            self,
+            text="",
+            width=BTN_W_MAIN,
+            height=BTN_H_MAIN,
+            corner_radius=8,
+            font=("Segoe UI", 11, "bold"),
+        )
 
-    # Atajos para compatibilidad con la ventana principal (acceso directo)
-    @property
-    def lbl_progress_status(self):
-        return self.widgets.lbl_status
-
-    @property
-    def lbl_percent(self):
-        return self.widgets.lbl_percent
-
-    @property
-    def progress_bar(self):
-        return self.widgets.bar
-
-    @property
-    def lbl_current_file(self):
-        return self.widgets.lbl_current_file
+        # Layout base (idle)
+        self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="w")
+        self.lbl_percent.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="e")
+        self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
+        self.lbl_current_file.grid(row=2, column=0, padx=10, pady=(0, 0), sticky="w")
+        # btn_cancel se gridea cuando se activa el procesamiento
