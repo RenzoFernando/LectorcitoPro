@@ -61,6 +61,9 @@ class LectorcitoApp(ctk.CTk):
         # Control de cierre (evita doble destroy desde callbacks `after`)
         self._closing = False
         self._close_after_id = None
+        self._idle_status_after_id = None
+        self._idle_waiting_index = 0
+        self._idle_waiting_variants = ("Esperando lectura.", "Esperando lectura..", "Esperando lectura...")
 
 
         self.title("Lectorcito Pro")
@@ -286,6 +289,7 @@ class LectorcitoApp(ctk.CTk):
         self.progress_bar = self.home_page.progress_panel.progress_bar
         self.lbl_current_file = self.home_page.progress_panel.lbl_current_file
         self.btn_cancel = self.home_page.progress_panel.btn_cancel
+        self.btn_cancel.configure(width=BTN_W_MAIN, height=BTN_H_MAIN)
 
     def _create_header(self, parent):
         self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -364,6 +368,7 @@ class LectorcitoApp(ctk.CTk):
                     "openlect": "btn_open_lecturas", "openlast": "btn_open_last", "delete": "btn_del"}
         for key, btn in self.main_buttons.items():
             if key in key_map: btn.configure(text=self._tr(key_map[key]))
+            btn.configure(width=BTN_W_MAIN, height=BTN_H_MAIN)
         self.btn_cancel.configure(text=self._tr("btn_cancel"))
         self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
 
@@ -431,6 +436,27 @@ class LectorcitoApp(ctk.CTk):
             self.gif_frame_index = (self.gif_frame_index + 1) % len(self.gif_pil_frames)
             self.gif_animation_after_id = self.after(self.gif_delay, self._animate_gif)
 
+    def _start_idle_status_animation(self):
+        self._idle_waiting_index = 0
+        def _tick():
+            if not self.winfo_exists() or self.controller.is_processing:
+                return
+            self._idle_waiting_index = (self._idle_waiting_index + 1) % len(self._idle_waiting_variants)
+            try:
+                self.lbl_progress_status.configure(text=self._idle_waiting_variants[self._idle_waiting_index])
+            except Exception:
+                return
+            self._idle_status_after_id = self.after(600, _tick)
+        self._idle_status_after_id = self.after(600, _tick)
+
+    def _stop_idle_status_animation(self):
+        if self._idle_status_after_id:
+            try:
+                self.after_cancel(self._idle_status_after_id)
+            except Exception:
+                pass
+            self._idle_status_after_id = None
+
     def set_progress(self, percentage, file_context=None, force_color=False):
         new_target = int(percentage)
         if new_target != self.target_progress or force_color:
@@ -454,6 +480,8 @@ class LectorcitoApp(ctk.CTk):
         state = "disabled" if is_active else "normal"
         for btn in self.main_buttons.values(): btn.configure(state=state)
         for btn in self.sidebar_buttons.values(): btn.configure(state=state)
+
+        self._stop_idle_status_animation()
 
         if is_active:
             if self.gif_animation_after_id:
@@ -483,10 +511,19 @@ class LectorcitoApp(ctk.CTk):
             self.progress_bar.stop()
             for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file, self.btn_cancel):
                 widget.grid_forget()
+            self.progress_content_wrapper.grid_forget()
+            self.progress_bar.configure(mode='determinate')
+            self.set_progress(0, None, True)
+            self.lbl_progress_status.configure(text=self._idle_waiting_variants[0])
+            self.lbl_percent.configure(text="0%")
+            self.lbl_current_file.configure(text="")
 
-            self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew", rowspan=4)
-            self.lbl_gif_animation.configure(text="Lectorcito Pro", image=None)
-            self.after(100, lambda: self.set_progress(0))
+            self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
+            self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
+            self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
+            self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
+
+            self._start_idle_status_animation()
 
     def show_message(self, title_key: str, message_key: str, *args):
         MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))

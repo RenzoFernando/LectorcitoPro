@@ -121,9 +121,11 @@ class CustomTooltip:
         else:
             if self.tooltip_window and self.tooltip_window.winfo_exists():
                 try:
+                    self._cancel_afters(self.tooltip_window)
                     self.tooltip_window.after_idle(self.tooltip_window.destroy)
                 except Exception:
                     try:
+                        self._cancel_afters(self.tooltip_window)
                         self.tooltip_window.destroy()
                     except (TclError, Exception):
                         pass
@@ -149,9 +151,11 @@ class CustomTooltip:
 
         if self.tooltip_window and self.tooltip_window.winfo_exists():
             try:
+                self._cancel_afters(self.tooltip_window)
                 self.tooltip_window.after_idle(self.tooltip_window.destroy)
             except Exception:
                 try:
+                    self._cancel_afters(self.tooltip_window)
                     self.tooltip_window.destroy()
                 except Exception:
                     pass
@@ -161,3 +165,13 @@ class CustomTooltip:
         """Handler para destrucción del widget base."""
         self._disposed = True
         self.cleanup()
+
+    def _cancel_afters(self, window):
+        try:
+            for after_id in list(window.after_info()):
+                try:
+                    window.after_cancel(after_id)
+                except Exception:
+                    pass
+        except Exception:
+            pass
