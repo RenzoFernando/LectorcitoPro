@@ -346,7 +346,13 @@ class LectorcitoApp(ctk.CTk):
 
     def update_ui_texts(self):
         # Prevent updating UI when window is being destroyed
-        if self._closing or not self.winfo_exists():
+        # Check _closing first to avoid TclError from winfo_exists on destroyed widget
+        if self._closing:
+            return
+        try:
+            if not self.winfo_exists():
+                return
+        except tk.TclError:
             return
         
         hour = datetime.datetime.now().hour
@@ -370,16 +376,19 @@ class LectorcitoApp(ctk.CTk):
                 try:
                     btn.configure(text=self._tr(key_map[key]))
                 except tk.TclError:
+                    # Widget destroyed during shutdown - safe to ignore
                     pass
         
         try:
             self.btn_cancel.configure(text=self._tr("btn_cancel"))
         except tk.TclError:
+            # Widget destroyed during shutdown - safe to ignore
             pass
         
         try:
             self.lbl_progress_status.configure(text=self._tr("progress_processing_text"))
         except tk.TclError:
+            # Widget destroyed during shutdown - safe to ignore
             pass
 
         tooltip_map = {
@@ -399,6 +408,7 @@ class LectorcitoApp(ctk.CTk):
                     else:
                         self.tooltips[key] = CustomTooltip(btn, text=self._tr(tooltip_map[key]))
                 except tk.TclError:
+                    # Widget destroyed during shutdown - safe to ignore
                     pass
 
     def apply_theme(self):
@@ -522,8 +532,15 @@ class LectorcitoApp(ctk.CTk):
 
     def show_message(self, title_key: str, message_key: str, *args):
         # Prevent creating dialogs when window is being destroyed
-        if self._closing or not self.winfo_exists():
+        # Check _closing first to avoid TclError from winfo_exists on destroyed widget
+        if self._closing:
             return
+        try:
+            if not self.winfo_exists():
+                return
+        except tk.TclError:
+            return
+        
         try:
             MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
         except (tk.TclError, RuntimeError) as e:
@@ -531,8 +548,15 @@ class LectorcitoApp(ctk.CTk):
 
     def show_app_info(self):
         # Prevent creating dialogs when window is being destroyed
-        if self._closing or not self.winfo_exists():
+        # Check _closing first to avoid TclError from winfo_exists on destroyed widget
+        if self._closing:
             return
+        try:
+            if not self.winfo_exists():
+                return
+        except tk.TclError:
+            return
+        
         try:
             from ...features.help.application.open_manual import get_infographic_path
             image_path = get_infographic_path()
