@@ -6,6 +6,7 @@ from PIL import Image
 import datetime
 import os
 import random
+import logging
 
 from ...core.paths import resource_path
 from ...i18n.translations import TRANSLATIONS
@@ -35,6 +36,7 @@ AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
 GIF_CHANGE_INTERVAL_MS = 1 * 60 * 1000
 
+logger = logging.getLogger(__name__)
 
 
 class LectorcitoApp(ctk.CTk):
@@ -366,7 +368,7 @@ class LectorcitoApp(ctk.CTk):
         try:
             self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
         except tk.TclError as e:
-            print(f"Error updating greeting label: {e}")
+            logger.debug(f"Error updating greeting label (widget destroyed): {e}")
             return
         
         key_map = {"selpath": "btn_sel_lecturas", "choose": "btn_choose_folder", "create_tree": "btn_create_tree",
@@ -544,7 +546,7 @@ class LectorcitoApp(ctk.CTk):
         try:
             MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
         except (tk.TclError, RuntimeError) as e:
-            print(f"Error showing message dialog: {e}")
+            logger.debug(f"Error showing message dialog (window destroyed): {e}")
 
     def show_app_info(self):
         # Prevent creating dialogs when window is being destroyed
@@ -565,4 +567,4 @@ class LectorcitoApp(ctk.CTk):
             else:
                 self.show_message("error_title", "msg_infographic_error")
         except (tk.TclError, RuntimeError) as e:
-            print(f"Error showing app info: {e}")
+            logger.debug(f"Error showing app info (window destroyed): {e}")
