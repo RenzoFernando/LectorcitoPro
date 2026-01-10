@@ -1,3 +1,4 @@
+
 """Gestión de tema (Light/Dark) para CustomTkinter.
 
 La lógica de negocio de la app define el tema como un string:

@@ -1,3 +1,4 @@
+
 # =======================================================================================
 # ==               FIRMADOR AUTOMÁTICO PARA APLICACIONES (VERSIÓN POWERSHELL)            ==
 # =======================================================================================
@@ -49,7 +50,7 @@ try {
     $ExeName = "LectorcitoPro.exe"
 
     # (Editable) Nombre de la carpeta donde está tu .exe.
-    $DownloadsDirName = "descargas"
+$DownloadsDirName = "dist"
 
     # (Editable) Nombre de la carpeta donde se guardarán los certificados.
     $CertsDirName = "recursos_certificado"
@@ -81,7 +82,13 @@ try {
         throw "No se encontró signtool.exe en la ruta: $SigToolPath. Por favor, instala el Windows SDK y/o corrige la ruta en este script."
     }
     if (-not (Test-Path -Path $ExePath)) {
-        throw "No se encontró el archivo ejecutable: $ExePath. Por favor, compila tu aplicación primero."
+        $FallbackExePath = Join-Path (Join-Path $ProjectRoot "descargas") $ExeName
+        if (Test-Path -Path $FallbackExePath) {
+            Write-Host "   - Ejecutable encontrado en carpeta alternativa: $FallbackExePath" -ForegroundColor Yellow
+            $ExePath = $FallbackExePath
+        } else {
+            throw "No se encontró el archivo ejecutable: $ExePath. Compila tu aplicación primero (build.bat) o coloca el .exe en dist/ o descargas/."
+        }
     }
 
     Write-Host "   - Rutas configuradas correctamente."
@@ -165,4 +172,3 @@ Write-Host "El archivo $ExeName ha sido firmado correctamente." -ForegroundColor
 Write-Host "`n"
 
 Read-Host -Prompt "Presiona Enter para salir"
-

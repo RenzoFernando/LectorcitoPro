@@ -1,1 +1,1 @@
-"""Package marker."""
+"""Molecules: componentes compuestos por átomos."""

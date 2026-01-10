@@ -1,9 +1,5 @@
+
 from __future__ import annotations
-
-"""Capa UI (adaptador) para la funcionalidad de árbol.
-
-No cambia lógica: delega al caso de uso `generate_tree_report`.
-"""
 
 from ..application.generate_tree import generate_tree_report
 

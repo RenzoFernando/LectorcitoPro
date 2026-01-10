@@ -1,11 +1,6 @@
+
 from __future__ import annotations
 
-"""Adaptador UI para settings.
-
-La UI real sigue en `ui/app_window/bindings.py`.
-Este módulo ofrece helpers para manipular el dict de configuración sin acoplarlo
-a widgets específicos.
-"""
 
 from ..application.update_language import toggle_language
 from ..application.update_theme import toggle_theme

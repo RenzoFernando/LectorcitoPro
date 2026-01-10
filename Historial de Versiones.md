@@ -1,3 +1,4 @@
+
 # Historial de Versiones
 
 ## Versión 0: Funcionalidad Básica
@@ -87,3 +88,8 @@
 8.  Optimizar la interfaz para un diseño responsivo que se adapte a diferentes resoluciones de pantalla.
 9.  Rediseñar los diálogos de configuración ("Ver" / "No Ver") para un estilo más moderno y compacto.
 10. Integrar un manual de usuario visual (infografía) accesible desde la aplicación.
+
+---
+
+## Versión 6: 
+1. Refactorización y Escalabilidad Arquitectura. Se implementó la arquitectura de componentes UI (átomos, moléculas, organismos y páginas) y se conectó con la ventana principal.

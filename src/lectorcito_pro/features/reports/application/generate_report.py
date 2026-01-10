@@ -1,121 +1,106 @@
 from __future__ import annotations
 
 import os
-import threading
-from time import sleep
+from typing import Callable, Optional, Tuple
 
-from ....infra.filesystem.file_reader import read_text_file
+from ....core.errors import ProcessingCancelled
+from ....infra.filesystem.file_reader import describe_media_file, read_text_file
+from ....infra.filesystem.report_writer import write_report
 from ....infra.filesystem.scanner import count_files_to_process, iter_directories_with_files
 from ..domain.filters import build_filters
 
 
+ProgressCallback = Callable[[float, str], None]
+
+
 def generate_report(
+    *,
     source_folder: str,
     output_path: str,
     config: dict,
-    cancel_event: threading.Event | None = None,
-    progress_callback=None,
-) -> tuple[str, str | None]:
-    """Genera el reporte consolidado del proyecto.
+    cancel_event=None,
+    progress_callback: Optional[ProgressCallback] = None,
+) -> Tuple[str, Optional[str]]:
+    """Genera un reporte de lectura para `source_folder`.
 
-    ✅ Mantiene el mismo comportamiento y formato del reporte original.
-    - Recorre el proyecto recursivamente.
-    - Aplica filtros configurables.
-    - Incluye archivos de texto con su contenido.
-    - Lista archivos multimedia (sin incluir contenido).
-    - Soporta cancelación y progreso.
+    Retorna:
+        ("success", report_path) si todo salió bien.
+        ("no_files", None) si no se encontró nada que reportar.
+        ("cancelled", None) si el usuario canceló.
+        ("error", None) ante cualquier error inesperado.
+
+    Nota:
+    - Mantiene la lógica de negocio actual: usa `config` (tags activos) para construir filtros.
+    - Reusa el scanner del proyecto (count_files_to_process / iter_directories_with_files).
     """
-    filters = build_filters(config)
-
-    total_files = count_files_to_process(source_folder, filters)
-    if total_files == 0:
-        return "no_files", None
-
-    if cancel_event and cancel_event.is_set():
-        return "cancelled", None
-
-    os.makedirs(output_path, exist_ok=True)
-
-    folder_name = os.path.basename(os.path.normpath(source_folder))
-    version = 1
-    while True:
-        report_filename = f"Reporte_{folder_name}_v{version}.txt"
-        final_report_path = os.path.join(output_path, report_filename)
-        if not os.path.exists(final_report_path):
-            break
-        version += 1
-
-    processed_files = 0
-
     try:
-        with open(final_report_path, "w", encoding="utf-8") as outfile:
-            # Encabezado (mismo formato del viejo/original)
-            outfile.write("=" * 80 + "\n")
-            outfile.write(" LECTORCITO PRO - REPORTE DE PROYECTO\n")
-            outfile.write(f" PROYECTO: {folder_name}\n")
-            outfile.write(f" RUTA: {source_folder}\n")
-            outfile.write("=" * 80 + "\n\n")
+        if cancel_event is not None and cancel_event.is_set():
+            raise ProcessingCancelled("Operación cancelada antes de iniciar.")
 
-            for root, scanned_files in iter_directories_with_files(source_folder, filters, cancel_event=cancel_event):
-                if cancel_event and cancel_event.is_set():
-                    break
+        filters = build_filters(config or {})
+        os.makedirs(output_path, exist_ok=True)
 
-                relative_path = os.path.relpath(root, source_folder)
-                folder_name_display = relative_path if relative_path != "." else "RAÍZ DEL PROYECTO"
-                highlight = " [IMPORTANTE]" if os.path.basename(root) in filters.important_folders else ""
+        folder_name = os.path.basename(os.path.normpath(source_folder)) or "Lectura"
+        version = 1
+        while True:
+            report_filename = f"Reporte_{folder_name}_v{version}.txt"
+            report_path = os.path.join(output_path, report_filename)
+            if not os.path.exists(report_path):
+                break
+            version += 1
 
-                outfile.write(f"■ CARPETA: {folder_name_display}{highlight}\n")
-                outfile.write("└" + ("─" * 78) + "\n\n")
+        total_files = count_files_to_process(source_folder, filters)
+        if total_files <= 0:
+            return "no_files", None
 
-                for item in scanned_files:
-                    if cancel_event and cancel_event.is_set():
-                        break
+        processed = 0
+        results: list[tuple[str, list[str]]] = []
 
-                    processed_files += 1
-                    progress = (processed_files / total_files) * 100
+        for rel_root, scanned_files in iter_directories_with_files(
+            source_folder, filters, cancel_event=cancel_event
+        ):
+            if cancel_event is not None and cancel_event.is_set():
+                raise ProcessingCancelled("Operación cancelada durante el proceso.")
 
-                    if progress_callback:
-                        progress_callback(progress, item.name)
+            abs_root = source_folder if rel_root == "." else os.path.join(source_folder, rel_root)
+            folder_lines: list[str] = []
 
-                    sleep(0.01)
+            for sf in scanned_files:
+                if cancel_event is not None and cancel_event.is_set():
+                    raise ProcessingCancelled("Operación cancelada durante la lectura.")
 
-                    file_path = os.path.join(root, item.name)
-                    outfile.write(f"  ● Archivo: {item.name}\n")
+                file_path = os.path.join(abs_root, sf.name)
+                rel_file_path = os.path.relpath(file_path, source_folder)
 
-                    if item.is_text:
-                        outfile.write("    " + ("-" * 74) + "\n")
-                        outfile.write("    >> INICIO DEL CONTENIDO\n\n")
-                        try:
-                            content = read_text_file(file_path, encoding="utf-8")
-                            for line in content.splitlines(True):
-                                outfile.write(f"    {line}")
-                        except Exception as e:
-                            outfile.write(f"    [Error al leer el archivo: {e}]\n")
+                folder_lines.append(f"[ARCHIVO] {rel_file_path}")
+                folder_lines.append("-" * 60)
 
-                        # Igual al original: 2 saltos de línea antes del cierre + separador final
-                        outfile.write("\n\n    << FIN DEL CONTENIDO\n")
-                        outfile.write("    " + ("-" * 74) + "\n\n")
+                if sf.is_media:
+                    folder_lines.append(describe_media_file(file_path))
+                else:
+                    content, error = read_text_file(file_path)
+                    if error:
+                        folder_lines.append(f"[ERROR] {error}")
+                    else:
+                        folder_lines.extend(content.splitlines() if content.strip() else ["(archivo vacío)"])
 
-                    elif item.is_media:
-                        # Igual al original: no imprime contenido adicional
-                        outfile.write("\n")
+                folder_lines.append("")
 
-    except Exception as e:
-        print(f"[Error] Se produjo una excepción al escribir el reporte: {e}")
-        try:
-            if os.path.exists(final_report_path):
-                os.remove(final_report_path)
-        except Exception:
-            pass
-        return "error", None
+                processed += 1
+                if progress_callback:
+                    try:
+                        progress = (processed / total_files) * 100.0
+                        progress_callback(progress, rel_file_path)
+                    except Exception:
+                        pass
 
-    # En el original GUI, al cancelar se elimina el reporte parcial.
-    if cancel_event and cancel_event.is_set():
-        try:
-            if os.path.exists(final_report_path):
-                os.remove(final_report_path)
-        except Exception:
-            pass
+            results.append((folder_name if rel_root == "." else rel_root, folder_lines))
+
+        write_report(report_path, source_folder, results)
+        return "success", report_path
+
+    except ProcessingCancelled:
         return "cancelled", None
-
-    return "success", final_report_path
+    except Exception as e:
+        print(f"[Error] No se pudo generar el reporte: {e}")
+        return "error", None

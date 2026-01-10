@@ -1,10 +1,6 @@
+
 from __future__ import annotations
 
-"""Constructor de árbol de directorios (texto).
-
-Este módulo encapsula la lógica de recorrido usada para generar el reporte de árbol.
-No cambia el comportamiento: solo mueve el recorrido a infraestructura para reutilizarlo.
-"""
 
 import os
 from typing import Iterable, Iterator

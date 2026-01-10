@@ -1,20 +1,34 @@
+from __future__ import annotations
+
 import customtkinter as ctk
 import os
+import tkinter as tk
 
 from ..theme.palette import COLORS
 
+
 class BaseDialog(ctk.CTkToplevel):
+    """Base para diálogos con animación fade-in/fade-out.
+
+    Fix v6:
+    - Evita `TclError: can't delete Tcl command` al destruir dentro de callbacks `after`
+      usando `after_idle` y un flag de cierre.
+    """
 
     def __init__(self, parent, title: str):
         super().__init__(parent)
+
         self.transient(parent)
         self.title(title)
         self.resizable(False, False)
         self.attributes("-alpha", 0.0)
 
+        self._closing = False
+        self._fade_job: str | None = None
+
         def _set_icon():
             try:
-                if hasattr(parent, '_icon_path') and parent._icon_path and os.path.exists(parent._icon_path):
+                if hasattr(parent, "_icon_path") and parent._icon_path and os.path.exists(parent._icon_path):
                     self.iconbitmap(parent._icon_path)
             except Exception as e:
                 print(f"Error al establecer el icono de la sub-ventana: {e}")
@@ -28,44 +42,91 @@ class BaseDialog(ctk.CTkToplevel):
         self.after(100, self._center_and_fade_in)
 
     def _center_and_fade_in(self):
+        # Centrar diálogo sobre el parent
         try:
-            self.grab_set()
-            self._center_window()
-            self._fade_in()
+            self.update_idletasks()
+            parent = self.master
+            px = parent.winfo_rootx()
+            py = parent.winfo_rooty()
+            pw = parent.winfo_width()
+            ph = parent.winfo_height()
+            w = self.winfo_width()
+            h = self.winfo_height()
+            x = px + (pw - w) // 2
+            y = py + (ph - h) // 2
+            self.geometry(f"+{x}+{y}")
         except Exception:
             pass
 
-    def _center_window(self):
-        self.update_idletasks()
-        parent_x = self.master.winfo_x()
-        parent_y = self.master.winfo_y()
-        parent_width = self.master.winfo_width()
-        parent_height = self.master.winfo_height()
+        self._fade_in_step()
 
-        dialog_width = self.winfo_width()
-        dialog_height = self.winfo_height()
+    def _fade_in_step(self):
+        if not self.winfo_exists():
+            return
+        try:
+            alpha = float(self.attributes("-alpha"))
+        except Exception:
+            alpha = 0.0
 
-        x = parent_x + (parent_width - dialog_width) // 2
-        y = parent_y + (parent_height - dialog_height) // 2
-
-        self.geometry(f"+{x}+{y}")
-
-    def _fade_in(self):
-        alpha = self.attributes("-alpha")
-        if alpha < 1:
+        if alpha < 1.0 and not self._closing:
             alpha = min(alpha + 0.1, 1.0)
-            self.attributes("-alpha", alpha)
-            self.after(15, self._fade_in)
+            try:
+                self.attributes("-alpha", alpha)
+            except Exception:
+                pass
+            self.after(15, self._fade_in_step)
 
     def _close_with_fade_out(self, event=None):
-        self.grab_release()
-        alpha = self.attributes("-alpha")
-        if alpha > 0:
+        if self._closing:
+            return
+        self._closing = True
+
+        try:
+            self.grab_release()
+        except Exception:
+            pass
+
+        self._fade_out_step()
+
+    def _fade_out_step(self):
+        if not self.winfo_exists():
+            return
+
+        try:
+            alpha = float(self.attributes("-alpha"))
+        except Exception:
+            alpha = 0.0
+
+        if alpha > 0.0:
             alpha = max(alpha - 0.1, 0.0)
-            self.attributes("-alpha", alpha)
-            self.after(15, self._close_with_fade_out)
+            try:
+                self.attributes("-alpha", alpha)
+            except Exception:
+                pass
+            self._fade_job = self.after(15, self._fade_out_step)
         else:
-            self.destroy()
+            # Destruir fuera del callback activo
+            try:
+                self.after_idle(self._safe_destroy)
+            except Exception:
+                self._safe_destroy()
+
+    def _safe_destroy(self):
+        try:
+            if self._fade_job:
+                try:
+                    self.after_cancel(self._fade_job)
+                except Exception:
+                    pass
+                self._fade_job = None
+        except Exception:
+            pass
+
+        try:
+            super().destroy()
+        except tk.TclError:
+            # Evitar crash por doble-destroy / callbacks Tcl.
+            pass
 
     def _on_ok(self, event=None):
         self._close_with_fade_out()

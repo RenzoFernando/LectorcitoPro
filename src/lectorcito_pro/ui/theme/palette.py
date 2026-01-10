@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 """Paleta de colores y constantes visuales compartidas.

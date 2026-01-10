@@ -1,3 +1,4 @@
+
 class LectorcitoError(Exception):
     """Error base de la aplicación."""
 

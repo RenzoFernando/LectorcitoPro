@@ -1,1 +1,1 @@
-"""Package marker."""
+"""Pages: pantallas (composición de organismos)."""

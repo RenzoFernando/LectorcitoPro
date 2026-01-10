@@ -1,3 +1,4 @@
+
 """Entry point de desarrollo/compilación.
 
 Mantiene compatibilidad con scripts/bat existentes que apuntan a `src/main.py`.

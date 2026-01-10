@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 """Caso de uso: obtener ruta del manual (infografía).

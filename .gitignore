@@ -16,6 +16,9 @@ dist/
 # ── PyInstaller ─────────────────────────────────────────
 *.spec
 build/
+dist/
+.pyinstaller/
+pyinstaller_spec
 
 # ── Installer logs ──────────────────────────────────────
 pip-log.txt

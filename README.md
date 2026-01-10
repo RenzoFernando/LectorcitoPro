@@ -1,8 +1,9 @@
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/RenzoFernando/LectorcitoPro/main/recursos/lector.png" alt="Logo de Lectorcito Pro" width="150">
   <h1>Lectorcito Pro</h1>
   <p>
-    <strong>Versión Actual: 5.11.0</strong><br>
+    <strong>Versión Actual: 6.0.0</strong><br>
     Una herramienta de escritorio profesional para analizar y consolidar proyectos de código fuente en reportes unificados.
   </p>
   <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest">

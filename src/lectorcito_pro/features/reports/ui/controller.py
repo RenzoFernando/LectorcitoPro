@@ -1,13 +1,7 @@
+
 from __future__ import annotations
 
-"""Capa UI (adaptador) para la funcionalidad de reportes.
 
-Actualmente, la UI real está implementada en `ui/app_window/bindings.py`.
-Este módulo existe para mantener la estructura por features y permitir
-que la UI consuma un controlador específico de reportes si se desea.
-
-No cambia lógica: solo delega al caso de uso `generate_report`.
-"""
 
 import threading
 from typing import Callable, Optional

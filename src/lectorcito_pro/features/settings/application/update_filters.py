@@ -1,12 +1,6 @@
+
 from __future__ import annotations
 
-"""Caso de uso: actualizar/normalizar filtros.
-
-En la app, los filtros se guardan como listas de dicts:
-    {"nombre": "src", "estado": "activo"}
-
-Este módulo ofrece helpers para normalizar entradas sin cambiar lógica de negocio.
-"""
 
 from typing import Iterable
 

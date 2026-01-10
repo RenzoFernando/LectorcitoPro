@@ -1,3 +1,4 @@
+
 import customtkinter as ctk
 from tkinter import Canvas
 from PIL import Image
@@ -10,6 +11,10 @@ from ...i18n.translations import TRANSLATIONS
 from ..dialogs.message import MessageDialog
 from ..dialogs.infographic import InfographicDialog
 from ..tooltips.tooltip import CustomTooltip
+from ..components.pages.home_page import HomePage
+from ..components.molecules.sidebar import LeftSidebar, RightSidebar
+from ..components.organisms.footer import Footer
+
 
 from ..theme.palette import (
     COLORS,
@@ -23,7 +28,7 @@ from ..theme.palette import (
 from ..theme.theme_manager import set_theme
 
 
-VERSION = "5.11.0"
+VERSION = "6.0.0"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -55,6 +60,10 @@ class LectorcitoApp(ctk.CTk):
         self.gif_animation_after_id = None
         self.gif_delay = 100
         self.gif_change_timer_id = None
+        # Control de cierre (evita doble destroy desde callbacks `after`)
+        self._closing = False
+        self._close_after_id = None
+
 
         self.title("Lectorcito Pro")
         self.geometry("600x500")
@@ -101,18 +110,63 @@ class LectorcitoApp(ctk.CTk):
             self.after(15, self._fade_in)
 
     def _close_with_fade_out(self):
-        if self.gif_animation_after_id: self.after_cancel(self.gif_animation_after_id)
-        if self.gif_change_timer_id: self.after_cancel(self.gif_change_timer_id)
-        alpha = self.attributes("-alpha")
-        if alpha > 0:
+        """Cierra la app con animación, evitando errores Tcl por doble destroy."""
+        if getattr(self, "_closing", False):
+            return
+        self._closing = True
+
+        # Cancelar jobs programados (progress/gif/fade)
+        for attr in ("animation_after_id", "gif_animation_after_id", "gif_change_timer_id", "_close_after_id"):
+            job_id = getattr(self, attr, None)
+            if job_id:
+                try:
+                    self.after_cancel(job_id)
+                except Exception:
+                    pass
+                setattr(self, attr, None)
+
+        # Limpiar tooltips (cancela callbacks y cierra toplevels de tooltips)
+        try:
+            for tp in getattr(self, "tooltips", {}).values():
+                try:
+                    tp.cleanup()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        self._fade_out_step()
+
+    def _fade_out_step(self):
+        if not self.winfo_exists():
+            return
+        try:
+            alpha = float(self.attributes("-alpha"))
+        except Exception:
+            alpha = 0.0
+        if alpha > 0.0:
             alpha = max(alpha - 0.08, 0.0)
-            self.attributes("-alpha", alpha)
-            self.after(15, self._close_with_fade_out)
+            try:
+                self.attributes("-alpha", alpha)
+            except Exception:
+                pass
+            self._close_after_id = self.after(15, self._fade_out_step)
         else:
-            self.destroy()
+            # Destruir fuera del callback actual para evitar `can't delete Tcl command`
+            try:
+                self.after_idle(self._safe_destroy)
+            except Exception:
+                self._safe_destroy()
+
+    def _safe_destroy(self):
+        try:
+            ctk.CTk.destroy(self)
+        except Exception:
+            # Último recurso: evitar crash en cierre
+            pass
 
     def _tr(self, key, *args):
-        translation_entry = self.TRANSLATIONS.get(self.lang, self.TRANSLATIONS["es"]).get(key, f"<{key}>")
+        translation_entry = self.TRANSLATIONS.get(self.lang, self.TRANSLATIONS["es"]).get(key, f"{key}")
         if isinstance(translation_entry, list):
             return random.choice(translation_entry).format(*args)
         return translation_entry.format(*args)
@@ -194,15 +248,36 @@ class LectorcitoApp(ctk.CTk):
         center_frame = ctk.CTkFrame(self, fg_color="transparent")
         center_frame.grid(row=0, column=1, sticky="nsew", pady=10)
         center_frame.grid_columnconfigure(0, weight=1)
-        center_frame.grid_rowconfigure(2, weight=1)
+        center_frame.grid_rowconfigure(0, weight=1)
 
-        self._create_header(center_frame)
-        self._create_main_buttons(center_frame)
-        self._create_progress_and_cancel(center_frame)
+        self._create_home_page(center_frame)
+
 
         self._create_left_sidebar(left_sidebar_container)
         self._create_right_sidebar(right_sidebar_container)
         self._create_footer()
+
+    def _create_home_page(self, parent):
+        """Crea la página principal (Home) usando componentes reutilizables."""
+        self.home_page = HomePage(parent, logo_image=self.logo_image)
+        self.home_page.grid(row=0, column=0, sticky="nsew")
+
+        # Mapeo de referencias para mantener compatibilidad con el controller actual
+        self.header_frame = self.home_page.header
+        self.lbl_title = self.home_page.header.lbl_title
+        self.lbl_greet = self.home_page.header.lbl_greet
+
+        self.main_buttons_frame = self.home_page.main_buttons_frame
+        self.main_buttons = self.home_page.main_buttons
+
+        self.progress_frame = self.home_page.progress_panel
+        self.progress_content_wrapper = self.home_page.progress_panel.progress_content_wrapper
+        self.lbl_gif_animation = self.home_page.progress_panel.lbl_gif_animation
+        self.lbl_progress_status = self.home_page.progress_panel.lbl_progress_status
+        self.lbl_percent = self.home_page.progress_panel.lbl_percent
+        self.progress_bar = self.home_page.progress_panel.progress_bar
+        self.lbl_current_file = self.home_page.progress_panel.lbl_current_file
+        self.btn_cancel = self.home_page.progress_panel.btn_cancel
 
     def _create_header(self, parent):
         self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -249,38 +324,24 @@ class LectorcitoApp(ctk.CTk):
         self.btn_cancel = ctk.CTkButton(self.progress_frame, width=150, height=28)
 
     def _create_left_sidebar(self, parent):
-        sidebar_height = 400
-        self.side_left = ctk.CTkFrame(parent, width=SIDEBAR_WIDTH, height=sidebar_height, corner_radius=15)
+        """Sidebar izquierdo usando el componente LeftSidebar."""
+        sidebar_height = max(200, self.winfo_height() - 40)
+        self.side_left = LeftSidebar(parent, height=sidebar_height, corner_radius=15)
         self.side_left.pack(expand=True, anchor="center")
-
-        self.canvas_left = Canvas(self.side_left, width=20, height=sidebar_height - 40, highlightthickness=0)
-        self.canvas_left.place(relx=0.5, rely=0.5, anchor="center")
+        self.canvas_left = self.side_left.canvas
         self.canvas_left.bind("<Configure>", self._paint_left_sidebar_text)
 
     def _create_right_sidebar(self, parent):
-        button_container = ctk.CTkFrame(parent, fg_color="transparent")
-        button_container.pack(expand=True, anchor="center")
-
-        self.sidebar_buttons = {}
-        icon_keys = ["ver", "nover", "theme_icon", "traducir", "restaurar", "github", "info"]
-        for key in icon_keys:
-            is_light = self.current_theme == "Light"
-            initial_icon = self.icons.get('moon') if key == "theme_icon" and is_light else self.icons.get(
-                'sun') if key == "theme_icon" else self.icons.get(key)
-
-            fg_color = COLORS['dark']['bg'] if is_light else COLORS['light']['bg']
-            hover_color = COLORS['sidebar_hover']['light'] if is_light else COLORS['sidebar_hover']['dark']
-
-            btn = ctk.CTkButton(button_container, image=initial_icon, text="", width=SIDEBAR_WIDTH, height=BTN_H_ICON,
-                                corner_radius=8, fg_color=fg_color, hover_color=hover_color)
-            btn.pack(pady=5)
-            self.sidebar_buttons[key] = btn
+        """Sidebar derecho usando el componente RightSidebar."""
+        self.right_sidebar = RightSidebar(parent, icons=self.icons, current_theme=self.current_theme)
+        self.right_sidebar.pack(expand=True, anchor="center")
+        self.sidebar_buttons = self.right_sidebar.buttons
 
     def _create_footer(self):
-        self.footer_frame = ctk.CTkFrame(self, height=30, corner_radius=0)
-        self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="sew")
-        ctk.CTkLabel(self.footer_frame, text=f"Copyright © {YEAR} - {AUTHOR} - All Rights Reserved.",
-                        font=("Segoe UI", 9)).place(relx=0.5, rely=0.5, anchor="center")
+        """Footer usando el componente Footer."""
+        footer_text = f"Copyright ©{YEAR} - {AUTHOR} {self._tr(' - All rights reserved')}"
+        self.footer_frame = Footer(self, text=footer_text)
+        self.footer_frame.grid(row=1, column=1, sticky="ew")
 
     def update_ui_texts(self):
         hour = datetime.datetime.now().hour

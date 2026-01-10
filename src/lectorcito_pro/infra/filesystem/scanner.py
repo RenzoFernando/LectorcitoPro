@@ -1,12 +1,6 @@
+
 from __future__ import annotations
 
-"""Scanner de filesystem.
-
-Este módulo encapsula el recorrido de carpetas/archivos que antes estaba
-dentro de `features.reports.application.generate_report`.
-
-La lógica se mantiene igual, solo se organiza en funciones reutilizables.
-"""
 
 import os
 import threading

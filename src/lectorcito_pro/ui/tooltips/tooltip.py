@@ -1,7 +1,16 @@
+from __future__ import annotations
+
 import customtkinter as ctk
 from tkinter import TclError
 
+
 class CustomTooltip:
+    """Tooltip simple con fade-in/fade-out.
+
+    Fix v6:
+    - Método `cleanup()` para cancelar callbacks `after` y cerrar el tooltip de forma segura.
+    - Destroy del Toplevel vía `after_idle` para reducir riesgo de TclError en cierres rápidos.
+    """
 
     def __init__(self, widget, text: str):
         self.widget = widget
@@ -16,51 +25,55 @@ class CustomTooltip:
 
     def on_enter(self, event=None):
         if self.hide_id:
-            self.widget.after_cancel(self.hide_id)
+            try:
+                self.widget.after_cancel(self.hide_id)
+            except Exception:
+                pass
             self.hide_id = None
-        self.show_id = self.widget.after(500, self.show_tooltip)
+
+        if not self.tooltip_window:
+            self.show_id = self.widget.after(300, self.show_tooltip)
 
     def on_leave(self, event=None):
         if self.show_id:
-            self.widget.after_cancel(self.show_id)
+            try:
+                self.widget.after_cancel(self.show_id)
+            except Exception:
+                pass
             self.show_id = None
+
         self.hide_tooltip()
 
-    def show_tooltip(self, event=None):
-        if self.tooltip_window is not None:
+    def show_tooltip(self):
+        if not self.widget.winfo_exists():
             return
+
+        x = self.widget.winfo_rootx() + 25
+        y = self.widget.winfo_rooty() + 25
 
         root_window = self.widget.winfo_toplevel()
         self.tooltip_window = ctk.CTkToplevel(root_window)
         self.tooltip_window.wm_overrideredirect(True)
-
-        x = self.widget.winfo_pointerx() + 15
-        y = self.widget.winfo_pointery() + 10
-        self.tooltip_window.wm_geometry(f"+{x}+{y}")
         self.tooltip_window.attributes("-topmost", True)
-        self.tooltip_window.attributes("-alpha", 0)
+        self.tooltip_window.attributes("-alpha", 0.0)
 
-        transparent_color = '#E532F1'
-        self.tooltip_window.configure(fg_color=transparent_color)
-        self.tooltip_window.wm_attributes("-transparentcolor", transparent_color)
+        label = ctk.CTkLabel(
+            self.tooltip_window,
+            text=self.text,
+            font=("Segoe UI", 10),
+            corner_radius=6,
+            fg_color="#333333",
+            text_color="#ffffff",
+            padx=10,
+            pady=5,
+        )
+        label.pack()
 
-        current_theme = ctk.get_appearance_mode()
-        if current_theme == "Dark":
-            bg_color, text_color = "#323232", "#D3D3D3"
-        else:
-            bg_color, text_color = "#F5F5F5", "#2E2E2E"
-
-        frame = ctk.CTkFrame(self.tooltip_window, fg_color=bg_color, border_width=0, corner_radius=14)
-        frame.pack()
-
-        label = ctk.CTkLabel(frame, text=self.text, font=("Segoe UI", 9, "normal"),
-                             text_color=text_color, wraplength=220, justify="center")
-        label.pack(padx=10, pady=5)
-
+        self.tooltip_window.geometry(f"+{x}+{y}")
         self.fade_in()
 
     def hide_tooltip(self):
-        if self.tooltip_window is not None:
+        if self.tooltip_window:
             self.fade_out()
 
     def fade_in(self):
@@ -85,7 +98,36 @@ class CustomTooltip:
         else:
             if self.tooltip_window and self.tooltip_window.winfo_exists():
                 try:
-                    self.tooltip_window.destroy()
-                except (TclError, Exception):
-                    pass
+                    self.tooltip_window.after_idle(self.tooltip_window.destroy)
+                except Exception:
+                    try:
+                        self.tooltip_window.destroy()
+                    except (TclError, Exception):
+                        pass
             self.tooltip_window = None
+
+    def cleanup(self):
+        """Cancela callbacks y cierra el tooltip inmediatamente."""
+        if self.show_id:
+            try:
+                self.widget.after_cancel(self.show_id)
+            except Exception:
+                pass
+            self.show_id = None
+
+        if self.hide_id:
+            try:
+                self.widget.after_cancel(self.hide_id)
+            except Exception:
+                pass
+            self.hide_id = None
+
+        if self.tooltip_window and self.tooltip_window.winfo_exists():
+            try:
+                self.tooltip_window.after_idle(self.tooltip_window.destroy)
+            except Exception:
+                try:
+                    self.tooltip_window.destroy()
+                except Exception:
+                    pass
+        self.tooltip_window = None

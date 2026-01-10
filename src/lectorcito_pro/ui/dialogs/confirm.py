@@ -1,3 +1,4 @@
+
 import customtkinter as ctk
 
 from .base import BaseDialog, COLORS

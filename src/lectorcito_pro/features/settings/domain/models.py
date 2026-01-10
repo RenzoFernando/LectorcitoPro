@@ -1,10 +1,6 @@
+
 from __future__ import annotations
 
-"""Modelos de dominio para settings.
-
-La aplicación actualmente usa un dict de configuración por compatibilidad.
-Estos modelos son opcionales y sirven como referencia/contrato para futuras mejoras.
-"""
 
 from dataclasses import dataclass
 from typing import Any

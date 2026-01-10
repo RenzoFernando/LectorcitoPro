@@ -1,1 +1,1 @@
-"""Package marker."""
+"""Organisms: secciones completas de UI."""
