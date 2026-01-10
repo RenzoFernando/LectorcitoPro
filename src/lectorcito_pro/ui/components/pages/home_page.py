@@ -53,7 +53,7 @@ class HomePage(ctk.CTkFrame):
             ),
         }
         for btn in self.main_buttons.values():
-            btn.pack(pady=3)
+            btn.pack(pady=3, fill="x", expand=True)
 
         # Panel de progreso
         self.progress_panel = ProgressPanel(self, width=PROGRESS_W, height=135)

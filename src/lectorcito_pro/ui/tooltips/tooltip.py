@@ -18,6 +18,7 @@ class CustomTooltip:
         self.tooltip_window = None
         self.show_id = None
         self.hide_id = None
+        self._disposed = False
         self.widget.bind("<Destroy>", self.on_destroy, add="+")
 
         self.widget.bind("<Enter>", self.on_enter)
@@ -25,6 +26,8 @@ class CustomTooltip:
         self.widget.bind("<ButtonPress>", self.on_leave)
 
     def on_enter(self, event=None):
+        if self._disposed:
+            return
         if self.hide_id:
             try:
                 if self.tooltip_window and self.tooltip_window.winfo_exists():
@@ -39,6 +42,8 @@ class CustomTooltip:
             self.show_id = self.widget.after(300, self.show_tooltip)
 
     def on_leave(self, event=None):
+        if self._disposed:
+            return
         if self.show_id:
             try:
                 self.widget.after_cancel(self.show_id)
@@ -49,6 +54,8 @@ class CustomTooltip:
         self.hide_tooltip()
 
     def show_tooltip(self):
+        if self._disposed:
+            return
         try:
             if not self.widget.winfo_exists():
                 return
@@ -88,6 +95,8 @@ class CustomTooltip:
             self.fade_out()
 
     def fade_in(self):
+        if self._disposed:
+            return
         if not self.tooltip_window or not self.tooltip_window.winfo_exists():
             return
         alpha = self.tooltip_window.attributes("-alpha")
@@ -97,6 +106,9 @@ class CustomTooltip:
             self.hide_id = self.tooltip_window.after(15, self.fade_in)
 
     def fade_out(self):
+        if self._disposed:
+            self.tooltip_window = None
+            return
         if not self.tooltip_window or not self.tooltip_window.winfo_exists():
             self.tooltip_window = None
             return
@@ -119,6 +131,8 @@ class CustomTooltip:
 
     def cleanup(self):
         """Cancela callbacks y cierra el tooltip inmediatamente."""
+        if self._disposed and not self.tooltip_window:
+            return
         if self.show_id:
             try:
                 self.widget.after_cancel(self.show_id)
@@ -145,4 +159,5 @@ class CustomTooltip:
 
     def on_destroy(self, event=None):
         """Handler para destrucción del widget base."""
+        self._disposed = True
         self.cleanup()

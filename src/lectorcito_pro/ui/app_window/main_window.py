@@ -52,9 +52,7 @@ class LectorcitoApp(ctk.CTk):
         self.REPO_URL = REPO_URL
         self.tooltips = {}
 
-        self.gif_names = ["Cat_Working.gif", "Hacker_Coding.gif", "Computer_Coding.gif",
-                            "Mad_Artificial_Intelligence.gif", "Thinking_Working.gif", "Ctrl_C_V.gif",
-                            "Coding_Coffee.gif"]
+        self.gif_names = []
         self.gif_pil_frames = []
         self.gif_frame_index = 0
         self.gif_animation_after_id = None
@@ -236,7 +234,9 @@ class LectorcitoApp(ctk.CTk):
             self.gif_pil_frames = []
 
     def _build_ui(self):
+        self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
         left_sidebar_container = ctk.CTkFrame(self, fg_color="transparent")
@@ -302,7 +302,7 @@ class LectorcitoApp(ctk.CTk):
             "delete": ctk.CTkButton(self.main_buttons_frame, **opts, fg_color=COLORS['button']['red'],
                                     hover_color=COLORS['button_hover']['red_h'])
         }
-        for btn in self.main_buttons.values(): btn.pack(pady=3)
+        for btn in self.main_buttons.values(): btn.pack(pady=3, fill="x", expand=True)
 
     def _create_progress_and_cancel(self, parent):
         self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -341,7 +341,7 @@ class LectorcitoApp(ctk.CTk):
         """Footer usando el componente Footer."""
         footer_text = f"Copyright ©{YEAR} - {AUTHOR} {self._tr(' - All rights reserved')}"
         self.footer_frame = Footer(self, text=footer_text)
-        self.footer_frame.grid(row=1, column=1, sticky="ew")
+        self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="ew")
 
     def update_ui_texts(self):
         hour = datetime.datetime.now().hour
@@ -440,19 +440,12 @@ class LectorcitoApp(ctk.CTk):
         if self.animation_after_id is None: self._animate_progress()
 
     def _change_and_reschedule_gif(self):
-        if not self.controller.is_processing:
-            self._load_and_prepare_gif()
-            self._animate_gif()
-        self.gif_change_timer_id = self.after(GIF_CHANGE_INTERVAL_MS, self._change_and_reschedule_gif)
+        self.gif_change_timer_id = None
 
     def toggle_ui_for_processing(self, is_active: bool, mode: str = 'determinate', text: str = None):
         state = "disabled" if is_active else "normal"
         for btn in self.main_buttons.values(): btn.configure(state=state)
         for btn in self.sidebar_buttons.values(): btn.configure(state=state)
-
-        if self.gif_change_timer_id:
-            self.after_cancel(self.gif_change_timer_id)
-            self.gif_change_timer_id = None
 
         if is_active:
             if self.gif_animation_after_id:
@@ -484,14 +477,7 @@ class LectorcitoApp(ctk.CTk):
                 widget.grid_forget()
 
             self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew", rowspan=4)
-            self.after(50, self._load_and_prepare_gif)
-
-            def show_gif():
-                if self.gif_pil_frames:
-                    self._animate_gif()
-                    self.gif_change_timer_id = self.after(GIF_CHANGE_INTERVAL_MS, self._change_and_reschedule_gif)
-
-            self.after(60, show_gif)
+            self.lbl_gif_animation.configure(text="Lectorcito Pro", image=None)
             self.after(100, lambda: self.set_progress(0))
 
     def show_message(self, title_key: str, message_key: str, *args):

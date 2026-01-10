@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
+from ...theme.palette import BTN_H_MAIN, BTN_W_MAIN
 from ..molecules.progress_bar import ProgressWidgets
 
 
@@ -31,14 +32,14 @@ class ProgressPanel(ctk.CTkFrame):
         self.progress_content_wrapper = ctk.CTkFrame(self, fg_color="transparent")
         self.progress_content_wrapper.grid(row=0, column=0, sticky="nsew", rowspan=4)
 
-        self.lbl_gif_animation = ctk.CTkLabel(self.progress_content_wrapper, text="")
+        self.lbl_gif_animation = ctk.CTkLabel(self.progress_content_wrapper, text="Lectorcito Pro")
         self.lbl_gif_animation.pack(expand=True)
 
         # Progreso + labels
         self.widgets = ProgressWidgets.build(self)
 
         # Botón cancelar (el command se asigna desde el controller)
-        self.btn_cancel = ctk.CTkButton(self, width=150, height=28)
+        self.btn_cancel = ctk.CTkButton(self, width=BTN_W_MAIN, height=BTN_H_MAIN)
 
     # Atajos para compatibilidad con la ventana principal (acceso directo)
     @property

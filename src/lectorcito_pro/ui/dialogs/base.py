@@ -38,6 +38,11 @@ class BaseDialog(ctk.CTkToplevel):
         self.result = None
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
         self.bind("<Escape>", self._close_with_fade_out)
+        try:
+            self.grab_set()
+            self.focus_set()
+        except Exception:
+            pass
 
         self.after(100, self._center_and_fade_in)
 
