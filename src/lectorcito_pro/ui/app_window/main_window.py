@@ -88,6 +88,21 @@ class LectorcitoApp(ctk.CTk):
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
+    def _safe_winfo_exists(self) -> bool:
+        """Safely check if window exists without raising TclError."""
+        try:
+            return self.winfo_exists()
+        except tk.TclError:
+            return False
+    
+    @staticmethod
+    def _widget_exists(widget) -> bool:
+        """Safely check if widget exists without raising TclError."""
+        try:
+            return widget.winfo_exists()
+        except tk.TclError:
+            return False
+
     def _on_configure_center(self, event=None):
         if not self._is_centered:
             self._is_centered = True
@@ -143,7 +158,7 @@ class LectorcitoApp(ctk.CTk):
         self._fade_out_step()
 
     def _fade_out_step(self):
-        if not self.winfo_exists():
+        if not self._safe_winfo_exists():
             return
         try:
             alpha = float(self.attributes("-alpha"))
@@ -173,7 +188,7 @@ class LectorcitoApp(ctk.CTk):
                     pass
         except tk.TclError:
             pass
-        if not self.winfo_exists():
+        if not self._safe_winfo_exists():
             return
         try:
             ctk.CTk.destroy(self)
@@ -362,7 +377,7 @@ class LectorcitoApp(ctk.CTk):
 
     def update_ui_texts(self):
         # Check if window is being destroyed or already destroyed
-        if not self.winfo_exists() or getattr(self, "_closing", False):
+        if not self._safe_winfo_exists() or getattr(self, "_closing", False):
             return
         
         hour = datetime.datetime.now().hour
@@ -375,7 +390,7 @@ class LectorcitoApp(ctk.CTk):
         
         # Safely configure label if it exists
         try:
-            if hasattr(self, 'lbl_greet') and self.lbl_greet.winfo_exists():
+            if hasattr(self, 'lbl_greet') and self._widget_exists(self.lbl_greet):
                 self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
         except tk.TclError:
             pass
@@ -384,20 +399,20 @@ class LectorcitoApp(ctk.CTk):
                     "openlect": "btn_open_lecturas", "openlast": "btn_open_last", "delete": "btn_del"}
         for key, btn in self.main_buttons.items():
             try:
-                if btn.winfo_exists():
+                if self._widget_exists(btn):
                     if key in key_map: btn.configure(text=self._tr(key_map[key]))
                     btn.configure(width=BTN_W_MAIN, height=BTN_H_MAIN)
             except tk.TclError:
                 pass
         
         try:
-            if hasattr(self, 'btn_cancel') and self.btn_cancel.winfo_exists():
+            if hasattr(self, 'btn_cancel') and self._widget_exists(self.btn_cancel):
                 self.btn_cancel.configure(text=self._tr("btn_cancel"))
         except tk.TclError:
             pass
         
         try:
-            if hasattr(self, 'lbl_progress_status') and self.lbl_progress_status.winfo_exists():
+            if hasattr(self, 'lbl_progress_status') and self._widget_exists(self.lbl_progress_status):
                 self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
         except tk.TclError:
             pass
@@ -413,7 +428,7 @@ class LectorcitoApp(ctk.CTk):
         }
         for key, btn in self.sidebar_buttons.items():
             try:
-                if key in tooltip_map and btn.winfo_exists():
+                if key in tooltip_map and self._widget_exists(btn):
                     if key in self.tooltips:
                         self.tooltips[key].text = self._tr(tooltip_map[key])
                     else:
@@ -423,7 +438,7 @@ class LectorcitoApp(ctk.CTk):
 
     def apply_theme(self):
         # Check if window is being destroyed or already destroyed
-        if not self.winfo_exists() or getattr(self, "_closing", False):
+        if not self._safe_winfo_exists() or getattr(self, "_closing", False):
             return
             
         is_light = self.current_theme == "Light"
@@ -443,7 +458,7 @@ class LectorcitoApp(ctk.CTk):
         btn_hover_color = COLORS['sidebar_hover']['light'] if is_light else COLORS['sidebar_hover']['dark']
         for key, btn in self.sidebar_buttons.items():
             try:
-                if btn.winfo_exists():
+                if self._widget_exists(btn):
                     if key != "theme_icon":
                         btn.configure(fg_color=btn_fg_color, hover_color=btn_hover_color)
             except tk.TclError:
@@ -476,7 +491,7 @@ class LectorcitoApp(ctk.CTk):
 
     def _animate_progress(self):
         # Check if window is being destroyed or already destroyed
-        if not self.winfo_exists() or getattr(self, "_closing", False):
+        if not self._safe_winfo_exists() or getattr(self, "_closing", False):
             return
             
         if self.animation_after_id:
@@ -492,14 +507,14 @@ class LectorcitoApp(ctk.CTk):
             self.current_progress += diff * 0.1
             self.animation_after_id = self.after(20, self._animate_progress)
         try:
-            if self.progress_bar.winfo_exists():
+            if self._widget_exists(progress_bar):
                 self.progress_bar.set(self.current_progress / 100)
         except tk.TclError:
             pass
 
     def _animate_gif(self):
         # Check if window is being destroyed or already destroyed
-        if not self.winfo_exists() or getattr(self, "_closing", False):
+        if not self._safe_winfo_exists() or getattr(self, "_closing", False):
             return
             
         if self.gif_animation_after_id:
@@ -509,7 +524,7 @@ class LectorcitoApp(ctk.CTk):
                 pass
         if self.gif_pil_frames:
             try:
-                if self.lbl_gif_animation.winfo_exists():
+                if self._widget_exists(lbl_gif_animation):
                     pil_frame = self.gif_pil_frames[self.gif_frame_index]
                     ctk_image = ctk.CTkImage(light_image=pil_frame, dark_image=pil_frame, size=pil_frame.size)
                     self.lbl_gif_animation.configure(image=ctk_image)
@@ -521,7 +536,7 @@ class LectorcitoApp(ctk.CTk):
     def _start_idle_status_animation(self):
         self._idle_waiting_index = 0
         def _tick():
-            if not self.winfo_exists() or self.controller.is_processing:
+            if not self._safe_winfo_exists() or self.controller.is_processing:
                 return
             self._idle_waiting_index = (self._idle_waiting_index + 1) % len(self._idle_waiting_variants)
             try:
@@ -541,7 +556,7 @@ class LectorcitoApp(ctk.CTk):
 
     def set_progress(self, percentage, file_context=None, force_color=False):
         # Check if window is being destroyed or already destroyed
-        if not self.winfo_exists() or getattr(self, "_closing", False):
+        if not self._safe_winfo_exists() or getattr(self, "_closing", False):
             return
             
         new_target = int(percentage)
@@ -550,23 +565,23 @@ class LectorcitoApp(ctk.CTk):
             color = COLORS['progress_colors']['done'] if self.target_progress >= 99 else COLORS['progress_colors'][
                 'mid'] if self.target_progress >= 50 else COLORS['progress_colors']['start']
             try:
-                if self.progress_bar.winfo_exists():
+                if self._widget_exists(self.progress_bar):
                     self.progress_bar.configure(progress_color=color)
             except tk.TclError:
                 pass
 
         try:
-            if self.progress_bar.winfo_exists() and self.progress_bar.cget("mode") == "determinate":
-                if self.lbl_percent.winfo_exists():
+            if self._widget_exists(self.progress_bar) and self.progress_bar.cget("mode") == "determinate":
+                if self._widget_exists(self.lbl_percent):
                     self.lbl_percent.configure(text=f"{self.target_progress}%")
             else:
-                if self.lbl_percent.winfo_exists():
+                if self._widget_exists(self.lbl_percent):
                     self.lbl_percent.configure(text="")
         except tk.TclError:
             pass
 
         try:
-            if file_context and self.lbl_current_file.winfo_exists():
+            if file_context and self._widget_exists(self.lbl_current_file):
                 self.lbl_current_file.configure(text=file_context)
         except tk.TclError:
             pass
@@ -577,19 +592,19 @@ class LectorcitoApp(ctk.CTk):
 
     def toggle_ui_for_processing(self, is_active: bool, mode: str = 'determinate', text: str = None):
         # Check if window is being destroyed or already destroyed
-        if not self.winfo_exists() or getattr(self, "_closing", False):
+        if not self._safe_winfo_exists() or getattr(self, "_closing", False):
             return
             
         state = "disabled" if is_active else "normal"
         for btn in self.main_buttons.values():
             try:
-                if btn.winfo_exists():
+                if self._widget_exists(btn):
                     btn.configure(state=state)
             except tk.TclError:
                 pass
         for btn in self.sidebar_buttons.values():
             try:
-                if btn.winfo_exists():
+                if self._widget_exists(btn):
                     btn.configure(state=state)
             except tk.TclError:
                 pass
@@ -605,7 +620,7 @@ class LectorcitoApp(ctk.CTk):
                 self.gif_animation_after_id = None
 
             try:
-                if self.progress_bar.winfo_exists():
+                if self._widget_exists(progress_bar):
                     self.progress_bar.configure(mode=mode)
                     self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
             except tk.TclError:
@@ -613,61 +628,61 @@ class LectorcitoApp(ctk.CTk):
 
             if mode == 'indeterminate':
                 try:
-                    if self.progress_bar.winfo_exists():
+                    if self._widget_exists(progress_bar):
                         self.progress_bar.start()
-                    if self.lbl_progress_status.winfo_exists():
+                    if self._widget_exists(lbl_progress_status):
                         self.lbl_progress_status.configure(text=text if text else "")
                         self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(15, 0), sticky="s")
-                    if self.lbl_percent.winfo_exists():
+                    if self._widget_exists(lbl_percent):
                         self.lbl_percent.grid_forget()
-                    if self.lbl_current_file.winfo_exists():
+                    if self._widget_exists(lbl_current_file):
                         self.lbl_current_file.grid_forget()
                 except tk.TclError:
                     pass
             else:
                 try:
-                    if self.progress_bar.winfo_exists():
+                    if self._widget_exists(progress_bar):
                         self.progress_bar.stop()
                     self.set_progress(0)
-                    if self.lbl_progress_status.winfo_exists():
+                    if self._widget_exists(lbl_progress_status):
                         self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
                         self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
-                    if self.lbl_percent.winfo_exists():
+                    if self._widget_exists(lbl_percent):
                         self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
-                    if self.lbl_current_file.winfo_exists():
+                    if self._widget_exists(lbl_current_file):
                         self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
                 except tk.TclError:
                     pass
 
             try:
-                if self.btn_cancel.winfo_exists():
+                if self._widget_exists(btn_cancel):
                     self.btn_cancel.grid(row=3, column=0, pady=(10, 10), sticky="s")
             except tk.TclError:
                 pass
         else:
             try:
-                if self.progress_bar.winfo_exists():
+                if self._widget_exists(progress_bar):
                     self.progress_bar.stop()
                 for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file, self.btn_cancel):
-                    if widget.winfo_exists():
+                    if self._widget_exists(widget):
                         widget.grid_forget()
-                if self.progress_bar.winfo_exists():
+                if self._widget_exists(progress_bar):
                     self.progress_bar.configure(mode='determinate')
                 self.set_progress(0, None, True)
-                if self.lbl_progress_status.winfo_exists():
+                if self._widget_exists(lbl_progress_status):
                     self.lbl_progress_status.configure(text=self._idle_waiting_variants[0])
-                if self.lbl_percent.winfo_exists():
+                if self._widget_exists(lbl_percent):
                     self.lbl_percent.configure(text="0%")
-                if self.lbl_current_file.winfo_exists():
+                if self._widget_exists(lbl_current_file):
                     self.lbl_current_file.configure(text="")
 
-                if self.lbl_progress_status.winfo_exists():
+                if self._widget_exists(lbl_progress_status):
                     self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
-                if self.lbl_percent.winfo_exists():
+                if self._widget_exists(lbl_percent):
                     self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
-                if self.progress_bar.winfo_exists():
+                if self._widget_exists(progress_bar):
                     self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
-                if self.lbl_current_file.winfo_exists():
+                if self._widget_exists(lbl_current_file):
                     self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
             except tk.TclError:
                 pass
@@ -676,7 +691,7 @@ class LectorcitoApp(ctk.CTk):
 
     def show_message(self, title_key: str, message_key: str, *args):
         # Check if the window still exists and is not being closed
-        if not self.winfo_exists() or getattr(self, "_closing", False):
+        if not self._safe_winfo_exists() or getattr(self, "_closing", False):
             return
         try:
             MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
@@ -689,7 +704,7 @@ class LectorcitoApp(ctk.CTk):
 
     def show_app_info(self):
         # Check if the window still exists and is not being closed
-        if not self.winfo_exists() or getattr(self, "_closing", False):
+        if not self._safe_winfo_exists() or getattr(self, "_closing", False):
             return
         try:
             from ...features.help.application.open_manual import get_infographic_path

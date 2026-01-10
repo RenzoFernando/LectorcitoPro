@@ -18,7 +18,11 @@ class BaseDialog(ctk.CTkToplevel):
 
     def __init__(self, parent, title: str):
         # Check if parent window exists before creating dialog
-        if parent is None or not parent.winfo_exists():
+        try:
+            if parent is None or not parent.winfo_exists():
+                raise tk.TclError("Parent window does not exist")
+        except tk.TclError:
+            # Parent has been destroyed, cannot create dialog
             raise tk.TclError("Parent window does not exist")
         
         super().__init__(parent)
