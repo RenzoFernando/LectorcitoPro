@@ -2,6 +2,7 @@
 
 import customtkinter as ctk
 from tkinter import Canvas
+import tkinter as tk
 from PIL import Image
 import datetime
 import os
@@ -123,7 +124,7 @@ class LectorcitoApp(ctk.CTk):
             if job_id:
                 try:
                     self.after_cancel(job_id)
-                except Exception:
+                except tk.TclError:
                     pass
                 setattr(self, attr, None)
 
@@ -132,9 +133,9 @@ class LectorcitoApp(ctk.CTk):
             for tp in getattr(self, "tooltips", {}).values():
                 try:
                     tp.cleanup()
-                except Exception:
+                except tk.TclError:
                     pass
-        except Exception:
+        except tk.TclError:
             pass
 
         self._fade_out_step()
@@ -144,20 +145,20 @@ class LectorcitoApp(ctk.CTk):
             return
         try:
             alpha = float(self.attributes("-alpha"))
-        except Exception:
+        except tk.TclError:
             alpha = 0.0
         if alpha > 0.0:
             alpha = max(alpha - 0.08, 0.0)
             try:
                 self.attributes("-alpha", alpha)
-            except Exception:
+            except tk.TclError:
                 pass
             self._close_after_id = self.after(15, self._fade_out_step)
         else:
             # Destruir fuera del callback actual para evitar `can't delete Tcl command`
             try:
                 self.after_idle(self._safe_destroy)
-            except Exception:
+            except tk.TclError:
                 self._safe_destroy()
 
     def _safe_destroy(self):
@@ -166,15 +167,15 @@ class LectorcitoApp(ctk.CTk):
             for after_id in list(self.after_info()):
                 try:
                     self.after_cancel(after_id)
-                except Exception:
+                except tk.TclError:
                     pass
-        except Exception:
+        except tk.TclError:
             pass
         if not self.winfo_exists():
             return
         try:
             ctk.CTk.destroy(self)
-        except Exception:
+        except tk.TclError:
             # Último recurso: evitar crash en cierre
             pass
 
@@ -374,7 +375,7 @@ class LectorcitoApp(ctk.CTk):
         try:
             if hasattr(self, 'lbl_greet') and self.lbl_greet.winfo_exists():
                 self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
-        except Exception:
+        except tk.TclError:
             pass
         
         key_map = {"selpath": "btn_sel_lecturas", "choose": "btn_choose_folder", "create_tree": "btn_create_tree",
@@ -384,19 +385,19 @@ class LectorcitoApp(ctk.CTk):
                 if btn.winfo_exists():
                     if key in key_map: btn.configure(text=self._tr(key_map[key]))
                     btn.configure(width=BTN_W_MAIN, height=BTN_H_MAIN)
-            except Exception:
+            except tk.TclError:
                 pass
         
         try:
             if hasattr(self, 'btn_cancel') and self.btn_cancel.winfo_exists():
                 self.btn_cancel.configure(text=self._tr("btn_cancel"))
-        except Exception:
+        except tk.TclError:
             pass
         
         try:
             if hasattr(self, 'lbl_progress_status') and self.lbl_progress_status.winfo_exists():
                 self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
-        except Exception:
+        except tk.TclError:
             pass
 
         tooltip_map = {
@@ -415,7 +416,7 @@ class LectorcitoApp(ctk.CTk):
                         self.tooltips[key].text = self._tr(tooltip_map[key])
                     else:
                         self.tooltips[key] = CustomTooltip(btn, text=self._tr(tooltip_map[key]))
-            except Exception:
+            except tk.TclError:
                 pass
 
     def apply_theme(self):
@@ -433,7 +434,7 @@ class LectorcitoApp(ctk.CTk):
             self.canvas_left.configure(bg=theme['left_bar'])
             self._paint_left_sidebar_text()
             self.progress_bar.configure(fg_color=theme['progress_bar'])
-        except Exception:
+        except tk.TclError:
             pass
 
         btn_fg_color = COLORS['dark']['bg'] if is_light else COLORS['light']['bg']
@@ -443,7 +444,7 @@ class LectorcitoApp(ctk.CTk):
                 if btn.winfo_exists():
                     if key != "theme_icon":
                         btn.configure(fg_color=btn_fg_color, hover_color=btn_hover_color)
-            except Exception:
+            except tk.TclError:
                 pass
 
         try:
@@ -451,7 +452,7 @@ class LectorcitoApp(ctk.CTk):
                 self.sidebar_buttons['theme_icon'].configure(
                     image=self.icons.get('moon') if is_light else self.icons.get('sun'),
                     fg_color=btn_fg_color, hover_color=btn_hover_color)
-        except Exception:
+        except tk.TclError:
             pass
 
         try:
@@ -459,7 +460,7 @@ class LectorcitoApp(ctk.CTk):
             footer_text_color = COLORS["dark"]["text"] if self.current_theme == "Light" else COLORS["light"]["text"]
             self.footer_frame.configure(fg_color=theme["left_bar"])
             self.footer_frame.lbl.configure(text_color=footer_text_color)
-        except Exception:
+        except tk.TclError:
             pass
 
         self.set_progress(self.target_progress, None, True)
@@ -479,7 +480,7 @@ class LectorcitoApp(ctk.CTk):
         if self.animation_after_id:
             try:
                 self.after_cancel(self.animation_after_id)
-            except Exception:
+            except tk.TclError:
                 pass
             self.animation_after_id = None
         diff = self.target_progress - self.current_progress
@@ -491,7 +492,7 @@ class LectorcitoApp(ctk.CTk):
         try:
             if self.progress_bar.winfo_exists():
                 self.progress_bar.set(self.current_progress / 100)
-        except Exception:
+        except tk.TclError:
             pass
 
     def _animate_gif(self):
@@ -502,7 +503,7 @@ class LectorcitoApp(ctk.CTk):
         if self.gif_animation_after_id:
             try:
                 self.after_cancel(self.gif_animation_after_id)
-            except Exception:
+            except tk.TclError:
                 pass
         if self.gif_pil_frames:
             try:
@@ -512,7 +513,7 @@ class LectorcitoApp(ctk.CTk):
                     self.lbl_gif_animation.configure(image=ctk_image)
                     self.gif_frame_index = (self.gif_frame_index + 1) % len(self.gif_pil_frames)
                     self.gif_animation_after_id = self.after(self.gif_delay, self._animate_gif)
-            except Exception:
+            except tk.TclError:
                 pass
 
     def _start_idle_status_animation(self):
@@ -523,7 +524,7 @@ class LectorcitoApp(ctk.CTk):
             self._idle_waiting_index = (self._idle_waiting_index + 1) % len(self._idle_waiting_variants)
             try:
                 self.lbl_progress_status.configure(text=self._idle_waiting_variants[self._idle_waiting_index])
-            except Exception:
+            except tk.TclError:
                 return
             self._idle_status_after_id = self.after(600, _tick)
         self._idle_status_after_id = self.after(600, _tick)
@@ -532,7 +533,7 @@ class LectorcitoApp(ctk.CTk):
         if self._idle_status_after_id:
             try:
                 self.after_cancel(self._idle_status_after_id)
-            except Exception:
+            except tk.TclError:
                 pass
             self._idle_status_after_id = None
 
@@ -549,7 +550,7 @@ class LectorcitoApp(ctk.CTk):
             try:
                 if self.progress_bar.winfo_exists():
                     self.progress_bar.configure(progress_color=color)
-            except Exception:
+            except tk.TclError:
                 pass
 
         try:
@@ -559,13 +560,13 @@ class LectorcitoApp(ctk.CTk):
             else:
                 if self.lbl_percent.winfo_exists():
                     self.lbl_percent.configure(text="")
-        except Exception:
+        except tk.TclError:
             pass
 
         try:
             if file_context and self.lbl_current_file.winfo_exists():
                 self.lbl_current_file.configure(text=file_context)
-        except Exception:
+        except tk.TclError:
             pass
         if self.animation_after_id is None: self._animate_progress()
 
@@ -582,13 +583,13 @@ class LectorcitoApp(ctk.CTk):
             try:
                 if btn.winfo_exists():
                     btn.configure(state=state)
-            except Exception:
+            except tk.TclError:
                 pass
         for btn in self.sidebar_buttons.values():
             try:
                 if btn.winfo_exists():
                     btn.configure(state=state)
-            except Exception:
+            except tk.TclError:
                 pass
 
         self._stop_idle_status_animation()
@@ -597,7 +598,7 @@ class LectorcitoApp(ctk.CTk):
             if self.gif_animation_after_id:
                 try:
                     self.after_cancel(self.gif_animation_after_id)
-                except Exception:
+                except tk.TclError:
                     pass
                 self.gif_animation_after_id = None
 
@@ -605,7 +606,7 @@ class LectorcitoApp(ctk.CTk):
                 if self.progress_bar.winfo_exists():
                     self.progress_bar.configure(mode=mode)
                     self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
-            except Exception:
+            except tk.TclError:
                 pass
 
             if mode == 'indeterminate':
@@ -619,7 +620,7 @@ class LectorcitoApp(ctk.CTk):
                         self.lbl_percent.grid_forget()
                     if self.lbl_current_file.winfo_exists():
                         self.lbl_current_file.grid_forget()
-                except Exception:
+                except tk.TclError:
                     pass
             else:
                 try:
@@ -633,13 +634,13 @@ class LectorcitoApp(ctk.CTk):
                         self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
                     if self.lbl_current_file.winfo_exists():
                         self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
-                except Exception:
+                except tk.TclError:
                     pass
 
             try:
                 if self.btn_cancel.winfo_exists():
                     self.btn_cancel.grid(row=3, column=0, pady=(10, 10), sticky="s")
-            except Exception:
+            except tk.TclError:
                 pass
         else:
             try:
@@ -666,7 +667,7 @@ class LectorcitoApp(ctk.CTk):
                     self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
                 if self.lbl_current_file.winfo_exists():
                     self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
-            except Exception:
+            except tk.TclError:
                 pass
 
             self._start_idle_status_animation()
@@ -677,10 +678,12 @@ class LectorcitoApp(ctk.CTk):
             return
         try:
             MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
+        except tk.TclError:
+            # Silently handle TclError when window is being destroyed
+            pass
         except Exception as e:
-            # Silently handle errors when window is being destroyed
-            if "application has been destroyed" not in str(e) and "bad window path" not in str(e):
-                print(f"Error showing message dialog: {e}")
+            # Log unexpected errors for debugging
+            print(f"Unexpected error showing message dialog: {e}")
 
     def show_app_info(self):
         # Check if the window still exists and is not being closed
@@ -693,7 +696,9 @@ class LectorcitoApp(ctk.CTk):
                 InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
             else:
                 self.show_message("error_title", "msg_infographic_error")
+        except tk.TclError:
+            # Silently handle TclError when window is being destroyed
+            pass
         except Exception as e:
-            # Silently handle errors when window is being destroyed
-            if "application has been destroyed" not in str(e) and "bad window path" not in str(e):
-                print(f"Error showing app info: {e}")
+            # Log unexpected errors for debugging
+            print(f"Unexpected error showing app info: {e}")

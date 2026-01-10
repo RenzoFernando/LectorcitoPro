@@ -19,7 +19,7 @@ class BaseDialog(ctk.CTkToplevel):
     def __init__(self, parent, title: str):
         # Check if parent window exists before creating dialog
         if parent is None or not parent.winfo_exists():
-            raise RuntimeError("Parent window does not exist")
+            raise tk.TclError("Parent window does not exist")
         
         super().__init__(parent)
 
