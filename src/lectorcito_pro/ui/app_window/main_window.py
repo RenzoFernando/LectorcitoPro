@@ -7,6 +7,7 @@ from PIL import Image
 import datetime
 import os
 import random
+import logging
 
 from ...core.paths import resource_path
 from ...i18n.translations import TRANSLATIONS
@@ -43,6 +44,7 @@ class LectorcitoApp(ctk.CTk):
     def __init__(self, cfg: dict, controller):
         super().__init__()
         self.attributes("-alpha", 0.0)
+        self.logger = logging.getLogger(__name__)
         self.TRANSLATIONS = TRANSLATIONS
         self.config = cfg
         self.controller = controller
@@ -683,7 +685,7 @@ class LectorcitoApp(ctk.CTk):
             pass
         except Exception as e:
             # Log unexpected errors for debugging
-            print(f"Unexpected error showing message dialog: {e}")
+            self.logger.error(f"Unexpected error showing message dialog: {e}")
 
     def show_app_info(self):
         # Check if the window still exists and is not being closed
@@ -701,4 +703,4 @@ class LectorcitoApp(ctk.CTk):
             pass
         except Exception as e:
             # Log unexpected errors for debugging
-            print(f"Unexpected error showing app info: {e}")
+            self.logger.error(f"Unexpected error showing app info: {e}")
