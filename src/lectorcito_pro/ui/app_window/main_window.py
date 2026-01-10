@@ -358,6 +358,10 @@ class LectorcitoApp(ctk.CTk):
         self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="ew", padx=0, pady=0)
 
     def update_ui_texts(self):
+        # Check if window is being destroyed or already destroyed
+        if not self.winfo_exists() or getattr(self, "_closing", False):
+            return
+        
         hour = datetime.datetime.now().hour
         greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
         try:
@@ -365,14 +369,35 @@ class LectorcitoApp(ctk.CTk):
         except OSError:
             user = "User"
         greeting = self._tr(greet_key)
-        self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
+        
+        # Safely configure label if it exists
+        try:
+            if hasattr(self, 'lbl_greet') and self.lbl_greet.winfo_exists():
+                self.lbl_greet.configure(text=f"{greeting} {user}{self._tr('welcome')}")
+        except Exception:
+            pass
+        
         key_map = {"selpath": "btn_sel_lecturas", "choose": "btn_choose_folder", "create_tree": "btn_create_tree",
                     "openlect": "btn_open_lecturas", "openlast": "btn_open_last", "delete": "btn_del"}
         for key, btn in self.main_buttons.items():
-            if key in key_map: btn.configure(text=self._tr(key_map[key]))
-            btn.configure(width=BTN_W_MAIN, height=BTN_H_MAIN)
-        self.btn_cancel.configure(text=self._tr("btn_cancel"))
-        self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
+            try:
+                if btn.winfo_exists():
+                    if key in key_map: btn.configure(text=self._tr(key_map[key]))
+                    btn.configure(width=BTN_W_MAIN, height=BTN_H_MAIN)
+            except Exception:
+                pass
+        
+        try:
+            if hasattr(self, 'btn_cancel') and self.btn_cancel.winfo_exists():
+                self.btn_cancel.configure(text=self._tr("btn_cancel"))
+        except Exception:
+            pass
+        
+        try:
+            if hasattr(self, 'lbl_progress_status') and self.lbl_progress_status.winfo_exists():
+                self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
+        except Exception:
+            pass
 
         tooltip_map = {
             "ver": "tooltip_ver",
@@ -384,11 +409,14 @@ class LectorcitoApp(ctk.CTk):
             "info": "tooltip_info"
         }
         for key, btn in self.sidebar_buttons.items():
-            if key in tooltip_map:
-                if key in self.tooltips:
-                    self.tooltips[key].text = self._tr(tooltip_map[key])
-                else:
-                    self.tooltips[key] = CustomTooltip(btn, text=self._tr(tooltip_map[key]))
+            try:
+                if key in tooltip_map and btn.winfo_exists():
+                    if key in self.tooltips:
+                        self.tooltips[key].text = self._tr(tooltip_map[key])
+                    else:
+                        self.tooltips[key] = CustomTooltip(btn, text=self._tr(tooltip_map[key]))
+            except Exception:
+                pass
 
     def apply_theme(self):
         is_light = self.current_theme == "Light"
@@ -534,12 +562,28 @@ class LectorcitoApp(ctk.CTk):
             self._start_idle_status_animation()
 
     def show_message(self, title_key: str, message_key: str, *args):
-        MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
+        # Check if the window still exists and is not being closed
+        if not self.winfo_exists() or getattr(self, "_closing", False):
+            return
+        try:
+            MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
+        except Exception as e:
+            # Silently handle errors when window is being destroyed
+            if "application has been destroyed" not in str(e) and "bad window path" not in str(e):
+                print(f"Error showing message dialog: {e}")
 
     def show_app_info(self):
-        from ...features.help.application.open_manual import get_infographic_path
-        image_path = get_infographic_path()
-        if os.path.exists(image_path):
-            InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
-        else:
-            self.show_message("error_title", "msg_infographic_error")
+        # Check if the window still exists and is not being closed
+        if not self.winfo_exists() or getattr(self, "_closing", False):
+            return
+        try:
+            from ...features.help.application.open_manual import get_infographic_path
+            image_path = get_infographic_path()
+            if os.path.exists(image_path):
+                InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
+            else:
+                self.show_message("error_title", "msg_infographic_error")
+        except Exception as e:
+            # Silently handle errors when window is being destroyed
+            if "application has been destroyed" not in str(e) and "bad window path" not in str(e):
+                print(f"Error showing app info: {e}")
