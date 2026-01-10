@@ -507,7 +507,7 @@ class LectorcitoApp(ctk.CTk):
             self.current_progress += diff * 0.1
             self.animation_after_id = self.after(20, self._animate_progress)
         try:
-            if self._widget_exists(progress_bar):
+            if self._widget_exists(self.progress_bar):
                 self.progress_bar.set(self.current_progress / 100)
         except tk.TclError:
             pass
@@ -524,7 +524,7 @@ class LectorcitoApp(ctk.CTk):
                 pass
         if self.gif_pil_frames:
             try:
-                if self._widget_exists(lbl_gif_animation):
+                if self._widget_exists(self.lbl_gif_animation):
                     pil_frame = self.gif_pil_frames[self.gif_frame_index]
                     ctk_image = ctk.CTkImage(light_image=pil_frame, dark_image=pil_frame, size=pil_frame.size)
                     self.lbl_gif_animation.configure(image=ctk_image)
@@ -620,7 +620,7 @@ class LectorcitoApp(ctk.CTk):
                 self.gif_animation_after_id = None
 
             try:
-                if self._widget_exists(progress_bar):
+                if self._widget_exists(self.progress_bar):
                     self.progress_bar.configure(mode=mode)
                     self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
             except tk.TclError:
@@ -628,61 +628,61 @@ class LectorcitoApp(ctk.CTk):
 
             if mode == 'indeterminate':
                 try:
-                    if self._widget_exists(progress_bar):
+                    if self._widget_exists(self.progress_bar):
                         self.progress_bar.start()
-                    if self._widget_exists(lbl_progress_status):
+                    if self._widget_exists(self.lbl_progress_status):
                         self.lbl_progress_status.configure(text=text if text else "")
                         self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(15, 0), sticky="s")
-                    if self._widget_exists(lbl_percent):
+                    if self._widget_exists(self.lbl_percent):
                         self.lbl_percent.grid_forget()
-                    if self._widget_exists(lbl_current_file):
+                    if self._widget_exists(self.lbl_current_file):
                         self.lbl_current_file.grid_forget()
                 except tk.TclError:
                     pass
             else:
                 try:
-                    if self._widget_exists(progress_bar):
+                    if self._widget_exists(self.progress_bar):
                         self.progress_bar.stop()
                     self.set_progress(0)
-                    if self._widget_exists(lbl_progress_status):
+                    if self._widget_exists(self.lbl_progress_status):
                         self.lbl_progress_status.configure(text=self._tr("progress_processing_text") if self.controller.is_processing else self._idle_waiting_variants[0])
                         self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
-                    if self._widget_exists(lbl_percent):
+                    if self._widget_exists(self.lbl_percent):
                         self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
-                    if self._widget_exists(lbl_current_file):
+                    if self._widget_exists(self.lbl_current_file):
                         self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
                 except tk.TclError:
                     pass
 
             try:
-                if self._widget_exists(btn_cancel):
+                if self._widget_exists(self.btn_cancel):
                     self.btn_cancel.grid(row=3, column=0, pady=(10, 10), sticky="s")
             except tk.TclError:
                 pass
         else:
             try:
-                if self._widget_exists(progress_bar):
+                if self._widget_exists(self.progress_bar):
                     self.progress_bar.stop()
                 for widget in (self.lbl_progress_status, self.lbl_percent, self.progress_bar, self.lbl_current_file, self.btn_cancel):
                     if self._widget_exists(widget):
                         widget.grid_forget()
-                if self._widget_exists(progress_bar):
+                if self._widget_exists(self.progress_bar):
                     self.progress_bar.configure(mode='determinate')
                 self.set_progress(0, None, True)
-                if self._widget_exists(lbl_progress_status):
+                if self._widget_exists(self.lbl_progress_status):
                     self.lbl_progress_status.configure(text=self._idle_waiting_variants[0])
-                if self._widget_exists(lbl_percent):
+                if self._widget_exists(self.lbl_percent):
                     self.lbl_percent.configure(text="0%")
-                if self._widget_exists(lbl_current_file):
+                if self._widget_exists(self.lbl_current_file):
                     self.lbl_current_file.configure(text="")
 
-                if self._widget_exists(lbl_progress_status):
+                if self._widget_exists(self.lbl_progress_status):
                     self.lbl_progress_status.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
-                if self._widget_exists(lbl_percent):
+                if self._widget_exists(self.lbl_percent):
                     self.lbl_percent.grid(row=0, column=0, padx=10, pady=(5, 0), sticky="e")
-                if self._widget_exists(progress_bar):
+                if self._widget_exists(self.progress_bar):
                     self.progress_bar.grid(row=1, column=0, padx=10, pady=(5, 5), sticky="ew")
-                if self._widget_exists(lbl_current_file):
+                if self._widget_exists(self.lbl_current_file):
                     self.lbl_current_file.grid(row=2, column=0, padx=10, sticky="w")
             except tk.TclError:
                 pass
