@@ -13,7 +13,7 @@ class StatusPanel(ctk.CTkFrame):
     - Texto de estado con puntos animados (., .., ...)
     - Porcentaje alineado a la derecha
     - Barra de progreso gradiente (track visible + sin puntico)
-    - Ruta del archivo (solo durante lectura)
+    - Ruta del archivo (durante lectura) dentro del mismo panel
     - Botón cancelar
     - Regla UX: mínimo visible del progreso (evita parpadeo 0→100)
     """
@@ -59,12 +59,12 @@ class StatusPanel(ctk.CTkFrame):
         self.lbl_percent.grid(row=0, column=1, sticky="e")
 
         self.progress_bar = GradientProgressBar(self.status_panel, height=12, corner_radius=8)
-        self.progress_bar.grid(row=1, column=0, padx=12, pady=(0, 12), sticky="ew")
+        self.progress_bar.grid(row=1, column=0, padx=12, pady=(0, 6), sticky="ew")
         self.progress_bar.set(0.0)
 
-        # Ruta (solo durante lectura)
-        self.file_row = ctk.CTkFrame(self, fg_color="transparent")
-        self.file_row.grid(row=1, column=0, padx=12, pady=(0, 8), sticky="ew")
+        # Ruta (ruta actual / carpeta) — dentro del mismo rectángulo
+        self.file_row = ctk.CTkFrame(self.status_panel, fg_color="transparent")
+        self.file_row.grid(row=2, column=0, padx=12, pady=(0, 12), sticky="ew")
         self.file_row.grid_columnconfigure(1, weight=1)
 
         self.lbl_processing_prefix = ctk.CTkLabel(
@@ -73,16 +73,28 @@ class StatusPanel(ctk.CTkFrame):
         self.lbl_processing_prefix.grid(row=0, column=0, sticky="w", padx=(0, 6))
 
         self.lbl_current_file = ctk.CTkLabel(
-            self.file_row, text="", font=("Segoe UI", 9, "normal"), anchor="w"
+            self.file_row,
+            text="",
+            font=("Segoe UI", 9, "normal"),
+            anchor="w",
+            justify="left",
+            wraplength=460
         )
         self.lbl_current_file.grid(row=0, column=1, sticky="ew")
+
+        # Ajusta wraplength cuando cambie el ancho del panel
+        self.status_panel.bind("<Configure>", self._on_panel_resize)
+
+        # cache de traducción (para mostrar/ocultar el prefijo sin romper i18n)
+        self._processing_label_text = ""
 
         # Cancel
         self.btn_cancel = ctk.CTkButton(self, width=150, height=28)
         self.btn_cancel.grid(row=2, column=0, pady=(4, 0))
 
-        # Por defecto: idle
-        self.file_row.grid_remove()
+        # Por defecto: idle (dejamos espacio reservado para la ruta)
+        self.lbl_processing_prefix.configure(text="")
+        self.lbl_current_file.configure(text="")
 
         # Traducciones (se setean desde ui.py)
         self._tr = None  # callable(key)->str
@@ -107,7 +119,10 @@ class StatusPanel(ctk.CTkFrame):
         if not self._tr:
             return
 
-        self.lbl_processing_prefix.configure(text=self._tr(self._key_processing_label))
+        # Guardamos traducción, pero solo mostramos el prefijo cuando haya ruta
+        self._processing_label_text = self._tr(self._key_processing_label)
+        if (self.lbl_processing_prefix.cget("text") or "").strip():
+            self.lbl_processing_prefix.configure(text=self._processing_label_text)
         self.btn_cancel.configure(text=self._tr(self._key_btn_cancel))
 
         # Reaplica status base actual, manteniendo fase de puntos si está activa
@@ -117,14 +132,16 @@ class StatusPanel(ctk.CTkFrame):
             self._status_base = self._tr(self._key_status_waiting)
         elif self._mode == "done":
             self._status_base = self._tr(self._key_status_done)
+        elif self._mode == "indeterminate":
+            # se deja el texto base tal como venga (lo setea set_active)
+            pass
 
-        if self._dots_after_id is not None:
-            self.lbl_status.configure(text=f"{self._status_base}{'.' * self._dots_phase}")
-        else:
+        # actualiza label visible
+        if self._dots_after_id is None:
             self.lbl_status.configure(text=self._status_base)
 
     # ----------------------------
-    # Tema / colores
+    # Tema
     # ----------------------------
     def apply_theme(self, theme_name: str):
         """
@@ -135,12 +152,14 @@ class StatusPanel(ctk.CTkFrame):
             panel_bg = "#E3E6EA"
             panel_border = "#D0D7DE"
             text = "#24292F"
+            muted = "#6E7781"
             track = "#C9CDD1"
             border = "#B6BAC0"
         else:
             panel_bg = "#20252B"
             panel_border = "#2B3137"
             text = "#E6EDF3"
+            muted = "#8B949E"
             track = "#30363D"
             border = "#2B3137"
 
@@ -152,11 +171,32 @@ class StatusPanel(ctk.CTkFrame):
         self.lbl_status.configure(text_color=text)
         self.lbl_percent.configure(text_color=text)
         self.lbl_processing_prefix.configure(text_color=text)
-        self.lbl_current_file.configure(text_color=text)
+        self.lbl_current_file.configure(text_color=muted)
 
         self.progress_bar.set_colors(track=track, border=border)
         # Redibuja a valor actual
         self.progress_bar.set(self.current_progress / 100.0)
+
+    def _on_panel_resize(self, event=None):
+        """Mantiene la ruta bonita: permite 2 líneas sin desbordar."""
+        try:
+            panel_w = int(self.status_panel.winfo_width())
+        except Exception:
+            return
+
+        # padding izq/der del panel (aprox): 12 + 12
+        usable = max(180, panel_w - 24)
+
+        try:
+            prefix_w = int(self.lbl_processing_prefix.winfo_reqwidth()) + 6
+        except Exception:
+            prefix_w = 0
+
+        wrap = max(160, usable - prefix_w)
+        try:
+            self.lbl_current_file.configure(wraplength=wrap)
+        except Exception:
+            pass
 
     # ----------------------------
     # Animación de puntos
@@ -171,8 +211,19 @@ class StatusPanel(ctk.CTkFrame):
             self.lbl_status.configure(text=self._status_base)
 
     def _start_dots(self):
-        self._stop_dots()
+        if self._dots_after_id is not None:
+            return
         self._tick_dots()
+
+    def _tick_dots(self):
+        if not self.winfo_exists():
+            self._dots_after_id = None
+            return
+
+        dots = "." * self._dots_phase
+        self.lbl_status.configure(text=f"{self._status_base}{dots}")
+        self._dots_phase = 1 if self._dots_phase >= 3 else self._dots_phase + 1
+        self._dots_after_id = self.after(350, self._tick_dots)
 
     def _stop_dots(self):
         if self._dots_after_id is not None:
@@ -182,31 +233,25 @@ class StatusPanel(ctk.CTkFrame):
                 pass
         self._dots_after_id = None
 
-    def _tick_dots(self):
-        if not self.winfo_exists():
-            return
-        self.lbl_status.configure(text=f"{self._status_base}{'.' * self._dots_phase}")
-        self._dots_phase = 1 if self._dots_phase >= 3 else (self._dots_phase + 1)
-        self._dots_after_id = self.after(450, self._tick_dots)
-
     # ----------------------------
-    # Progreso: animación + mínimo visible
+    # Progreso suave (ease) y regla mínimo visible
     # ----------------------------
     def get_min_visible_completion_delay_ms(self) -> int:
         """
-        Si terminó muy rápido, devuelve cuánto falta para cumplir el mínimo visible.
+        Tiempo restante (ms) para cumplir el mínimo visible desde que empezó processing.
+        Útil para que el controller retrase el mensaje de "Done!" sin parpadeo.
         """
-        if self._min_end_time is None:
+        if self._processing_started_at is None:
             return 0
         now = time.monotonic()
-        remaining = self._min_end_time - now
-        return int(max(0.0, remaining) * 1000)
+        min_end = self._processing_started_at + self._min_visible_s
+        remaining = max(0.0, min_end - now)
+        return int(remaining * 1000)
 
     def _start_progress_animation(self):
-        if self._progress_after_id is not None:
-            return
-        self._last_tick = time.monotonic()
-        self._progress_after_id = self.after(16, self._animate_progress)
+        if self._progress_after_id is None:
+            self._last_tick = None
+            self._animate_progress()
 
     def _stop_progress_animation(self):
         if self._progress_after_id is not None:
@@ -214,8 +259,8 @@ class StatusPanel(ctk.CTkFrame):
                 self.after_cancel(self._progress_after_id)
             except Exception:
                 pass
-        self._progress_after_id = None
-        self._last_tick = None
+            self._progress_after_id = None
+            self._last_tick = None
 
     def _animate_progress(self):
         if not self.winfo_exists():
@@ -280,9 +325,11 @@ class StatusPanel(ctk.CTkFrame):
 
         # Ruta solo durante lectura real
         if file_context and self._mode == "processing":
-            path_txt = self._ellipsize_middle(str(file_context), max_len=72)
+            path_txt = self._ellipsize_middle(str(file_context), max_len=140)
             self.lbl_current_file.configure(text=path_txt)
-            self.file_row.grid()
+
+            prefix = self._processing_label_text or (self._tr(self._key_processing_label) if self._tr else "Procesando:")
+            self.lbl_processing_prefix.configure(text=prefix)
 
     def set_active(self, is_active: bool, *, mode: str = "determinate", text: str | None = None, final_status: str | None = None):
         """
@@ -295,7 +342,8 @@ class StatusPanel(ctk.CTkFrame):
             self._min_end_time = self._processing_started_at + self._min_visible_s
             self._forced_end_time = None
 
-            self.file_row.grid_remove()
+            # limpiamos ruta/prefijo (dejamos el espacio)
+            self.lbl_processing_prefix.configure(text="")
             self.lbl_current_file.configure(text="")
 
             if mode == "indeterminate":
@@ -334,7 +382,8 @@ class StatusPanel(ctk.CTkFrame):
             self.target_progress = 100.0
             self.progress_bar.set(1.0)
             self.lbl_percent.configure(text="100%")
-            self.file_row.grid_remove()
+            self.lbl_processing_prefix.configure(text="")
+            self.lbl_current_file.configure(text="")
 
             # vuelve a idle luego de un momentico
             self.after(900, self.back_to_idle)
@@ -346,7 +395,7 @@ class StatusPanel(ctk.CTkFrame):
         if not self.winfo_exists():
             return
         self._mode = "idle"
-        self.file_row.grid_remove()
+        self.lbl_processing_prefix.configure(text="")
         self.lbl_current_file.configure(text="")
 
         self.current_progress = 0.0
@@ -364,6 +413,6 @@ class StatusPanel(ctk.CTkFrame):
         self._stop_dots()
         self._stop_progress_animation()
         try:
-            self.progress_bar.cleanup()
+            self.progress_bar.stop_indeterminate()
         except Exception:
             pass

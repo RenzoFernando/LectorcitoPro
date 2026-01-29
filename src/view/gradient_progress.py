@@ -30,29 +30,32 @@ def _lerp_color(c1: str, c2: str, t: float) -> str:
 def gradient_color_at(t: float) -> str:
     """
     Gradiente continuo:
-    rojo -> naranja -> amarillo -> amarillo limón -> verde
+    rojo -> naranja -> ámbar -> lima -> verde
+    (colores ajustados a la paleta de la app)
     """
     stops = [
-        (0.00, "#D03B3D"),  # rojo
-        (0.25, "#F08C00"),  # naranja
-        (0.50, "#F9C74F"),  # amarillo
-        (0.75, "#CDEB4A"),  # amarillo limón
-        (1.00, "#2FA047"),  # verde
+        # Paleta de la app (mismo rojo/verde que botones) + tonos intermedios coherentes
+        (0.00, "#D03B3D"),  # rojo (app)
+        (0.30, "#D06A3B"),  # rojo-naranja
+        (0.55, "#D0A33B"),  # ámbar
+        (0.78, "#A8D03B"),  # lima
+        (1.00, "#3BD056"),  # verde (app)
     ]
     t = max(0.0, min(1.0, float(t)))
-    for (p0, c0), (p1, c1) in zip(stops, stops[1:]):
-        if p0 <= t <= p1:
-            local = 0.0 if p1 == p0 else (t - p0) / (p1 - p0)
-            return _lerp_color(c0, c1, local)
+
+    for i in range(len(stops) - 1):
+        p1, c1 = stops[i]
+        p2, c2 = stops[i + 1]
+        if p1 <= t <= p2:
+            local = (t - p1) / max(1e-9, (p2 - p1))
+            return _lerp_color(c1, c2, local)
+
     return stops[-1][1]
 
 
-def rounded_rect_points(x1: int, y1: int, x2: int, y2: int, r: int):
-    """
-    Puntos para un rectángulo redondeado en Canvas (polygon smooth=True).
-    """
+def rounded_rect_points(x1: int, y1: int, x2: int, y2: int, r: int) -> list[int]:
     r = max(0, min(r, (x2 - x1) // 2, (y2 - y1) // 2))
-    return [
+    pts = [
         x1 + r, y1,
         x2 - r, y1,
         x2, y1,
@@ -66,108 +69,102 @@ def rounded_rect_points(x1: int, y1: int, x2: int, y2: int, r: int):
         x1, y1 + r,
         x1, y1
     ]
+    return pts
 
 
 class GradientProgressBar(ctk.CTkFrame):
     """
-    Barra de progreso personalizada:
-    - Track gris marcado
-    - Fill con gradiente continuo rojo→verde
-    - Sin “puntico azul”
-    - Modo indeterminate opcional (segmento moviéndose)
+    Barra custom:
+    - track visible
+    - fill con degradado
+    - sin “puntico”
+    - modo indeterminate opcional
     """
     def __init__(self, parent, height: int = 12, corner_radius: int = 8):
         super().__init__(parent, fg_color="transparent")
-        self._h = int(height)
-        self._r = int(corner_radius)
+        self._h = height
+        self._r = corner_radius
 
         self._value = 0.0  # 0..1
         self._mode = "determinate"  # determinate | indeterminate
-
-        self._ind_after = None
         self._ind_phase = 0.0
+        self._ind_after_id = None
 
-        # Colores por defecto (se pueden sobreescribir con set_colors)
-        self._track = "#C9CDD1"
-        self._border = "#B6BAC0"
+        self._track_color = "#C9CDD1"
+        self._border_color = "#B6BAC0"
 
-        self._canvas = Canvas(self, height=self._h, highlightthickness=0, bd=0)
-        self._canvas.pack(fill="x", expand=True)
-        self._canvas.bind("<Configure>", lambda e: self._redraw())
+        self._canvas = Canvas(self, height=self._h, highlightthickness=0, bd=0, relief="flat")
+        self._canvas.pack(fill="both", expand=True)
 
-    def set_colors(self, track: str, border: str):
-        self._track = track
-        self._border = border
+        self.bind("<Configure>", lambda e: self._redraw())
+
+    def set_colors(self, *, track: str, border: str):
+        self._track_color = track
+        self._border_color = border
         self._redraw()
 
-    def set(self, value_0_1: float):
-        self._value = max(0.0, min(1.0, float(value_0_1)))
-        if self._mode != "determinate":
-            self.stop_indeterminate()
+    def set(self, value: float):
+        self._value = max(0.0, min(1.0, float(value)))
         self._redraw()
 
     def start_indeterminate(self):
+        if self._mode == "indeterminate":
+            return
         self._mode = "indeterminate"
-        self._cancel_indeterminate()
         self._ind_phase = 0.0
         self._tick_indeterminate()
 
     def stop_indeterminate(self):
-        self._mode = "determinate"
-        self._cancel_indeterminate()
-        self._redraw()
-
-    def cleanup(self):
-        self._cancel_indeterminate()
-
-    def _cancel_indeterminate(self):
-        if self._ind_after is not None:
-            try:
-                self.after_cancel(self._ind_after)
-            except Exception:
-                pass
-        self._ind_after = None
-
-    def _tick_indeterminate(self):
         if self._mode != "indeterminate":
             return
-        # Avanza fase (60fps aprox)
-        self._ind_phase = (self._ind_phase + 0.03) % 1.0
+        self._mode = "determinate"
+        if self._ind_after_id is not None:
+            try:
+                self.after_cancel(self._ind_after_id)
+            except Exception:
+                pass
+        self._ind_after_id = None
         self._redraw()
-        self._ind_after = self.after(16, self._tick_indeterminate)
+
+    def _tick_indeterminate(self):
+        if not self.winfo_exists():
+            self._ind_after_id = None
+            return
+        self._ind_phase = (self._ind_phase + 0.018) % 1.0
+        self._redraw()
+        self._ind_after_id = self.after(16, self._tick_indeterminate)
 
     def _draw_track(self, w: int, h: int):
         self._canvas.delete("all")
-        pts = rounded_rect_points(2, 2, w - 2, h - 2, self._r)
-        self._canvas.create_polygon(
-            pts, smooth=True,
-            fill=self._track, outline=self._border, width=1
-        )
+        x1, y1 = 1, 1
+        x2, y2 = w - 1, h - 1
+        pts = rounded_rect_points(x1, y1, x2, y2, self._r)
+        self._canvas.create_polygon(pts, smooth=True, fill=self._track_color, outline=self._border_color, width=1)
 
     def _draw_fill_determinate(self, w: int, h: int):
-        fill_w = int((w - 4) * self._value)
-        if fill_w <= 0:
+        if self._value <= 0.0:
             return
 
         x1, y1 = 2, 2
-        x2 = x1 + fill_w
         y2 = h - 2
+        usable_w = (w - 4)
+        fill_w = int(usable_w * self._value)
+        x2 = x1 + fill_w
+        if x2 <= x1:
+            return
 
-        # Segmentar para simular degradado continuo
-        # (número relativamente alto para que no se vean cortes)
-        segments = 70
+        segments = 80
         seg_w = max(1, fill_w // segments)
 
         x = x1
         while x < x2:
             nx = min(x + seg_w, x2)
-            mid = (x + nx) / 2
-            t = (mid - x1) / max(1, (w - 4))
+            t = (x - x1) / max(1, usable_w)
             color = gradient_color_at(t)
             self._canvas.create_rectangle(x, y1, nx, y2, outline="", fill=color)
             x = nx
 
-        # Cap redondeado izquierdo
+        # Redondeado izquierdo
         cap_r = min(self._r, max(2, fill_w // 2))
         pts_left = rounded_rect_points(x1, y1, min(x1 + cap_r * 2, x2), y2, cap_r)
         self._canvas.create_polygon(pts_left, smooth=True, fill=gradient_color_at(0.0), outline="")
@@ -178,7 +175,6 @@ class GradientProgressBar(ctk.CTkFrame):
             self._canvas.create_polygon(pts_right, smooth=True, fill=gradient_color_at(1.0), outline="")
 
     def _draw_fill_indeterminate(self, w: int, h: int):
-        # Segmento móvil (30% del ancho total usable)
         usable_w = (w - 4)
         seg = int(usable_w * 0.30)
         start = int(self._ind_phase * (usable_w + seg)) - seg
@@ -192,7 +188,6 @@ class GradientProgressBar(ctk.CTkFrame):
         if ex <= sx:
             return
 
-        # Degradado dentro del segmento
         segments = 40
         seg_w = max(1, (ex - sx) // segments)
 
