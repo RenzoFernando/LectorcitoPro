@@ -14,6 +14,6 @@ COLORS = {
     "sidebar_hover": {"light": "#3C3C3C", "dark": "#DCDCDC"},
 }
 
-BTN_W_MAIN, BTN_H_MAIN = 275, 31
+BTN_W_MAIN, BTN_H_MAIN = 300, 32
 BTN_W_ICON, BTN_H_ICON = 35, 40
 SIDEBAR_WIDTH = 48
