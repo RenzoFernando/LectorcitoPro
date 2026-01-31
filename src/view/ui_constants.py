@@ -1,7 +1,7 @@
 # src/view/ui_constants.py
 import datetime
 
-VERSION = "6.0.0"
+VERSION = "6.4.1"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
@@ -14,6 +14,6 @@ COLORS = {
     "sidebar_hover": {"light": "#3C3C3C", "dark": "#DCDCDC"},
 }
 
-BTN_W_MAIN, BTN_H_MAIN = 300, 32
+BTN_W_MAIN, BTN_H_MAIN = 315, 35
 BTN_W_ICON, BTN_H_ICON = 35, 40
-SIDEBAR_WIDTH = 48
+SIDEBAR_WIDTH = 50

@@ -191,13 +191,14 @@ class PillIconButton(ctk.CTkFrame):
         except Exception:
             pass
 
-        for w in (self, self._canvas):
-            try:
-                w.bind("<Enter>", self._on_enter, add="+")
-                w.bind("<Leave>", self._on_leave, add="+")
-                w.bind("<Button-1>", self._on_click, add="+")
-            except Exception:
-                pass
+        # Hover / click events (sin duplicar binds)
+        super().bind("<Enter>", self._on_enter, add="+")
+        super().bind("<Leave>", self._on_leave, add="+")
+        super().bind("<Button-1>", self._on_click, add="+")  # click en el frame (bordes)
+
+        self._canvas.bind("<Enter>", self._on_enter, add="+")
+        self._canvas.bind("<Leave>", self._on_leave, add="+")
+        self._canvas.bind("<Button-1>", self._on_click, add="+")  # click en el canvas (área principal)
 
         self.bind("<Configure>", self._on_configure, add="+")
         self._schedule_paint()
@@ -283,9 +284,21 @@ class PillIconButton(ctk.CTkFrame):
 
     def _on_click(self, event=None):
         if self._state == "disabled":
-            return
+            return "break"
+
+        if getattr(self, "_click_lock", False):
+            return "break"
+
+        self._click_lock = True
+        try:
+            self.after(220, lambda: setattr(self, "_click_lock", False))
+        except Exception:
+            self._click_lock = False
+
         if callable(self._command):
             self._command()
+
+        return "break"
 
     def _pick_icon_pil(self):
         """Convierte un CTkImage (o PIL.Image) a PIL.Image correcto para el modo actual."""
@@ -469,6 +482,252 @@ class PillIconButton(ctk.CTkFrame):
             except Exception:
                 pass
 
+# -------------------------
+# Pill Text Button (píldora suave para texto)
+# -------------------------
+class PillTextButton(ctk.CTkFrame):
+    """
+    Botón tipo “píldora” con bordes realmente suavizados (PIL + downsample),
+    pensado para los 6 botones principales (texto).
+    API compatible con CTkButton: configure(text=..., command=..., state=..., fg_color=..., hover_color=..., outside_bg=...)
+    """
+
+    def __init__(
+        self,
+        parent,
+        *,
+        text: str = "",
+        width: int = 300,
+        height: int = 32,
+        outside_bg: str = COLORS["light"]["bg"],
+        fg_color: str = COLORS["button"]["blue"],
+        hover_color: str = COLORS["button_hover"]["blue_h"],
+        border_width: int = 2,
+        text_color: str = "#FFFFFF",
+        font=("Segoe UI", 11, "bold"),
+        command=None
+    ):
+        super().__init__(parent, width=width, height=height, fg_color="transparent")
+        self.pack_propagate(False)
+
+        self._outside_bg = outside_bg
+        self._fg_color = fg_color
+        self._hover_color = hover_color
+        self._border_w = int(border_width)
+
+        self._text = text or ""
+        self._text_color = text_color
+        self._font = font
+
+        self._hovered = False
+        self._state = "normal"
+        self._command = command
+
+        self._border_color = _auto_border(self._fg_color)
+        self._hover_border_color = _auto_border(self._hover_color)
+
+        self._canvas = Canvas(self, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
+        self._canvas.pack(fill="both", expand=True)
+
+        self._pill_photo = None  # mantener referencia viva
+        self._paint_job = None   # debounce
+
+        try:
+            self._canvas.configure(cursor="hand2")
+        except Exception:
+            pass
+
+        # (opcional pero recomendado)
+        self._click_lock = False
+
+        # Hover / click events (sin duplicar binds)
+        super().bind("<Enter>", self._on_enter, add="+")
+        super().bind("<Leave>", self._on_leave, add="+")
+        super().bind("<Button-1>", self._on_click, add="+")  # click en bordes del frame
+
+        self._canvas.bind("<Enter>", self._on_enter, add="+")
+        self._canvas.bind("<Leave>", self._on_leave, add="+")
+        self._canvas.bind("<Button-1>", self._on_click, add="+")  # click en el área principal
+
+        self.bind("<Configure>", self._on_configure, add="+")
+        self._schedule_paint()
+
+    # --- API “tipo CTkButton” ---
+    def configure(self, cnf=None, **kwargs):  # compatible con tkinter
+        if cnf and isinstance(cnf, dict):
+            kwargs = {**cnf, **kwargs}
+
+        if "outside_bg" in kwargs:
+            self._outside_bg = kwargs.pop("outside_bg")
+            try:
+                self._canvas.configure(bg=self._outside_bg)
+            except Exception:
+                pass
+
+        if "fg_color" in kwargs:
+            self._fg_color = kwargs.pop("fg_color")
+            self._border_color = _auto_border(self._fg_color)
+
+        if "hover_color" in kwargs:
+            self._hover_color = kwargs.pop("hover_color")
+            self._hover_border_color = _auto_border(self._hover_color)
+
+        if "border_width" in kwargs:
+            self._border_w = int(kwargs.pop("border_width"))
+
+        if "text" in kwargs:
+            self._text = str(kwargs.pop("text"))
+
+        if "text_color" in kwargs:
+            self._text_color = kwargs.pop("text_color")
+
+        if "font" in kwargs:
+            self._font = kwargs.pop("font")
+
+        if "state" in kwargs:
+            self._state = kwargs.pop("state")
+
+        if "command" in kwargs:
+            self._command = kwargs.pop("command")
+
+        self._schedule_paint()
+
+    config = configure  # alias común en tkinter
+
+    def cget(self, key):
+        if key in ("outside_bg", "fg_color", "hover_color", "text", "text_color", "font", "state", "command"):
+            return {
+                "outside_bg": self._outside_bg,
+                "fg_color": self._fg_color,
+                "hover_color": self._hover_color,
+                "text": self._text,
+                "text_color": self._text_color,
+                "font": self._font,
+                "state": self._state,
+                "command": self._command,
+            }[key]
+        return super().cget(key)
+
+    def bind(self, sequence=None, func=None, add=None):
+        if add is None:
+            add = "+"
+        r = super().bind(sequence, func, add)
+        try:
+            self._canvas.bind(sequence, func, add)
+        except Exception:
+            pass
+        return r
+
+    def invoke(self):
+        if self._state == "disabled":
+            return None
+        if callable(self._command):
+            return self._command()
+        return None
+
+    # --- Hover + click ---
+    def _on_enter(self, event=None):
+        if self._state == "disabled":
+            return
+        if not self._hovered:
+            self._hovered = True
+            self._schedule_paint()
+
+    def _on_leave(self, event=None):
+        if self._hovered:
+            self._hovered = False
+            self._schedule_paint()
+
+    def _on_click(self, event=None):
+        if self._state == "disabled":
+            return "break"
+
+        if getattr(self, "_click_lock", False):
+            return "break"
+
+        self._click_lock = True
+        try:
+            self.after(220, lambda: setattr(self, "_click_lock", False))
+        except Exception:
+            self._click_lock = False
+
+        if callable(self._command):
+            self._command()
+
+        return "break"
+
+    def _on_configure(self, event=None):
+        self._schedule_paint()
+
+    def _schedule_paint(self):
+        if self._paint_job is not None:
+            return
+        try:
+            self._paint_job = self.after_idle(self._paint)
+        except Exception:
+            self._paint_job = None
+
+    def _paint(self, event=None):
+        self._paint_job = None
+        w = max(1, int(self._canvas.winfo_width()))
+        h = max(1, int(self._canvas.winfo_height()))
+        if w <= 2 or h <= 2:
+            return
+
+        self._canvas.delete("all")
+
+        scale = 4
+        W, H = w * scale, h * scale
+
+        fill = self._hover_color if (self._hovered and self._state != "disabled") else self._fg_color
+        border = self._hover_border_color if (self._hovered and self._state != "disabled") else self._border_color
+        text_color = self._text_color
+
+        if self._state == "disabled":
+            fill = _mix(fill, self._outside_bg, 0.35)
+            border = _mix(border, self._outside_bg, 0.35)
+            try:
+                text_color = _mix(text_color, self._outside_bg, 0.55)
+            except Exception:
+                pass
+
+        outside_rgb = _hex_to_rgb(self._outside_bg)
+        fill_rgb = _hex_to_rgb(fill)
+        border_rgb = _hex_to_rgb(border) if border else None
+
+        img = Image.new("RGBA", (W, H), outside_rgb)
+        draw = ImageDraw.Draw(img)
+
+        pad = 2 * scale
+        x1, y1 = pad, pad
+        x2, y2 = W - pad, H - pad
+
+        usable_w = max(10 * scale, (x2 - x1))
+        usable_h = max(10 * scale, (y2 - y1))
+        radius = min(usable_w, usable_h) // 2  # píldora real
+        bw = max(1, int(self._border_w * scale))
+
+        draw.rounded_rectangle(
+            [x1, y1, x2, y2],
+            radius=radius,
+            fill=fill_rgb,
+            outline=border_rgb,
+            width=bw
+        )
+
+        img_small = img.resize((w, h), Image.LANCZOS)
+        self._pill_photo = ImageTk.PhotoImage(img_small)
+        self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
+
+        wrap_w = max(10, w - 16)
+        self._canvas.create_text(
+            w / 2, h / 2,
+            text=self._text,
+            font=self._font,
+            fill=text_color,
+            width=wrap_w,
+            justify="center"
+        )
 
 # -------------------------
 # Right Sidebar (píldoras suaves)

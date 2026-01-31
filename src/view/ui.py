@@ -15,7 +15,7 @@ from view.ui_constants import (
     COLORS, BTN_W_MAIN, BTN_H_MAIN
 )
 from view.ui_assets import load_sidebar_icons, load_logo, safe_set_window_icon
-from view.sidebars import LeftSidebar, RightSidebar
+from view.sidebars import LeftSidebar, RightSidebar, PillTextButton
 from view.status_panel import StatusPanel
 from utils import resource_path
 
@@ -127,7 +127,7 @@ class LectorcitoApp(ctk.CTk):
         right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=15)
 
         center = ctk.CTkFrame(self, fg_color="transparent")
-        center.grid(row=0, column=1, sticky="nsew", pady=10)
+        center.grid(row=0, column=1, sticky="nsew", pady=(6, 0))
         center.grid_columnconfigure(0, weight=1)
         center.grid_rowconfigure(2, weight=1)
 
@@ -150,7 +150,7 @@ class LectorcitoApp(ctk.CTk):
 
     def _create_header(self, parent):
         self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        self.header_frame.grid(row=0, column=0, sticky="ew", pady=(20, 15))
+        self.header_frame.grid(row=0, column=0, sticky="ew", pady=(10, 8))
 
         self.lbl_title = ctk.CTkLabel(self.header_frame, text="", image=self.logo_image)
         self.lbl_title.pack()
@@ -159,37 +159,79 @@ class LectorcitoApp(ctk.CTk):
         self.lbl_greet.pack()
 
     def _create_main_buttons(self, parent):
-        self.main_buttons_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        self.main_buttons_frame.grid(row=1, column=0, sticky="ew", pady=5)
+        # --- Card / recuadro para encerrar el menú principal ---
+        is_light = self.current_theme == "Light"
 
-        opts = {
+        # Color suave (tipo tarjeta) + borde sutil
+        menu_bg = "#F2F3F5" if is_light else "#262C33"  # un poquito más claro
+        menu_border = "#D5D9DE" if is_light else "#2B3137"
+
+        self.main_menu_frame = ctk.CTkFrame(
+            parent,
+            fg_color=menu_bg,
+            corner_radius=16,
+            border_width=1,
+            border_color=menu_border
+        )
+        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=5)
+
+        # Contenedor real de los botones (transparente, dentro del recuadro)
+        self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame, fg_color="transparent")
+        self.main_buttons_frame.pack(pady=10, padx=10)
+
+        # MUY IMPORTANTE: para que el antialias del botón se mezcle con el fondo del recuadro (no con el bg global)
+        outside_bg = menu_bg
+
+        common = {
             "width": BTN_W_MAIN,
             "height": BTN_H_MAIN,
-            "corner_radius": 8,
+            "outside_bg": outside_bg,
+            "border_width": 2,
             "font": ("Segoe UI", 11, "bold"),
             "text_color": "#FFFFFF",
         }
 
         self.main_buttons = {
-            "selpath": ctk.CTkButton(self.main_buttons_frame, **opts),
-            "choose": ctk.CTkButton(self.main_buttons_frame, **opts),
-            "create_tree": ctk.CTkButton(self.main_buttons_frame, **opts),
-            "openlect": ctk.CTkButton(self.main_buttons_frame, **opts),
-            "openlast": ctk.CTkButton(
-                self.main_buttons_frame, **opts,
-                fg_color=COLORS["button"]["green"], hover_color=COLORS["button_hover"]["green_h"]
+            "selpath": PillTextButton(
+                self.main_buttons_frame,
+                fg_color=COLORS["button"]["blue"], hover_color=COLORS["button_hover"]["blue_h"],
+                **common
             ),
-            "delete": ctk.CTkButton(
-                self.main_buttons_frame, **opts,
-                fg_color=COLORS["button"]["red"], hover_color=COLORS["button_hover"]["red_h"]
-            )
+            "choose": PillTextButton(
+                self.main_buttons_frame,
+                fg_color=COLORS["button"]["blue"], hover_color=COLORS["button_hover"]["blue_h"],
+                **common
+            ),
+            "create_tree": PillTextButton(
+                self.main_buttons_frame,
+                fg_color=COLORS["button"]["blue"], hover_color=COLORS["button_hover"]["blue_h"],
+                **common
+            ),
+            "openlect": PillTextButton(
+                self.main_buttons_frame,
+                fg_color=COLORS["button"]["blue"], hover_color=COLORS["button_hover"]["blue_h"],
+                **common
+            ),
+            "openlast": PillTextButton(
+                self.main_buttons_frame,
+                fg_color=COLORS["button"]["green"], hover_color=COLORS["button_hover"]["green_h"],
+                **common
+            ),
+            "delete": PillTextButton(
+                self.main_buttons_frame,
+                fg_color=COLORS["button"]["red"], hover_color=COLORS["button_hover"]["red_h"],
+                **common
+            ),
         }
+
+        # ✅ AQUÍ ajustas el espacio vertical entre botones
+        BTN_SPACING = 1.5  # prueba 1, 2, 0...
         for btn in self.main_buttons.values():
-            btn.pack(pady=3)
+            btn.pack(pady=BTN_SPACING, anchor="center")
 
     def _create_status_area(self, parent):
         self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=(6, 6))
+        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=(4, 2))
         self.progress_frame.grid_columnconfigure(0, weight=1)
 
         self.status_panel = StatusPanel(self.progress_frame, min_visible_seconds=2.0)
@@ -270,6 +312,21 @@ class LectorcitoApp(ctk.CTk):
 
         # Status panel
         self.status_panel.apply_theme(self.current_theme)
+
+        # --- NUEVO: colores del recuadro del menú principal ---
+        menu_bg = "#F2F3F5" if is_light else "#262C33"
+        menu_border = "#D5D9DE" if is_light else "#2B3137"
+        try:
+            self.main_menu_frame.configure(fg_color=menu_bg, border_color=menu_border)
+        except Exception:
+            pass
+
+        # Main buttons: antialias mezclando con el fondo del recuadro
+        for btn in self.main_buttons.values():
+            try:
+                btn.configure(outside_bg=menu_bg)
+            except Exception:
+                pass
 
     # ---------------------------
     # API usada por el controller
