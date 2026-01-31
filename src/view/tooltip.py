@@ -214,6 +214,17 @@ class _SharedTooltipWindow:
 
         self._fade_out_step()
 
+    def hide_immediate(self):
+        """Oculta la ventana instantáneamente sin animación."""
+        self._cancel_fade()
+        self._visible = False
+        if self._safe_exists(self._window):
+            try:
+                self._window.withdraw()
+                self._window.attributes("-alpha", 0.0)
+            except Exception:
+                pass
+
     def is_visible(self) -> bool:
         return self._visible and self._safe_exists(self._window)
 
@@ -431,6 +442,22 @@ class CustomTooltip:
         self.hide_tooltip()
         self._cancel_scheduled_show()
 
+    # --- NUEVO MÉTODO PARA ELIMINAR TODO RASTRO AL ABRIR DIÁLOGOS ---
+    @classmethod
+    def hide_global(cls):
+        """Fuerza el cierre inmediato de cualquier tooltip activo (sin animación)."""
+        active = cls._active_tooltip
+        if active:
+            active._cancel_scheduled_show()
+            active._cancel_scheduled_auto_hide()
+
+            # Obtener ventana y forzar cierre inmediato
+            win = active._get_shared_window()
+            if win:
+                win.hide_immediate()
+
+            cls._active_tooltip = None
+
     def _cancel_scheduled_show(self):
         if self._after_id and self._safe_widget():
             try:
@@ -537,4 +564,3 @@ class CustomTooltip:
             return x0 <= px <= x1 and y0 <= py <= y1
         except Exception:
             return False
-

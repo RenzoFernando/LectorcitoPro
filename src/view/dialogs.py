@@ -3,6 +3,7 @@ import os
 from tkinter import filedialog
 from PIL import Image
 from utils import resource_path
+from view.tooltip import CustomTooltip  # <--- IMPORTANTE: Importamos para controlar los tooltips
 
 # Paleta de colores centralizada para consistencia en los diálogos.
 COLORS = {
@@ -17,11 +18,15 @@ COLORS = {
 
 MESSAGE_AUTO_CLOSE_SECONDS = 5
 
+
 # Clase base para todos los diálogos con animaciones de entrada y salida.
 class BaseDialog(ctk.CTkToplevel):
 
     # Configura la ventana base del diálogo (título, posición, etc.).
     def __init__(self, parent, title: str):
+        # --- NUEVO: Matar cualquier tooltip activo ANTES de abrir la ventana ---
+        CustomTooltip.hide_global()
+
         super().__init__(parent)
         self.transient(parent)
         self.title(title)
