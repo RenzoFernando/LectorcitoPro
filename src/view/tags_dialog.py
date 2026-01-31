@@ -15,6 +15,7 @@ class TagsConfigDialog(BaseDialog):
 
         self.folders_list = copy.deepcopy(initial_folders)
         self.files_list = copy.deepcopy(initial_files)
+        self._parent = parent
 
         # Accedemos a la estructura nueva de botones
         blue_btn = COLORS['button']['blue']
@@ -26,7 +27,7 @@ class TagsConfigDialog(BaseDialog):
         self.tag_font = ctk.CTkFont(family="Segoe UI", size=11)
 
         # AJUSTE DE GEOMETRÍA
-        self.geometry("500x600")
+        self.geometry("600x550")
 
         # Tarjeta principal
         self.main_frame = self._create_card_frame()
@@ -52,12 +53,16 @@ class TagsConfigDialog(BaseDialog):
         button_frame.grid(row=7, column=0, pady=(15, 15), sticky="ew")
         button_frame.grid_columnconfigure((0, 1), weight=1)
 
-        ok_button = ctk.CTkButton(button_frame, text="Guardar Cambios", command=self._on_ok)
+        # TRADUCCION APLICADA
+        txt_save = parent._tr("btn_save_changes") if hasattr(parent, "_tr") else "Guardar Cambios"
+        txt_cancel = parent._tr("btn_cancel_simple") if hasattr(parent, "_tr") else "Cancelar"
+
+        ok_button = ctk.CTkButton(button_frame, text=txt_save, command=self._on_ok)
         _style_button(ok_button, "green")
         ok_button.configure(width=140)
         ok_button.grid(row=0, column=0, padx=10, sticky="e")
 
-        cancel_button = ctk.CTkButton(button_frame, text="Cancelar", command=self._on_cancel)
+        cancel_button = ctk.CTkButton(button_frame, text=txt_cancel, command=self._on_cancel)
         _style_button(cancel_button, "red")
         cancel_button.configure(width=100)
         cancel_button.grid(row=0, column=1, padx=10, sticky="w")
@@ -83,7 +88,9 @@ class TagsConfigDialog(BaseDialog):
         )
         scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew", padx=20)
 
-        entry = ctk.CTkEntry(self.main_frame, placeholder_text="Escribir y presionar Enter para añadir...")
+        # TRADUCCION APLICADA
+        ph_text = self._parent._tr("placeholder_tags") if hasattr(self._parent, "_tr") else "Escribir y presionar Enter..."
+        entry = ctk.CTkEntry(self.main_frame, placeholder_text=ph_text)
         entry.grid(row=base_row + 2, column=0, sticky="ew", pady=(5, 0), padx=20)
 
         if section_id == "folders":

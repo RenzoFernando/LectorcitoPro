@@ -233,11 +233,13 @@ class LectorcitoApp(ctk.CTk):
         self.footer_line = ctk.CTkFrame(self.footer_frame, height=1, corner_radius=0)
         self.footer_line.pack(side="top", fill="x")
 
-        ctk.CTkLabel(
+        # TRADUCCION APLICADA (se asigna inicial, luego update_ui_texts lo sobrescribe)
+        self.lbl_copyright = ctk.CTkLabel(
             self.footer_frame,
-            text=f"Copyright © {YEAR} - {AUTHOR} - All Rights Reserved.",
+            text="", # Se llena en update_ui_texts
             font=("Segoe UI", 9)
-        ).place(relx=0.5, rely=0.5, anchor="center")
+        )
+        self.lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
 
     def update_ui_texts(self):
         hour = datetime.datetime.now().hour
@@ -261,6 +263,9 @@ class LectorcitoApp(ctk.CTk):
                 btn.configure(text=self._tr(key_map[key]))
 
         self.status_panel.set_translator(lambda k: self._tr(k))
+
+        # Actualizar Copyright traducido
+        self.lbl_copyright.configure(text=self._tr("footer_copyright", YEAR, AUTHOR))
 
         tooltip_map = {
             "ver": "tooltip_ver",

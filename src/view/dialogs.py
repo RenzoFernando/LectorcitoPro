@@ -29,6 +29,7 @@ def _get_color_tuple(key: str) -> tuple[str, str]:
 
 def _style_button(btn: ctk.CTkButton, color_type="blue"):
     # Usamos la estructura nueva de botones en COLORS["button"]
+
     base = COLORS["button"].get(color_type, COLORS["button"]["blue"])["bg"]
     hover = COLORS["button"].get(color_type, COLORS["button"]["blue"])["hover"]
 
@@ -69,6 +70,17 @@ class BaseDialog(ctk.CTkToplevel):
         self.after(120, self._install_escape_bindtags)
         self.after(350, self._install_escape_bindtags)
 
+        # --- CORRECCIÓN DE RESTAURACIÓN (Win+D / Minimizar) ---
+        # Vinculamos eventos de la ventana principal (padre) para que, al restaurarse
+        # o ganar foco, traiga automáticamente esta sub-ventana al frente.
+        try:
+            if self.master:
+                self.master.bind("<Map>", self._on_parent_map_restore, add="+")
+                self.master.bind("<FocusIn>", self._on_parent_focus_restore, add="+")
+        except Exception:
+            pass
+        # --------------------------------------------------------
+
         def _set_icon():
             try:
                 if hasattr(parent, '_icon_path') and parent._icon_path and os.path.exists(parent._icon_path):
@@ -82,8 +94,28 @@ class BaseDialog(ctk.CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
         self.after(100, self._center_and_fade_in)
 
+    # --- NUEVOS MÉTODOS DE RESTAURACIÓN ---
+    def _on_parent_map_restore(self, event=None):
+        """Se ejecuta cuando la ventana principal se restaura (se 'mapea' en pantalla)."""
+        if not self.winfo_exists(): return
+        try:
+            self.deiconify() # Asegura que no esté minimizada
+            self.lift()      # La pone encima de la principal
+        except Exception:
+            pass
+
+    def _on_parent_focus_restore(self, event=None):
+        """Se ejecuta cuando la ventana principal gana el foco."""
+        if not self.winfo_exists(): return
+        try:
+            self.lift()      # La pone encima
+        except Exception:
+            pass
+    # --------------------------------------
+
     def _create_card_frame(self) -> ctk.CTkFrame:
         # Usa 'card' que _get_color_tuple mapea a 'surface'
+
         card = ctk.CTkFrame(
             self,
             fg_color=_get_color_tuple("card"),
@@ -139,8 +171,7 @@ class BaseDialog(ctk.CTkToplevel):
                     except Exception:
                         pass
                     try:
-                        self.focus_force();
-                        self.focus_set()
+                        self.focus_force(); self.focus_set()
                     except Exception:
                         pass
                     try:
@@ -196,8 +227,7 @@ class BaseDialog(ctk.CTkToplevel):
         self._close_with_fade_out()
 
     def _on_cancel(self, event=None):
-        self.result = None;
-        self._close_with_fade_out()
+        self.result = None; self._close_with_fade_out()
 
 
 # Diálogo simple para mostrar un mensaje con un botón de "OK".
@@ -211,6 +241,7 @@ class MessageDialog(BaseDialog):
         # Ajuste para que se vea compacto
         card = self._create_card_frame()
 
+
         ctk.CTkLabel(
             card,
             text=message,
@@ -220,9 +251,12 @@ class MessageDialog(BaseDialog):
             text_color=_get_color_tuple("text")
         ).pack(fill="x", padx=20, pady=(20, 20))  # Menos padding
 
+        # TRADUCCION APLICADA
+        btn_text = parent._tr("btn_ok") if hasattr(parent, "_tr") else "OK"
+
         ok_button = ctk.CTkButton(
             card,
-            text="OK",
+            text=btn_text,
             width=110,
             command=self._on_ok
         )
@@ -289,11 +323,15 @@ class ConfirmDialog(BaseDialog):
         button_frame = ctk.CTkFrame(card, fg_color="transparent")
         button_frame.pack(pady=(0, 20))
 
-        btn_yes = ctk.CTkButton(button_frame, text="Sí", width=100, command=self._on_yes)
+        # TRADUCCION APLICADA
+        txt_yes = parent._tr("btn_yes") if hasattr(parent, "_tr") else "Sí"
+        txt_no = parent._tr("btn_no") if hasattr(parent, "_tr") else "No"
+
+        btn_yes = ctk.CTkButton(button_frame, text=txt_yes, width=100, command=self._on_yes)
         _style_button(btn_yes, "green")
         btn_yes.pack(side="left", padx=10)
 
-        btn_no = ctk.CTkButton(button_frame, text="No", width=100, command=self._on_no)
+        btn_no = ctk.CTkButton(button_frame, text=txt_no, width=100, command=self._on_no)
         _style_button(btn_no, "red")
         btn_no.pack(side="left", padx=10)
 

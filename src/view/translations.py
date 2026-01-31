@@ -60,6 +60,7 @@ TRANSLATIONS = {
         "dlg_ver_title": "Configurar qué Ver",
         "dlg_ver_folder_prompt": "Carpetas a resaltar como Importantes (ej: src, utils):",
         "dlg_ver_file_prompt": "Extensiones de archivo a Leer (ej: .py, .md):",
+
         "dlg_nover_title": "Configurar qué No Ver",
         "dlg_nover_folder_prompt": "Carpetas a Ignorar por completo (ej: node_modules, .venv):",
         "dlg_nover_file_prompt": "Archivos a Ignorar por nombre completo (ej: license.txt, .env):",
@@ -78,7 +79,15 @@ TRANSLATIONS = {
         "tooltip_idioma": "Cambiar entre Español e Inglés.",
         "tooltip_restaurar": "Restaurar todas las configuraciones a su estado inicial.",
         "tooltip_github": "Abrir el repositorio del proyecto en GitHub.",
-        "tooltip_info": "Mostrar el manual de usuario y la información de la aplicación."
+        "tooltip_info": "Mostrar el manual de usuario y la información de la aplicación.",
+
+        "btn_ok": "OK",
+        "btn_yes": "Sí",
+        "btn_no": "No",
+        "btn_save_changes": "Guardar Cambios",
+        "btn_cancel_simple": "Cancelar",
+        "placeholder_tags": "Escribir y presionar Enter para añadir...",
+        "footer_copyright": "Copyright © {} - {} - Todos los derechos reservados."
     },
     "en": {
         "dlg_read_type_title": "Reading Type",
@@ -157,6 +166,14 @@ TRANSLATIONS = {
         "tooltip_idioma": "Switch between English and Spanish.",
         "tooltip_restaurar": "Restore all settings to their default state.",
         "tooltip_github": "Open the project repository on GitHub.",
-        "tooltip_info": "Show the user manual and application information."
+        "tooltip_info": "Show the user manual and application information.",
+
+        "btn_ok": "OK",
+        "btn_yes": "Yes",
+        "btn_no": "No",
+        "btn_save_changes": "Save Changes",
+        "btn_cancel_simple": "Cancel",
+        "placeholder_tags": "Type and press Enter to add...",
+        "footer_copyright": "Copyright © {} - {} - All Rights Reserved."
     }
 }
