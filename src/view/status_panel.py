@@ -5,6 +5,7 @@ import time
 import customtkinter as ctk
 
 from view.gradient_progress import GradientProgressBar
+from view.ui_constants import COLORS  # Importamos constantes
 
 
 class StatusPanel(ctk.CTkFrame):
@@ -28,7 +29,7 @@ class StatusPanel(ctk.CTkFrame):
         self._min_end_time: float | None = None
         self._forced_end_time: float | None = None
 
-        self._mode = "idle"  # idle | processing | indeterminate | done
+        self._mode = "idle"
         self._status_base = ""
         self._dots_after_id = None
         self._dots_phase = 1
@@ -66,19 +67,19 @@ class StatusPanel(ctk.CTkFrame):
             width=28,
             height=28,
             corner_radius=14,
-            fg_color="#D03B3D",
-            hover_color="#A03031",
+            fg_color=COLORS["button"]["red"]["bg"],  # Usamos constantes
+            hover_color=COLORS["button"]["red"]["hover"],
             text_color="white",
             font=("Segoe UI", 13, "bold"),
         )
         self.btn_cancel.grid(row=0, column=2, sticky="e")
-        self.btn_cancel.grid_remove()  # oculto por defecto
+        self.btn_cancel.grid_remove()
 
         self.progress_bar = GradientProgressBar(self.status_panel, height=12, corner_radius=8)
         self.progress_bar.grid(row=1, column=0, padx=12, pady=(0, 6), sticky="ew")
         self.progress_bar.set(0.0)
 
-        # Ruta (ruta actual / carpeta) — dentro del mismo rectángulo
+        # Ruta (ruta actual / carpeta)
         self.file_row = ctk.CTkFrame(self.status_panel, fg_color="transparent")
         self.file_row.grid(row=2, column=0, padx=12, pady=(0, 12), sticky="ew")
         self.file_row.grid_columnconfigure(1, weight=1)
@@ -98,30 +99,22 @@ class StatusPanel(ctk.CTkFrame):
         )
         self.lbl_current_file.grid(row=0, column=1, sticky="ew")
 
-        # Ajusta wraplength cuando cambie el ancho del panel
         self.status_panel.bind("<Configure>", self._on_panel_resize)
 
-        # cache de traducción (para mostrar/ocultar el prefijo sin romper i18n)
         self._processing_label_text = ""
         self._btn_cancel_full_text = ""
-
-        # Traducciones (se setean desde ui.py)
-        self._tr = None  # callable(key)->str
+        self._tr = None
         self._key_status_waiting = "status_waiting"
         self._key_status_reading = "status_reading"
         self._key_status_done = "status_done_panel"
         self._key_processing_label = "processing_label"
         self._key_btn_cancel = "btn_cancel"
 
-        # Default idle
         self.lbl_processing_prefix.configure(text="")
         self.lbl_current_file.configure(text="")
         self._mode = "idle"
         self._set_status("Esperando lectura", with_dots=True)
 
-    # ----------------------------
-    # Conexión con i18n
-    # ----------------------------
     def set_translator(self, tr_callable):
         self._tr = tr_callable
         self.refresh_texts()
@@ -148,37 +141,24 @@ class StatusPanel(ctk.CTkFrame):
         if self._dots_after_id is None:
             self.lbl_status.configure(text=self._status_base)
 
-    # ----------------------------
-    # Tema
-    # ----------------------------
     def apply_theme(self, theme_name: str):
         is_light = theme_name == "Light"
-        if is_light:
-            panel_bg = "#E3E6EA"
-            panel_border = "#D0D7DE"
-            text = "#24292F"
-            muted = "#6E7781"
-            track = "#C9CDD1"
-            border = "#B6BAC0"
-        else:
-            panel_bg = "#20252B"
-            panel_border = "#2B3137"
-            text = "#E6EDF3"
-            muted = "#8B949E"
-            track = "#30363D"
-            border = "#2B3137"
 
+        # Obtenemos los colores del diccionario centralizado
+        theme = COLORS["light"] if is_light else COLORS["dark"]
+
+        # Aplicamos colores consistentes
         try:
-            self.status_panel.configure(fg_color=panel_bg, border_color=panel_border, border_width=1)
+            self.status_panel.configure(fg_color=theme["surface"], border_color=theme["border"], border_width=1)
         except Exception:
-            self.status_panel.configure(fg_color=panel_bg)
+            self.status_panel.configure(fg_color=theme["surface"])
 
-        self.lbl_status.configure(text_color=text)
-        self.lbl_percent.configure(text_color=text)
-        self.lbl_processing_prefix.configure(text_color=text)
-        self.lbl_current_file.configure(text_color=muted)
+        self.lbl_status.configure(text_color=theme["text"])
+        self.lbl_percent.configure(text_color=theme["text"])
+        self.lbl_processing_prefix.configure(text_color=theme["text"])
+        self.lbl_current_file.configure(text_color=theme["text_secondary"])
 
-        self.progress_bar.set_colors(track=track, border=border)
+        self.progress_bar.set_colors(track=theme["progress_track"], border=theme["progress_border"])
         self.progress_bar.set(self.current_progress / 100.0)
 
     def _on_panel_resize(self, event=None):
@@ -187,7 +167,7 @@ class StatusPanel(ctk.CTkFrame):
         except Exception:
             return
 
-        usable = max(180, panel_w - 24)  # 12 + 12 padding aprox
+        usable = max(180, panel_w - 24)
         try:
             prefix_w = int(self.lbl_processing_prefix.winfo_reqwidth()) + 6
         except Exception:
@@ -199,9 +179,6 @@ class StatusPanel(ctk.CTkFrame):
         except Exception:
             pass
 
-    # ----------------------------
-    # Animación de puntos
-    # ----------------------------
     def _set_status(self, base_text: str, with_dots: bool):
         self._status_base = base_text or ""
         if with_dots:
@@ -209,7 +186,7 @@ class StatusPanel(ctk.CTkFrame):
             self._start_dots()
         else:
             self._stop_dots()
-            self.lbl_status.configure(text=self._status_base)
+        self.lbl_status.configure(text=self._status_base)
 
     def _start_dots(self):
         self._stop_dots()
@@ -234,14 +211,7 @@ class StatusPanel(ctk.CTkFrame):
         self.lbl_status.configure(text=f"{self._status_base}{dots}")
         self._dots_after_id = self.after(450, self._tick_dots)
 
-    # ----------------------------
-    # Regla UX: mínimo visible (MÉTODO QUE TE FALTABA)
-    # ----------------------------
     def get_min_visible_completion_delay_ms(self) -> int:
-        """
-        Tiempo restante (ms) para cumplir el mínimo visible desde que empezó processing.
-        El controller lo usa para retrasar el cierre/mensaje final y evitar parpadeo.
-        """
         if self._processing_started_at is None:
             return 0
         now = time.monotonic()
@@ -249,9 +219,6 @@ class StatusPanel(ctk.CTkFrame):
         remaining = max(0.0, min_end - now)
         return int(remaining * 1000)
 
-    # ----------------------------
-    # Animación de progreso suave
-    # ----------------------------
     def _start_progress_animation(self):
         if self._progress_after_id is None:
             self._last_tick = time.monotonic()
@@ -273,7 +240,6 @@ class StatusPanel(ctk.CTkFrame):
         dt = (now - (self._last_tick or now))
         self._last_tick = now
 
-        # Si estamos forzando fin por mínimo visible:
         if self._forced_end_time is not None and now < self._forced_end_time:
             self.target_progress = max(self.target_progress, 98.0)
         elif self._forced_end_time is not None and now >= self._forced_end_time:
@@ -301,9 +267,6 @@ class StatusPanel(ctk.CTkFrame):
 
         self._progress_after_id = self.after(16, self._tick_progress)
 
-    # ----------------------------
-    # Utilidad: ruta bonita
-    # ----------------------------
     @staticmethod
     def _ellipsize_middle(s: str, max_len: int = 72) -> str:
         s = (s or "").strip()
@@ -314,13 +277,9 @@ class StatusPanel(ctk.CTkFrame):
         right = keep - left
         return f"{s[:left]}…{s[-right:]}"
 
-    # ----------------------------
-    # API pública (ui.py / controller)
-    # ----------------------------
     def set_progress(self, percentage: float, file_context: str | None = None):
         new_target = float(max(0, min(100, int(percentage))))
 
-        # Si pidieron 100 y aún no cumplimos mínimo visible: forzamos end_time
         if new_target >= 100 and self._min_end_time is not None:
             now = time.monotonic()
             self._forced_end_time = self._min_end_time if now < self._min_end_time else None
@@ -332,16 +291,17 @@ class StatusPanel(ctk.CTkFrame):
             path_txt = self._ellipsize_middle(str(file_context), max_len=140)
             self.lbl_current_file.configure(text=path_txt)
 
-            prefix = self._processing_label_text or (self._tr(self._key_processing_label) if self._tr else "Procesando:")
+            prefix = self._processing_label_text or (
+                self._tr(self._key_processing_label) if self._tr else "Procesando:")
             self.lbl_processing_prefix.configure(text=prefix)
 
     def set_active(
-        self,
-        is_active: bool,
-        *,
-        mode: str = "determinate",
-        text: str | None = None,
-        final_status: str | None = None
+            self,
+            is_active: bool,
+            *,
+            mode: str = "determinate",
+            text: str | None = None,
+            final_status: str | None = None
     ):
         if is_active:
             self._processing_started_at = time.monotonic()
@@ -373,7 +333,6 @@ class StatusPanel(ctk.CTkFrame):
             self.btn_cancel.grid()
             return
 
-        # ---- is_active=False ----
         self.btn_cancel.grid_remove()
         self.progress_bar.stop_indeterminate()
 

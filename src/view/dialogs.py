@@ -1,3 +1,4 @@
+# src/view/dialogs.py
 import customtkinter as ctk
 import os
 from tkinter import filedialog
@@ -10,12 +11,26 @@ MESSAGE_AUTO_CLOSE_SECONDS = 5
 
 # --- Helpers de estilo ---
 def _get_color_tuple(key: str) -> tuple[str, str]:
-    return (COLORS["light"][key], COLORS["dark"][key])
+    """Obtiene una tupla (color_claro, color_oscuro) desde COLORS."""
+    # Mapeo de compatibilidad por si usamos claves viejas
+    key_map = {
+        "bg": "bg",
+        "card": "surface",
+        "card_border": "border",
+        "inner_area": "surface_alt",
+        "text": "text"
+    }
+
+    # Si la key está en el mapa, usamos la nueva clave semántica
+    actual_key = key_map.get(key, key)
+
+    return (COLORS["light"][actual_key], COLORS["dark"][actual_key])
 
 
 def _style_button(btn: ctk.CTkButton, color_type="blue"):
-    base = COLORS["button"].get(color_type, COLORS["button"]["blue"])
-    hover = COLORS["button_hover"].get(f"{color_type}_h", COLORS["button_hover"]["blue_h"])
+    # Usamos la estructura nueva de botones en COLORS["button"]
+    base = COLORS["button"].get(color_type, COLORS["button"]["blue"])["bg"]
+    hover = COLORS["button"].get(color_type, COLORS["button"]["blue"])["hover"]
 
     btn.configure(
         corner_radius=16,
@@ -39,6 +54,7 @@ class BaseDialog(ctk.CTkToplevel):
         self.resizable(False, False)
         self.attributes("-alpha", 0.0)
 
+        # Usamos la key 'bg' del tema
         self.configure(fg_color=_get_color_tuple("bg"))
 
         self._closing_grab_released = False
@@ -67,6 +83,7 @@ class BaseDialog(ctk.CTkToplevel):
         self.after(100, self._center_and_fade_in)
 
     def _create_card_frame(self) -> ctk.CTkFrame:
+        # Usa 'card' que _get_color_tuple mapea a 'surface'
         card = ctk.CTkFrame(
             self,
             fg_color=_get_color_tuple("card"),
@@ -122,7 +139,8 @@ class BaseDialog(ctk.CTkToplevel):
                     except Exception:
                         pass
                     try:
-                        self.focus_force(); self.focus_set()
+                        self.focus_force();
+                        self.focus_set()
                     except Exception:
                         pass
                     try:
@@ -178,7 +196,8 @@ class BaseDialog(ctk.CTkToplevel):
         self._close_with_fade_out()
 
     def _on_cancel(self, event=None):
-        self.result = None; self._close_with_fade_out()
+        self.result = None;
+        self._close_with_fade_out()
 
 
 # Diálogo simple para mostrar un mensaje con un botón de "OK".
@@ -256,7 +275,6 @@ class ConfirmDialog(BaseDialog):
         super().__init__(parent, title)
         self.result = False
 
-        # Geometría automática suele funcionar, pero si no, el Toplevel se ajusta.
         card = self._create_card_frame()
 
         ctk.CTkLabel(

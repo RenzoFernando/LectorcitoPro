@@ -1,49 +1,73 @@
 # src/view/ui_constants.py
 import datetime
 
-VERSION = "6.4.1"
+VERSION = "6.5.7"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
 
 COLORS = {
     "light": {
-        "bg": "#EBEBEB",        # Fondo ventana principal
-        "text": "#000000",
+        # --- Bases ---
+        "bg": "#F3F4F6",
+        "surface": "#FFFFFF",
+        "surface_alt": "#F9FAFB",
+        "footer_bg": "#EBEBEB",
+
+        # --- Bordes y Separadores ---
+        "border": "#E5E7EB",
+        "card_border": "#C0C2C5",
+        "separator_line": "#D1D5DB",
+
+        # --- Texto ---
+        "text": "#111827",
+        "text_secondary": "#6B7280",
+
+        # --- Componentes Laterales ---
         "left_bar": "#1A1E22",
-        "card": "#FFFFFF",      # Fondo tarjeta (diálogos)
-        "card_border": "#D0D7DE",
-        "inner_area": "#F2F4F7", # <--- NUEVO: Gris azulado muy suave para listas internas (contraste con blanco)
-        "progress_bar": "#D9D9D9"
+        "sidebar_text": "#FFFFFF",
+
+        "progress_track": "#E5E7EB",
+        "progress_border": "#D1D5DB"
     },
     "dark": {
-        "bg": "#1A1E22",        # Fondo ventana principal
-        "text": "#FFFFFF",
-        "left_bar": "#EBEBEB",
-        "card": "#21262D",      # Fondo tarjeta (diálogos)
+        # --- Bases ---
+        "bg": "#0D1117",
+        "surface": "#161B22",
+        "surface_alt": "#010409",
+        "footer_bg": "#12171E",
+
+        # --- Bordes y Separadores ---
+        "border": "#30363D",
         "card_border": "#30363D",
-        "inner_area": "#161B22", # <--- NUEVO: Más oscuro que la tarjeta para dar profundidad
-        "progress_bar": "#333333"
+        "separator_line": "#21262D",
+
+        # --- Texto ---
+        "text": "#E6EDF3",
+        "text_secondary": "#8B949E",
+
+        # --- Componentes Laterales ---
+        "left_bar": "#EBEBEB",
+        "sidebar_text": "#1A1E22",
+
+        "progress_track": "#21262D",
+        "progress_border": "#30363D"
     },
+
+    # --- Acciones (Botones Principales) ---
     "button": {
-        "blue": "#3B8ED0",
-        "green": "#3BD056",
-        "red": "#D03B3D"
+        "blue": {"bg": "#3B8ED0", "hover": "#3682BE", "border": "#2A7BB8"},
+        "green": {"bg": "#32B04A", "hover": "#2D9E42", "border": "#289640"},
+        "red": {"bg": "#D03B3D", "hover": "#B53032", "border": "#B02B2D"},
     },
-    "button_hover": {
-        "blue_h": "#3073A8",
-        "green_h": "#2FA047",
-        "red_h": "#A03031"
-    },
+
+    # --- Hover Sidebar ---
     "sidebar_hover": {
-        "light": "#3C3C3C",
-        "dark": "#DCDCDC"
+        "light": "#374151",
+        "dark": "#D1D5DB"
     },
-    "progress_colors": {
-        "start": "#3B8ED0",
-        "mid": "#F9A825",
-        "done": "#4CAF50"
-    },
+
+    # --- Elementos de Lista ---
     "list_item": {
         "selected_bg": "#3B8ED0",
         "normal_bg": "transparent"

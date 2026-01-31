@@ -1,3 +1,4 @@
+# src/view/tags_dialog.py
 import customtkinter as ctk
 import copy
 from view.dialogs import BaseDialog, _get_color_tuple, _style_button
@@ -15,14 +16,16 @@ class TagsConfigDialog(BaseDialog):
         self.folders_list = copy.deepcopy(initial_folders)
         self.files_list = copy.deepcopy(initial_files)
 
+        # Accedemos a la estructura nueva de botones
+        blue_btn = COLORS['button']['blue']
         self.tag_colors = {
-            "activo": {"fg": COLORS['button']['blue'], "hover": COLORS['button_hover']['blue_h'], "text": "#FFFFFF"},
+            "activo": {"fg": blue_btn["bg"], "hover": blue_btn["hover"], "text": "#FFFFFF"},
             "inactivo": {"fg": "#6c757d", "hover": "#5a6268", "text": "#FFFFFF"}
         }
 
         self.tag_font = ctk.CTkFont(family="Segoe UI", size=11)
 
-        # AJUSTE DE GEOMETRÍA: Más ancho, menos alto para evitar espacio vacío.
+        # AJUSTE DE GEOMETRÍA
         self.geometry("500x600")
 
         # Tarjeta principal
@@ -39,9 +42,14 @@ class TagsConfigDialog(BaseDialog):
         self.main_frame.grid_rowconfigure(1, weight=1)
         self.main_frame.grid_rowconfigure(4, weight=1)
 
-        # Botones de acción
+        # --- SECCIÓN DE ACCIONES (Botones) ---
+
+        # [SOLUCIÓN BARRA RARA] Línea separadora sutil antes de los botones
+        separator = ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line"))
+        separator.grid(row=6, column=0, sticky="ew", padx=0, pady=(10, 0))
+
         button_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        button_frame.grid(row=6, column=0, pady=(15, 10), sticky="ew")  # Menos padding abajo
+        button_frame.grid(row=7, column=0, pady=(15, 15), sticky="ew")
         button_frame.grid_columnconfigure((0, 1), weight=1)
 
         ok_button = ctk.CTkButton(button_frame, text="Guardar Cambios", command=self._on_ok)
@@ -59,15 +67,17 @@ class TagsConfigDialog(BaseDialog):
 
     def _create_tag_section(self, section_index, prompt, section_id, text_color):
         base_row = section_index * 3
-        # Título más pegado al contenido (pady reducido)
+        # Título más pegado al contenido
         ctk.CTkLabel(self.main_frame, text=prompt, font=("Segoe UI", 12, "bold"), text_color=text_color).grid(
             row=base_row, column=0,
             sticky="w", pady=(10, 2), padx=20)
 
+        # [SOLUCIÓN RECUADRO] Usamos 'inner_area' (surface_alt) para que el fondo sea distinto al de la tarjeta
+        # y 'card_border' para que el contorno se note más.
         scroll_frame = ctk.CTkScrollableFrame(
             self.main_frame,
             label_text="",
-            fg_color=_get_color_tuple("inner_area"),  # Contraste
+            fg_color=_get_color_tuple("inner_area"),
             border_width=1,
             border_color=_get_color_tuple("card_border")
         )
@@ -160,5 +170,5 @@ class TagsConfigDialog(BaseDialog):
     @classmethod
     def get_input(cls, parent, title, folders_prompt, initial_folders, files_prompt, initial_files):
         dialog = cls(parent, title, folders_prompt, initial_folders, files_prompt, initial_files)
-        parent.wait_window(dialog);
+        parent.wait_window(dialog)
         return dialog.result

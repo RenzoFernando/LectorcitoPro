@@ -40,26 +40,19 @@ class LectorcitoApp(ctk.CTk):
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
 
-        # Icono app (compatible con dialogs)
         safe_set_window_icon(self)
 
-        # Assets
         self.icons = load_sidebar_icons()
         self.logo_image = load_logo(target_width=150)
 
-        # UI
         self._is_centered = False
         self.bind("<Configure>", self._on_configure_center)
         self._build_ui()
 
-        # Textos + tema + estado inicial
         self.update_ui_texts()
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
-    # ---------------------------
-    # Arranque / cierre
-    # ---------------------------
     def _on_configure_center(self, event=None):
         if not self._is_centered:
             self._is_centered = True
@@ -84,14 +77,11 @@ class LectorcitoApp(ctk.CTk):
             self.after(15, self._fade_in)
 
     def _close_with_fade_out(self):
-        # Limpieza tooltips (evita after colgando)
         try:
             for tp in self.tooltips.values():
                 tp.cleanup()
         except Exception:
             pass
-
-        # Limpieza panel de estado (evita after colgando)
         try:
             self.status_panel.cleanup()
         except Exception:
@@ -104,53 +94,42 @@ class LectorcitoApp(ctk.CTk):
         else:
             self.destroy()
 
-    # ---------------------------
-    # i18n
-    # ---------------------------
     def _tr(self, key: str, *args):
         entry = self.TRANSLATIONS.get(self.lang, self.TRANSLATIONS["es"]).get(key, f"<{key}>")
         if isinstance(entry, list):
             return random.choice(entry).format(*args)
         return entry.format(*args)
 
-    # ---------------------------
-    # Layout principal
-    # ---------------------------
     def _build_ui(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
+        # Laterales: Subidos un poco con pady=(5, 30)
         left_container = ctk.CTkFrame(self, fg_color="transparent")
-        left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=15)
+        left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(5, 30))
 
         right_container = ctk.CTkFrame(self, fg_color="transparent")
-        right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=15)
+        right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(5, 30))
 
+        # Central: Subimos un poco el contenido para dejar espacio al footer
         center = ctk.CTkFrame(self, fg_color="transparent")
-        center.grid(row=0, column=1, sticky="nsew", pady=(6, 0))
+        center.grid(row=0, column=1, sticky="nsew", pady=(5, 5))
         center.grid_columnconfigure(0, weight=1)
         center.grid_rowconfigure(2, weight=1)
 
-        # Header
         self._create_header(center)
-
-        # Main buttons
         self._create_main_buttons(center)
-
-        # Status panel (reemplaza GIF)
         self._create_status_area(center)
 
-        # Sidebars
         self.left_sidebar = LeftSidebar(left_container, text=f"Lectorcito Pro v{VERSION}")
         self.right_sidebar = RightSidebar(right_container, icons=self.icons, current_theme=self.current_theme)
-        self.sidebar_buttons = self.right_sidebar.buttons  # compat con controller
+        self.sidebar_buttons = self.right_sidebar.buttons
 
-        # Footer
         self._create_footer()
 
     def _create_header(self, parent):
         self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        self.header_frame.grid(row=0, column=0, sticky="ew", pady=(10, 8))
+        self.header_frame.grid(row=0, column=0, sticky="ew", pady=(8, 5))
 
         self.lbl_title = ctk.CTkLabel(self.header_frame, text="", image=self.logo_image)
         self.lbl_title.pack()
@@ -159,28 +138,27 @@ class LectorcitoApp(ctk.CTk):
         self.lbl_greet.pack()
 
     def _create_main_buttons(self, parent):
-        # --- Card / recuadro para encerrar el menú principal ---
         is_light = self.current_theme == "Light"
-
-        # Color suave (tipo tarjeta) + borde sutil
-        menu_bg = "#F2F3F5" if is_light else "#262C33"  # un poquito más claro
-        menu_border = "#D5D9DE" if is_light else "#2B3137"
+        theme_keys = COLORS["light"] if is_light else COLORS["dark"]
 
         self.main_menu_frame = ctk.CTkFrame(
             parent,
-            fg_color=menu_bg,
+            fg_color=theme_keys["surface"],
             corner_radius=16,
             border_width=1,
-            border_color=menu_border
+            border_color=theme_keys["border"]
         )
-        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=5)
+        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=2)
 
-        # Contenedor real de los botones (transparente, dentro del recuadro)
         self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame, fg_color="transparent")
-        self.main_buttons_frame.pack(pady=10, padx=10)
+        self.main_buttons_frame.pack(pady=8, padx=10)
 
-        # MUY IMPORTANTE: para que el antialias del botón se mezcle con el fondo del recuadro (no con el bg global)
-        outside_bg = menu_bg
+        outside_bg = theme_keys["surface"]
+
+        # Configuraciones base de colores de botones (vibrantes)
+        btn_blue = COLORS["button"]["blue"]
+        btn_green = COLORS["button"]["green"]
+        btn_red = COLORS["button"]["red"]
 
         common = {
             "width": BTN_W_MAIN,
@@ -194,38 +172,37 @@ class LectorcitoApp(ctk.CTk):
         self.main_buttons = {
             "selpath": PillTextButton(
                 self.main_buttons_frame,
-                fg_color=COLORS["button"]["blue"], hover_color=COLORS["button_hover"]["blue_h"],
+                fg_color=btn_blue["bg"], hover_color=btn_blue["hover"], border_color=btn_blue["border"],
                 **common
             ),
             "choose": PillTextButton(
                 self.main_buttons_frame,
-                fg_color=COLORS["button"]["blue"], hover_color=COLORS["button_hover"]["blue_h"],
+                fg_color=btn_blue["bg"], hover_color=btn_blue["hover"], border_color=btn_blue["border"],
                 **common
             ),
             "create_tree": PillTextButton(
                 self.main_buttons_frame,
-                fg_color=COLORS["button"]["blue"], hover_color=COLORS["button_hover"]["blue_h"],
+                fg_color=btn_blue["bg"], hover_color=btn_blue["hover"], border_color=btn_blue["border"],
                 **common
             ),
             "openlect": PillTextButton(
                 self.main_buttons_frame,
-                fg_color=COLORS["button"]["blue"], hover_color=COLORS["button_hover"]["blue_h"],
+                fg_color=btn_blue["bg"], hover_color=btn_blue["hover"], border_color=btn_blue["border"],
                 **common
             ),
             "openlast": PillTextButton(
                 self.main_buttons_frame,
-                fg_color=COLORS["button"]["green"], hover_color=COLORS["button_hover"]["green_h"],
+                fg_color=btn_green["bg"], hover_color=btn_green["hover"], border_color=btn_green["border"],
                 **common
             ),
             "delete": PillTextButton(
                 self.main_buttons_frame,
-                fg_color=COLORS["button"]["red"], hover_color=COLORS["button_hover"]["red_h"],
+                fg_color=btn_red["bg"], hover_color=btn_red["hover"], border_color=btn_red["border"],
                 **common
             ),
         }
 
-        # ✅ AQUÍ ajustas el espacio vertical entre botones
-        BTN_SPACING = 1.5  # prueba 1, 2, 0...
+        BTN_SPACING = 1.0
         for btn in self.main_buttons.values():
             btn.pack(pady=BTN_SPACING, anchor="center")
 
@@ -237,23 +214,24 @@ class LectorcitoApp(ctk.CTk):
         self.status_panel = StatusPanel(self.progress_frame, min_visible_seconds=2.0)
         self.status_panel.grid(row=0, column=0, sticky="ew")
 
-        # compat: controller espera self.btn_cancel
         self.btn_cancel = self.status_panel.btn_cancel
 
     def _create_footer(self):
-        self.footer_frame = ctk.CTkFrame(self, height=30, corner_radius=0)
-        self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="sew")
+        self.footer_frame = ctk.CTkFrame(self, height=35, corner_radius=0)
+
+        # [SOLUCIÓN FOOTER] 'pady=(0, 15)' fuerza al footer a subir 15px desde el borde inferior
+        self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="sew", pady=(0, 15))
+
+        self.footer_line = ctk.CTkFrame(self.footer_frame, height=1, corner_radius=0)
+        self.footer_line.pack(side="top", fill="x")
+
         ctk.CTkLabel(
             self.footer_frame,
             text=f"Copyright © {YEAR} - {AUTHOR} - All Rights Reserved.",
             font=("Segoe UI", 9)
         ).place(relx=0.5, rely=0.5, anchor="center")
 
-    # ---------------------------
-    # Textos UI (incluye tooltips)
-    # ---------------------------
     def update_ui_texts(self):
-        # Greeting
         hour = datetime.datetime.now().hour
         greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
         try:
@@ -262,7 +240,6 @@ class LectorcitoApp(ctk.CTk):
             user = "User"
         self.lbl_greet.configure(text=f"{self._tr(greet_key)} {user}{self._tr('welcome')}")
 
-        # Botones main
         key_map = {
             "selpath": "btn_sel_lecturas",
             "choose": "btn_choose_folder",
@@ -275,10 +252,8 @@ class LectorcitoApp(ctk.CTk):
             if key in key_map:
                 btn.configure(text=self._tr(key_map[key]))
 
-        # Panel estado: traductor + refresco texts
         self.status_panel.set_translator(lambda k: self._tr(k))
 
-        # Tooltips
         tooltip_map = {
             "ver": "tooltip_ver",
             "nover": "tooltip_nover",
@@ -288,6 +263,7 @@ class LectorcitoApp(ctk.CTk):
             "github": "tooltip_github",
             "info": "tooltip_info",
         }
+
         for key, btn in self.sidebar_buttons.items():
             if key in tooltip_map:
                 txt = self._tr(tooltip_map[key])
@@ -296,61 +272,60 @@ class LectorcitoApp(ctk.CTk):
                 else:
                     self.tooltips[key] = CustomTooltip(btn, text=txt)
 
-    # ---------------------------
-    # Tema
-    # ---------------------------
     def apply_theme(self):
         is_light = self.current_theme == "Light"
         ctk.set_appearance_mode(self.current_theme)
-        theme = COLORS["light" if is_light else "dark"]
 
-        self.configure(fg_color=theme["bg"])
+        theme_keys = COLORS["light"] if is_light else COLORS["dark"]
 
-        # Sidebars
+        self.configure(fg_color=theme_keys["bg"])
+
         self.left_sidebar.apply_theme(self.current_theme)
         self.right_sidebar.apply_theme(self.current_theme)
-
-        # Status panel
         self.status_panel.apply_theme(self.current_theme)
 
-        # --- NUEVO: colores del recuadro del menú principal ---
-        menu_bg = "#F2F3F5" if is_light else "#262C33"
-        menu_border = "#D5D9DE" if is_light else "#2B3137"
+        # Actualizar recuadro del menú principal
         try:
-            self.main_menu_frame.configure(fg_color=menu_bg, border_color=menu_border)
+            self.main_menu_frame.configure(fg_color=theme_keys["surface"], border_color=theme_keys["border"])
         except Exception:
             pass
 
-        # Main buttons: antialias mezclando con el fondo del recuadro
+        # Actualizar botones principales
         for btn in self.main_buttons.values():
             try:
-                btn.configure(outside_bg=menu_bg)
+                btn.configure(outside_bg=theme_keys["surface"])
             except Exception:
                 pass
 
-    # ---------------------------
-    # API usada por el controller
-    # ---------------------------
+        # FOOTER
+        try:
+            self.footer_frame.configure(fg_color=theme_keys["footer_bg"])
+            self.footer_line.configure(fg_color=theme_keys["separator_line"])
+
+            self.lbl_greet.configure(text_color=theme_keys["text"])
+
+            for widget in self.footer_frame.winfo_children():
+                if isinstance(widget, ctk.CTkLabel):
+                    widget.configure(text_color=theme_keys["text_secondary"])
+        except Exception:
+            pass
+
     def get_min_visible_completion_delay_ms(self) -> int:
         return self.status_panel.get_min_visible_completion_delay_ms()
 
     def set_progress(self, percentage, file_context=None):
         self.status_panel.set_progress(percentage, file_context)
 
-    def toggle_ui_for_processing(self, is_active: bool, mode: str = "determinate", text: str = None, final_status: str = None):
-        # Bloqueo / desbloqueo botones
+    def toggle_ui_for_processing(self, is_active: bool, mode: str = "determinate", text: str = None,
+                                 final_status: str = None):
         state = "disabled" if is_active else "normal"
         for btn in self.main_buttons.values():
             btn.configure(state=state)
         for btn in self.sidebar_buttons.values():
             btn.configure(state=state)
 
-        # Panel
         self.status_panel.set_active(is_active, mode=mode, text=text, final_status=final_status)
 
-    # ---------------------------
-    # Mensajes / info
-    # ---------------------------
     def show_message(self, title_key: str, message_key: str, *args):
         MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
 

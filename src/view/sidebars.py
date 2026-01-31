@@ -2,7 +2,7 @@
 import customtkinter as ctk
 from tkinter import Canvas
 
-from PIL import Image, ImageDraw, ImageTk  # <- antialias real
+from PIL import Image, ImageDraw, ImageTk
 
 from view.ui_constants import COLORS, SIDEBAR_WIDTH, BTN_H_ICON
 
@@ -30,11 +30,11 @@ def _mix(a: str, b: str, t: float) -> str:
     b2 = int(ab + (bb - ab) * t)
     return f"#{r:02X}{g:02X}{b2:02X}"
 
+
 def _auto_border(fill: str) -> str:
-    """Borde sutil automático: si el fill es oscuro -> borde hacia blanco; si es claro -> hacia negro."""
     if _luma(fill) < 140:
-        return _mix(fill, "#FFFFFF", 0.18)
-    return _mix(fill, "#000000", 0.18)
+        return _mix(fill, "#FFFFFF", 0.2)
+    return _mix(fill, "#000000", 0.15)
 
 
 # -------------------------
@@ -48,7 +48,7 @@ class LeftSidebar(ctk.CTkFrame):
         self._text = text
         self._outside_bg = COLORS["light"]["bg"]
         self._pill_bg = COLORS["light"]["left_bar"]
-        self._text_color = COLORS["dark"]["text"]
+        self._text_color = COLORS["light"]["sidebar_text"]  # Texto contrastante
 
         self._border_w = 2
         self._border_color = None
@@ -56,9 +56,7 @@ class LeftSidebar(ctk.CTkFrame):
         self._canvas = Canvas(self, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
         self._canvas.pack(fill="both", expand=True)
 
-        # mantener referencia viva de la imagen
         self._pill_photo = None
-
         self.pack(expand=True, anchor="center")
         self.bind("<Configure>", self._paint, add="+")
 
@@ -71,10 +69,10 @@ class LeftSidebar(ctk.CTkFrame):
         theme = COLORS["light" if is_light else "dark"]
 
         self._outside_bg = theme["bg"]
-        self._pill_bg = theme["left_bar"]
-        self._text_color = COLORS["dark"]["text"] if is_light else COLORS["light"]["text"]
+        self._pill_bg = theme["left_bar"]  # Oscuro en Light, Claro en Dark
+        self._text_color = theme["sidebar_text"]
 
-        # borde sutil automático (más claro si el pill es oscuro, más oscuro si es claro)
+        # Borde sutil automático
         if _luma(self._pill_bg) < 140:
             self._border_color = _mix(self._pill_bg, "#FFFFFF", 0.18)
         else:
@@ -91,8 +89,7 @@ class LeftSidebar(ctk.CTkFrame):
 
         self._canvas.delete("all")
 
-        # --- Antialias: dibuja grande y baja ---
-        scale = 4  # 3 o 4 es ideal
+        scale = 4
         W, H = w * scale, h * scale
 
         outside_rgb = _hex_to_rgb(self._outside_bg)
@@ -106,11 +103,8 @@ class LeftSidebar(ctk.CTkFrame):
         x1, y1 = pad, pad
         x2, y2 = W - pad, H - pad
 
-        # Radio perfectamente simétrico: mitad del ancho usable
         usable_w = max(10 * scale, (x2 - x1))
         radius = usable_w // 2
-
-        # ancho de borde escalado (evita bordes “chuecos” al reducir)
         bw = max(1, int(self._border_w * scale))
 
         draw.rounded_rectangle(
@@ -121,13 +115,10 @@ class LeftSidebar(ctk.CTkFrame):
             width=bw
         )
 
-        # downsample con LANCZOS para suavidad
         img_small = img.resize((w, h), Image.LANCZOS)
         self._pill_photo = ImageTk.PhotoImage(img_small)
-
         self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
 
-        # Texto centrado (sobre la imagen)
         self._canvas.create_text(
             w / 2, h / 2,
             text=self._text,
@@ -138,26 +129,22 @@ class LeftSidebar(ctk.CTkFrame):
 
 
 # -------------------------
-# Pill Icon Button (píldora suave para íconos)
+# Pill Icon Button
 # -------------------------
 class PillIconButton(ctk.CTkFrame):
-    """
-    Botón tipo “píldora” con bordes realmente suavizados (PIL + downsample),
-    pensado para los íconos del sidebar derecho.
-    """
-
     def __init__(
-        self,
-        parent,
-        *,
-        image=None,
-        width: int = SIDEBAR_WIDTH,
-        height: int = BTN_H_ICON,
-        outside_bg: str = COLORS["light"]["bg"],
-        fg_color: str = COLORS["dark"]["bg"],
-        hover_color: str = COLORS["sidebar_hover"]["light"],
-        border_width: int = 2,
-        command=None
+            self,
+            parent,
+            *,
+            image=None,
+            width: int = SIDEBAR_WIDTH,
+            height: int = BTN_H_ICON,
+            outside_bg: str = COLORS["light"]["bg"],
+            fg_color: str = COLORS["light"]["left_bar"],  # Default al contraste
+            hover_color: str = COLORS["sidebar_hover"]["light"],
+            border_color: str = None,
+            border_width: int = 2,
+            command=None
     ):
         super().__init__(parent, width=width, height=height, fg_color="transparent")
         self.pack_propagate(False)
@@ -169,47 +156,39 @@ class PillIconButton(ctk.CTkFrame):
 
         self._hovered = False
         self._state = "normal"
-
-        self._border_color = _auto_border(self._fg_color)
+        self._explicit_border = border_color
+        self._border_color = border_color if border_color else _auto_border(self._fg_color)
         self._hover_border_color = _auto_border(self._hover_color)
 
-        # Canvas con el pill (fondo)
         self._canvas = Canvas(self, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
         self._canvas.pack(fill="both", expand=True)
 
-        self._pill_photo = None  # mantener referencia viva
-        self._icon_photo = None  # mantener referencia viva del ícono (fallback)
-        self._paint_job = None  # debounce para evitar loops
-
-        # Estado, comando e ícono (compat con .configure(...) del controller)
+        self._pill_photo = None
+        self._icon_photo = None
+        self._paint_job = None
         self._command = command
         self._image = image
 
-        # cursor y bindings (hover/click)
         try:
             self._canvas.configure(cursor="hand2")
         except Exception:
             pass
 
-        # Hover / click events (sin duplicar binds)
         super().bind("<Enter>", self._on_enter, add="+")
         super().bind("<Leave>", self._on_leave, add="+")
-        super().bind("<Button-1>", self._on_click, add="+")  # click en el frame (bordes)
+        super().bind("<Button-1>", self._on_click, add="+")
 
         self._canvas.bind("<Enter>", self._on_enter, add="+")
         self._canvas.bind("<Leave>", self._on_leave, add="+")
-        self._canvas.bind("<Button-1>", self._on_click, add="+")  # click en el canvas (área principal)
+        self._canvas.bind("<Button-1>", self._on_click, add="+")
 
         self.bind("<Configure>", self._on_configure, add="+")
         self._schedule_paint()
 
-    # --- API “tipo CTkButton” ---
-    def configure(self, cnf=None, **kwargs):  # compatible con tkinter
-        # algunos usos estilo tkinter pasan un dict en `cnf`
+    def configure(self, cnf=None, **kwargs):
         if cnf and isinstance(cnf, dict):
             kwargs = {**cnf, **kwargs}
 
-        # colores propios del pill
         if "outside_bg" in kwargs:
             self._outside_bg = kwargs.pop("outside_bg")
             try:
@@ -219,13 +198,17 @@ class PillIconButton(ctk.CTkFrame):
 
         if "fg_color" in kwargs:
             self._fg_color = kwargs.pop("fg_color")
-            self._border_color = _auto_border(self._fg_color)
+            if not self._explicit_border:
+                self._border_color = _auto_border(self._fg_color)
+
+        if "border_color" in kwargs:
+            self._explicit_border = kwargs.pop("border_color")
+            self._border_color = self._explicit_border
 
         if "hover_color" in kwargs:
             self._hover_color = kwargs.pop("hover_color")
             self._hover_border_color = _auto_border(self._hover_color)
 
-        # state / command / image (compat con CTkButton)
         if "state" in kwargs:
             self._state = kwargs.pop("state")
 
@@ -237,7 +220,7 @@ class PillIconButton(ctk.CTkFrame):
 
         self._schedule_paint()
 
-    config = configure  # alias común en tkinter
+    config = configure
 
     def cget(self, key):
         if key in ("outside_bg", "fg_color", "hover_color"):
@@ -251,8 +234,6 @@ class PillIconButton(ctk.CTkFrame):
         return super().cget(key)
 
     def bind(self, sequence=None, func=None, add=None):
-        # Bind al frame + canvas, para que tooltips funcionen bien.
-        # CustomTkinter requiere add="+" (o True) para no pisar callbacks internos.
         if add is None:
             add = "+"
         r = super().bind(sequence, func, add)
@@ -269,7 +250,6 @@ class PillIconButton(ctk.CTkFrame):
             return self._command()
         return None
 
-    # --- Hover + click ---
     def _on_enter(self, event=None):
         if self._state == "disabled":
             return
@@ -285,64 +265,48 @@ class PillIconButton(ctk.CTkFrame):
     def _on_click(self, event=None):
         if self._state == "disabled":
             return "break"
-
         if getattr(self, "_click_lock", False):
             return "break"
-
         self._click_lock = True
         try:
             self.after(220, lambda: setattr(self, "_click_lock", False))
         except Exception:
             self._click_lock = False
-
         if callable(self._command):
             self._command()
-
         return "break"
 
     def _pick_icon_pil(self):
-        """Convierte un CTkImage (o PIL.Image) a PIL.Image correcto para el modo actual."""
         img = self._image
         if img is None:
             return None
-
-        # Si ya es PIL Image
         try:
             if isinstance(img, Image.Image):
                 return img
         except Exception:
             pass
-
-        # CTkImage suele exponer _light_image/_dark_image y _size (depende de versión)
         try:
             mode = ctk.get_appearance_mode()
         except Exception:
             mode = "Light"
-
         pil = None
         if mode == "Dark":
             for a in ("_dark_image", "dark_image"):
                 if hasattr(img, a):
                     pil = getattr(img, a)
                     break
-
         if pil is None:
             for a in ("_light_image", "light_image"):
                 if hasattr(img, a):
                     pil = getattr(img, a)
                     break
-
         if pil is None:
-            # fallback: algunas versiones guardan una sola PIL
             for a in ("_pil_image", "_image", "image"):
                 if hasattr(img, a):
                     pil = getattr(img, a)
                     break
-
         if pil is None:
             return None
-
-        # Ajustar tamaño si CTkImage lo define
         size = None
         for a in ("_size", "size"):
             if hasattr(img, a):
@@ -356,15 +320,12 @@ class PillIconButton(ctk.CTkFrame):
                     pil = pil.resize(target, resample)
             except Exception:
                 pass
-
         return pil
-
 
     def _on_configure(self, event=None):
         self._schedule_paint()
 
     def _schedule_paint(self):
-        # Evita loops / repintados infinitos: solo agenda 1 repintado a la vez
         if self._paint_job is not None:
             return
         try:
@@ -377,7 +338,6 @@ class PillIconButton(ctk.CTkFrame):
         w = max(1, int(self._canvas.winfo_width()))
         h = max(1, int(self._canvas.winfo_height()))
         if w <= 2 or h <= 2:
-
             return
 
         self._canvas.delete("all")
@@ -388,7 +348,6 @@ class PillIconButton(ctk.CTkFrame):
         fill = self._hover_color if (self._hovered and self._state != "disabled") else self._fg_color
         border = self._hover_border_color if (self._hovered and self._state != "disabled") else self._border_color
 
-        # si está disabled, “apaga” un poco el fill mezclándolo con el fondo
         if self._state == "disabled":
             fill = _mix(fill, self._outside_bg, 0.35)
             border = _mix(border, self._outside_bg, 0.35)
@@ -406,7 +365,7 @@ class PillIconButton(ctk.CTkFrame):
 
         usable_w = max(10 * scale, (x2 - x1))
         usable_h = max(10 * scale, (y2 - y1))
-        radius = min(usable_w, usable_h) // 2  # “píldora” real
+        radius = min(usable_w, usable_h) // 2
         bw = max(1, int(self._border_w * scale))
 
         draw.rounded_rectangle(
@@ -417,16 +376,44 @@ class PillIconButton(ctk.CTkFrame):
             width=bw
         )
 
-        # Ícono centrado
         pil_icon = self._pick_icon_pil()
         if pil_icon is not None:
             try:
                 icon = pil_icon.convert("RGBA")
 
-                # tamaño objetivo: ~55% del alto
+                # INVERSION INTELIGENTE DE COLOR DE ICONO
+                # Si el botón es oscuro (modo light), invertimos el icono para que se vea blanco
+                # Si el botón es claro (modo dark), dejamos el icono oscuro (o lo oscurecemos)
+
+                # Detectamos si el fondo del botón es oscuro
+                fill_lum = _luma(fill)
+
+                # Si el fondo es oscuro, queremos iconos claros
+                need_light_icon = (fill_lum < 140)
+
+                # Obtenemos canal alpha
+                r, g, b, a = icon.split()
+
+                # Coloreamos el icono según necesidad
+                if need_light_icon:
+                    # Pintar de blanco
+                    icon = Image.merge("RGBA", (
+                        a.point(lambda _: 255),  # R
+                        a.point(lambda _: 255),  # G
+                        a.point(lambda _: 255),  # B
+                        a
+                    ))
+                else:
+                    # Pintar de casi negro (para botones claros en modo oscuro)
+                    icon = Image.merge("RGBA", (
+                        a.point(lambda _: 30),
+                        a.point(lambda _: 30),
+                        a.point(lambda _: 30),
+                        a
+                    ))
+
                 target_px = max(14, int(min(w, h) * 0.55))
                 max_side = target_px * scale
-
                 iw, ih = icon.size
                 if iw > 0 and ih > 0:
                     ratio = min(max_side / iw, max_side / ih)
@@ -436,7 +423,6 @@ class PillIconButton(ctk.CTkFrame):
                     icon = icon.resize((new_w, new_h), resample)
 
                     if self._state == "disabled":
-                        # baja un poco la opacidad
                         alpha = icon.split()[-1].point(lambda a: int(a * 0.45))
                         icon.putalpha(alpha)
 
@@ -446,66 +432,31 @@ class PillIconButton(ctk.CTkFrame):
             except Exception:
                 pass
 
-        # downsample con LANCZOS para suavidad
         img_small = img.resize((w, h), Image.LANCZOS)
         self._pill_photo = ImageTk.PhotoImage(img_small)
         self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
 
 
-        if pil_icon is None and self._image is not None:
-            try:
-                img_obj = self._image
-                tk_icon = None
-
-                if hasattr(img_obj, "create_scaled_photo_image"):
-                    try:
-                        mode = ctk.get_appearance_mode()
-                    except Exception:
-                        mode = "Light"
-                    try:
-                        scaling = ctk.get_widget_scaling()
-                    except Exception:
-                        scaling = 1
-                    try:
-                        tk_icon = img_obj.create_scaled_photo_image(scaling, mode)
-                    except TypeError:
-                        # algunas versiones usan keywords diferentes
-                        tk_icon = img_obj.create_scaled_photo_image(widget_scaling=scaling, appearance_mode=mode)
-
-                # Si ya es un PhotoImage (o compatible) úsalo tal cual
-                if tk_icon is None:
-                    tk_icon = img_obj
-
-                # Dibujar centrado (si Tk acepta la imagen)
-                self._icon_photo = tk_icon
-                self._canvas.create_image(w // 2, h // 2, image=self._icon_photo)
-            except Exception:
-                pass
-
 # -------------------------
-# Pill Text Button (píldora suave para texto)
+# Pill Text Button (Sin cambios lógicos, solo se mantiene igual)
 # -------------------------
 class PillTextButton(ctk.CTkFrame):
-    """
-    Botón tipo “píldora” con bordes realmente suavizados (PIL + downsample),
-    pensado para los 6 botones principales (texto).
-    API compatible con CTkButton: configure(text=..., command=..., state=..., fg_color=..., hover_color=..., outside_bg=...)
-    """
 
     def __init__(
-        self,
-        parent,
-        *,
-        text: str = "",
-        width: int = 300,
-        height: int = 32,
-        outside_bg: str = COLORS["light"]["bg"],
-        fg_color: str = COLORS["button"]["blue"],
-        hover_color: str = COLORS["button_hover"]["blue_h"],
-        border_width: int = 2,
-        text_color: str = "#FFFFFF",
-        font=("Segoe UI", 11, "bold"),
-        command=None
+            self,
+            parent,
+            *,
+            text: str = "",
+            width: int = 300,
+            height: int = 32,
+            outside_bg: str = COLORS["light"]["bg"],
+            fg_color: str = COLORS["button"]["blue"]["bg"],
+            hover_color: str = COLORS["button"]["blue"]["hover"],
+            border_color: str = None,
+            border_width: int = 2,
+            text_color: str = "#FFFFFF",
+            font=("Segoe UI", 11, "bold"),
+            command=None
     ):
         super().__init__(parent, width=width, height=height, fg_color="transparent")
         self.pack_propagate(False)
@@ -518,42 +469,39 @@ class PillTextButton(ctk.CTkFrame):
         self._text = text or ""
         self._text_color = text_color
         self._font = font
-
         self._hovered = False
         self._state = "normal"
         self._command = command
 
-        self._border_color = _auto_border(self._fg_color)
+        self._explicit_border = border_color
+        self._border_color = border_color if border_color else _auto_border(self._fg_color)
         self._hover_border_color = _auto_border(self._hover_color)
 
         self._canvas = Canvas(self, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
         self._canvas.pack(fill="both", expand=True)
 
-        self._pill_photo = None  # mantener referencia viva
-        self._paint_job = None   # debounce
+        self._pill_photo = None
+        self._paint_job = None
 
         try:
             self._canvas.configure(cursor="hand2")
         except Exception:
             pass
 
-        # (opcional pero recomendado)
         self._click_lock = False
 
-        # Hover / click events (sin duplicar binds)
         super().bind("<Enter>", self._on_enter, add="+")
         super().bind("<Leave>", self._on_leave, add="+")
-        super().bind("<Button-1>", self._on_click, add="+")  # click en bordes del frame
+        super().bind("<Button-1>", self._on_click, add="+")
 
         self._canvas.bind("<Enter>", self._on_enter, add="+")
         self._canvas.bind("<Leave>", self._on_leave, add="+")
-        self._canvas.bind("<Button-1>", self._on_click, add="+")  # click en el área principal
+        self._canvas.bind("<Button-1>", self._on_click, add="+")
 
         self.bind("<Configure>", self._on_configure, add="+")
         self._schedule_paint()
 
-    # --- API “tipo CTkButton” ---
-    def configure(self, cnf=None, **kwargs):  # compatible con tkinter
+    def configure(self, cnf=None, **kwargs):
         if cnf and isinstance(cnf, dict):
             kwargs = {**cnf, **kwargs}
 
@@ -566,7 +514,12 @@ class PillTextButton(ctk.CTkFrame):
 
         if "fg_color" in kwargs:
             self._fg_color = kwargs.pop("fg_color")
-            self._border_color = _auto_border(self._fg_color)
+            if not self._explicit_border:
+                self._border_color = _auto_border(self._fg_color)
+
+        if "border_color" in kwargs:
+            self._explicit_border = kwargs.pop("border_color")
+            self._border_color = self._explicit_border
 
         if "hover_color" in kwargs:
             self._hover_color = kwargs.pop("hover_color")
@@ -592,7 +545,7 @@ class PillTextButton(ctk.CTkFrame):
 
         self._schedule_paint()
 
-    config = configure  # alias común en tkinter
+    config = configure
 
     def cget(self, key):
         if key in ("outside_bg", "fg_color", "hover_color", "text", "text_color", "font", "state", "command"):
@@ -625,7 +578,6 @@ class PillTextButton(ctk.CTkFrame):
             return self._command()
         return None
 
-    # --- Hover + click ---
     def _on_enter(self, event=None):
         if self._state == "disabled":
             return
@@ -641,19 +593,15 @@ class PillTextButton(ctk.CTkFrame):
     def _on_click(self, event=None):
         if self._state == "disabled":
             return "break"
-
         if getattr(self, "_click_lock", False):
             return "break"
-
         self._click_lock = True
         try:
             self.after(220, lambda: setattr(self, "_click_lock", False))
         except Exception:
             self._click_lock = False
-
         if callable(self._command):
             self._command()
-
         return "break"
 
     def _on_configure(self, event=None):
@@ -704,7 +652,7 @@ class PillTextButton(ctk.CTkFrame):
 
         usable_w = max(10 * scale, (x2 - x1))
         usable_h = max(10 * scale, (y2 - y1))
-        radius = min(usable_w, usable_h) // 2  # píldora real
+        radius = min(usable_w, usable_h) // 2
         bw = max(1, int(self._border_w * scale))
 
         draw.rounded_rectangle(
@@ -729,8 +677,9 @@ class PillTextButton(ctk.CTkFrame):
             justify="center"
         )
 
+
 # -------------------------
-# Right Sidebar (píldoras suaves)
+# Right Sidebar
 # -------------------------
 class RightSidebar(ctk.CTkFrame):
     def __init__(self, parent, icons: dict, current_theme: str):
@@ -757,11 +706,15 @@ class RightSidebar(ctk.CTkFrame):
         else:
             img = self.icons.get(key)
 
-        # - tema claro: botones oscuros
-        # - tema oscuro: botones claros
-        fg_color = COLORS["dark"]["bg"] if is_light else COLORS["light"]["bg"]
+        # ARREGLADO: Usamos 'left_bar' para asegurar que coincida con el lateral izquierdo
+        # En modo claro, 'left_bar' es oscuro -> Botones derechos oscuros
+        # En modo oscuro, 'left_bar' es claro -> Botones derechos claros
+
+        theme_keys = COLORS["light"] if is_light else COLORS["dark"]
+
+        fg_color = theme_keys["left_bar"]
         hover_color = COLORS["sidebar_hover"]["light"] if is_light else COLORS["sidebar_hover"]["dark"]
-        outside_bg = COLORS["light"]["bg"] if is_light else COLORS["dark"]["bg"]
+        outside_bg = theme_keys["bg"]
 
         return PillIconButton(
             self._button_container,
@@ -776,17 +729,18 @@ class RightSidebar(ctk.CTkFrame):
 
     def apply_theme(self, theme_name: str):
         is_light = theme_name == "Light"
-        bg = COLORS["light"]["bg"] if is_light else COLORS["dark"]["bg"]
+        theme_keys = COLORS["light"] if is_light else COLORS["dark"]
+
+        bg = theme_keys["bg"]
         try:
             self.configure(fg_color=bg)
             self._button_container.configure(fg_color=bg)
         except Exception:
             pass
 
-
-        fg_color = COLORS["dark"]["bg"] if is_light else COLORS["light"]["bg"]
+        fg_color = theme_keys["left_bar"]
         hover_color = COLORS["sidebar_hover"]["light"] if is_light else COLORS["sidebar_hover"]["dark"]
-        outside_bg = COLORS["light"]["bg"] if is_light else COLORS["dark"]["bg"]
+        outside_bg = bg
 
         for key, btn in self.buttons.items():
             if key == "theme_icon":
