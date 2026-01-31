@@ -2,13 +2,14 @@ import sys
 import customtkinter as ctk
 from tkinter import TclError
 
+TOOLTIP_AUTOHIDE_SECONDS = 2.5
+
 
 def _is_windows() -> bool:
     return sys.platform.startswith("win")
 
 
 def _get_monitor_workarea_for_point(x: int, y: int, widget):
-
     if _is_windows():
         try:
             import ctypes
@@ -337,7 +338,6 @@ class _SharedTooltipWindow:
 
 
 class CustomTooltip:
-
     _active_tooltip = None  # solo 1 tooltip visible a la vez
 
     def __init__(self, widget, text: str, delay: int = 500, placement: str = "auto", gap: int = 10):
@@ -349,6 +349,8 @@ class CustomTooltip:
         self.gap = int(gap)
 
         self._after_id = None
+        self._auto_hide_id = None
+        self._auto_hide_master = None
         self._destroyed = False
 
         try:
@@ -371,6 +373,7 @@ class CustomTooltip:
             win = self._get_shared_window()
             if win and win.is_visible():
                 win.show(self.widget, self._text, placement=self.placement, gap=self.gap)
+                self._schedule_auto_hide()
 
     def _on_enter(self, event=None):
         if self._destroyed:
@@ -408,9 +411,12 @@ class CustomTooltip:
         if not win:
             return
         win.show(self.widget, self._text, placement=self.placement, gap=self.gap)
+        self._schedule_auto_hide()
 
     def hide_tooltip(self):
         self._cancel_scheduled_show()
+
+        self._cancel_scheduled_auto_hide()
 
         if CustomTooltip._active_tooltip is self:
             win = self._get_shared_window()
@@ -433,14 +439,86 @@ class CustomTooltip:
                 pass
         self._after_id = None
 
-    def _get_shared_window(self):
-        if not self._safe_widget():
-            return None
+    def _schedule_auto_hide(self):
+        # Si el tiempo es <= 0, se desactiva el auto-ocultado.
         try:
-            root_window = self.widget.winfo_toplevel()
+            seconds = float(TOOLTIP_AUTOHIDE_SECONDS)
+        except Exception:
+            seconds = 5.0
+
+        if seconds <= 0:
+            return
+
+        self._cancel_scheduled_auto_hide()
+
+        if self._destroyed:
+            return
+
+        try:
+            ms = max(1, int(seconds * 1000))
+
+            # Programar el after en el toplevel (no en el widget).
+            # Así, si el widget se destruye mientras el tooltip está visible, el auto-hide NO se pierde.
+            master = None
+            try:
+                if self._safe_widget():
+                    master = self.widget.winfo_toplevel()
+            except Exception:
+                master = None
+
+            if master is None:
+                master = self.widget  # fallback
+
+            self._auto_hide_master = master
+            self._auto_hide_id = master.after(ms, self._on_auto_hide)
+
+        except Exception:
+            self._auto_hide_id = None
+            self._auto_hide_master = None
+
+    def _cancel_scheduled_auto_hide(self):
+        if not self._auto_hide_id:
+            self._auto_hide_id = None
+            self._auto_hide_master = None
+            return
+
+        master = getattr(self, "_auto_hide_master", None) or self.widget
+        try:
+            master.after_cancel(self._auto_hide_id)
+        except (TclError, Exception):
+            pass
+
+        self._auto_hide_id = None
+        self._auto_hide_master = None
+
+    def _get_shared_window(self):
+        # Intentar por el widget; si ya no existe, usar el master del auto-hide (toplevel).
+        root_window = None
+
+        if self._safe_widget():
+            try:
+                root_window = self.widget.winfo_toplevel()
+            except Exception:
+                root_window = None
+
+        if root_window is None:
+            root_window = getattr(self, "_auto_hide_master", None)
+
+        if not root_window:
+            return None
+
+        try:
+            return _SharedTooltipWindow.get(root_window)
         except Exception:
             return None
-        return _SharedTooltipWindow.get(root_window)
+
+    def _on_auto_hide(self):
+        # Se ejecuta cuando se cumple el tiempo máximo visible.
+        self._auto_hide_id = None
+
+        # Solo ocultamos si ESTE tooltip sigue siendo el activo.
+        if CustomTooltip._active_tooltip is self:
+            self.hide_tooltip()
 
     def _safe_widget(self) -> bool:
         try:
@@ -459,3 +537,4 @@ class CustomTooltip:
             return x0 <= px <= x1 and y0 <= py <= y1
         except Exception:
             return False
+
