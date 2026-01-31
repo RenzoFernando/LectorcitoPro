@@ -111,7 +111,7 @@ class LectorcitoApp(ctk.CTk):
         right_container = ctk.CTkFrame(self, fg_color="transparent")
         right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(5, 30))
 
-        # Central: Subimos un poco el contenido para dejar espacio al footer
+        # Central
         center = ctk.CTkFrame(self, fg_color="transparent")
         center.grid(row=0, column=1, sticky="nsew", pady=(5, 5))
         center.grid_columnconfigure(0, weight=1)
@@ -129,7 +129,10 @@ class LectorcitoApp(ctk.CTk):
 
     def _create_header(self, parent):
         self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        self.header_frame.grid(row=0, column=0, sticky="ew", pady=(8, 5))
+        # MODIFICADO: pady=(35, 2)
+        # 35 arriba: Baja el título/saludo considerablemente.
+        # 2 abajo: Reduce el espacio con el menú para que este pueda subir.
+        self.header_frame.grid(row=0, column=0, sticky="ew", pady=(15, 20))
 
         self.lbl_title = ctk.CTkLabel(self.header_frame, text="", image=self.logo_image)
         self.lbl_title.pack()
@@ -148,7 +151,8 @@ class LectorcitoApp(ctk.CTk):
             border_width=1,
             border_color=theme_keys["border"]
         )
-        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=2)
+
+        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=(0, 5))
 
         self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame, fg_color="transparent")
         self.main_buttons_frame.pack(pady=8, padx=10)
@@ -208,7 +212,9 @@ class LectorcitoApp(ctk.CTk):
 
     def _create_status_area(self, parent):
         self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=(4, 2))
+        # MODIFICADO: pady=(0, 5)
+        # 0 arriba: "Sube" el módulo de carga pegándolo más al menú.
+        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=(5, 5))
         self.progress_frame.grid_columnconfigure(0, weight=1)
 
         self.status_panel = StatusPanel(self.progress_frame, min_visible_seconds=2.0)
@@ -218,9 +224,11 @@ class LectorcitoApp(ctk.CTk):
 
     def _create_footer(self):
         self.footer_frame = ctk.CTkFrame(self, height=35, corner_radius=0)
+        self.footer_frame.pack_propagate(False)
 
-        # [SOLUCIÓN FOOTER] 'pady=(0, 15)' fuerza al footer a subir 15px desde el borde inferior
-        self.footer_frame.grid(row=1, column=0, columnspan=3, sticky="sew", pady=(0, 15))
+        # Footer anclado abajo
+        self.footer_frame.place(relx=0.0, rely=1.0, anchor="sw", relwidth=1.0)
+        self.footer_frame.lift()
 
         self.footer_line = ctk.CTkFrame(self.footer_frame, height=1, corner_radius=0)
         self.footer_line.pack(side="top", fill="x")
