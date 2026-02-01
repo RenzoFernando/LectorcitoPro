@@ -218,7 +218,7 @@ class LectorcitoApp(ctk.CTk):
         self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=(5, 5))
         self.progress_frame.grid_columnconfigure(0, weight=1)
 
-        self.status_panel = StatusPanel(self.progress_frame, min_visible_seconds=2.0)
+        self.status_panel = StatusPanel(self.progress_frame, min_visible_seconds=1)
         self.status_panel.grid(row=0, column=0, sticky="ew")
 
         self.btn_cancel = self.status_panel.btn_cancel
