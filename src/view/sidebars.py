@@ -1,4 +1,3 @@
-# src/view/sidebars.py
 import customtkinter as ctk
 from tkinter import Canvas
 
@@ -6,10 +5,10 @@ from PIL import Image, ImageDraw, ImageTk
 
 from view.ui_constants import COLORS, SIDEBAR_WIDTH, BTN_H_ICON
 
+    # -------------------------
+    # Helpers de color
+    # -------------------------
 
-# -------------------------
-# Helpers de color
-# -------------------------
 def _hex_to_rgb(h: str):
     h = (h or "").strip().lstrip("#")
     if len(h) != 6:
@@ -50,6 +49,9 @@ class LeftSidebar(ctk.CTkFrame):
         self._pill_bg = COLORS["light"]["left_bar"]
         self._text_color = COLORS["light"]["sidebar_text"]  # Texto contrastante
 
+        # Estado para controlar si está habilitado o deshabilitado (gris)
+        self._state = "normal"
+
         self._border_w = 2
         self._border_color = None
 
@@ -59,6 +61,17 @@ class LeftSidebar(ctk.CTkFrame):
         self._pill_photo = None
         self.pack(expand=True, anchor="center")
         self.bind("<Configure>", self._paint, add="+")
+
+    def configure(self, cnf=None, **kwargs):
+        """Permite configurar el estado (state='disabled' | 'normal')."""
+        if cnf:
+            kwargs.update(cnf)
+
+        if "state" in kwargs:
+            self._state = kwargs.pop("state")
+            self._paint()  # Redibujar inmediatamente al cambiar estado
+
+        super().configure(**kwargs)
 
     def set_text(self, text: str):
         self._text = text
@@ -93,8 +106,21 @@ class LeftSidebar(ctk.CTkFrame):
         W, H = w * scale, h * scale
 
         outside_rgb = _hex_to_rgb(self._outside_bg)
-        pill_rgb = _hex_to_rgb(self._pill_bg)
-        border_rgb = _hex_to_rgb(self._border_color) if self._border_color else None
+
+        # --- Lógica de Colores (Normal vs Disabled) ---
+        pill_fill = self._pill_bg
+        text_fill = self._text_color
+        border_fill = self._border_color
+
+        if self._state == "disabled":
+            # Mezclamos con el fondo para dar efecto "gris" o desactivado
+            pill_fill = _mix(pill_fill, self._outside_bg, 0.35)
+            text_fill = _mix(text_fill, self._outside_bg, 0.55)
+            if border_fill:
+                border_fill = _mix(border_fill, self._outside_bg, 0.35)
+
+        pill_rgb = _hex_to_rgb(pill_fill)
+        border_rgb = _hex_to_rgb(border_fill) if border_fill else None
 
         img = Image.new("RGBA", (W, H), outside_rgb)
         draw = ImageDraw.Draw(img)
@@ -124,7 +150,7 @@ class LeftSidebar(ctk.CTkFrame):
             text=self._text,
             angle=90,
             font=("Segoe UI", 10, "bold"),
-            fill=self._text_color
+            fill=text_fill
         )
 
 

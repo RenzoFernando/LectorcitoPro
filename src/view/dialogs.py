@@ -1,4 +1,3 @@
-# src/view/dialogs.py
 import customtkinter as ctk
 import os
 from tkinter import filedialog
@@ -8,8 +7,8 @@ from view.ui_constants import COLORS
 
 MESSAGE_AUTO_CLOSE_SECONDS = 5
 
-
 # --- Helpers de estilo ---
+
 def _get_color_tuple(key: str) -> tuple[str, str]:
     """Obtiene una tupla (color_claro, color_oscuro) desde COLORS."""
     # Mapeo de compatibilidad por si usamos claves viejas
@@ -43,14 +42,22 @@ def _style_button(btn: ctk.CTkButton, color_type="blue"):
     )
 
 
-# Clase base para todos los diálogos con animaciones de entrada y salida.
+# Clase base para todos los diálogos.
+# MODIFICADO: Ventanas independientes y centradas estrictamente en la App.
 class BaseDialog(ctk.CTkToplevel):
 
     def __init__(self, parent, title: str):
         CustomTooltip.hide_global()
 
         super().__init__(parent)
-        self.transient(parent)
+        self.parent = parent
+
+        # 1. Bloqueo visual de la ventana principal (Efecto Gris)
+        if hasattr(parent, "dim_ui_for_modal"):
+            parent.dim_ui_for_modal()
+
+        # 2. INDEPENDENCIA TOTAL: Sin transient para manejo libre de ventanas.
+
         self.title(title)
         self.resizable(False, False)
         self.attributes("-alpha", 0.0)
@@ -67,20 +74,15 @@ class BaseDialog(ctk.CTkToplevel):
             self.bind("<Escape>", self._on_escape_key, add="+")
 
         self.bind("<Map>", self._install_escape_bindtags, add="+")
+
+        # --- CORRECCIÓN DE POSICIONAMIENTO AL RESTAURAR ---
+        # Detectamos cuando la ventana se muestra (Map) para forzar el centrado en la APP
+        self.bind("<Map>", self._on_map_event, add="+")
+
         self.after(120, self._install_escape_bindtags)
         self.after(350, self._install_escape_bindtags)
 
-        # --- CORRECCIÓN DE RESTAURACIÓN (Win+D / Minimizar) ---
-        # Vinculamos eventos de la ventana principal (padre) para que, al restaurarse
-        # o ganar foco, traiga automáticamente esta sub-ventana al frente.
-        try:
-            if self.master:
-                self.master.bind("<Map>", self._on_parent_map_restore, add="+")
-                self.master.bind("<FocusIn>", self._on_parent_focus_restore, add="+")
-        except Exception:
-            pass
-        # --------------------------------------------------------
-
+        # Asignamos el icono explícitamente
         def _set_icon():
             try:
                 if hasattr(parent, '_icon_path') and parent._icon_path and os.path.exists(parent._icon_path):
@@ -94,28 +96,8 @@ class BaseDialog(ctk.CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
         self.after(100, self._center_and_fade_in)
 
-    # --- NUEVOS MÉTODOS DE RESTAURACIÓN ---
-    def _on_parent_map_restore(self, event=None):
-        """Se ejecuta cuando la ventana principal se restaura (se 'mapea' en pantalla)."""
-        if not self.winfo_exists(): return
-        try:
-            self.deiconify() # Asegura que no esté minimizada
-            self.lift()      # La pone encima de la principal
-        except Exception:
-            pass
-
-    def _on_parent_focus_restore(self, event=None):
-        """Se ejecuta cuando la ventana principal gana el foco."""
-        if not self.winfo_exists(): return
-        try:
-            self.lift()      # La pone encima
-        except Exception:
-            pass
-    # --------------------------------------
-
     def _create_card_frame(self) -> ctk.CTkFrame:
         # Usa 'card' que _get_color_tuple mapea a 'surface'
-
         card = ctk.CTkFrame(
             self,
             fg_color=_get_color_tuple("card"),
@@ -154,6 +136,12 @@ class BaseDialog(ctk.CTkToplevel):
 
         apply_tag(self)
 
+    # Evento al mostrar/restaurar ventana
+    def _on_map_event(self, event=None):
+        # Cuando la ventana se "mapea" (aparece o se restaura), forzamos el centrado
+        # con un pequeño delay para asegurar que las geometrías estén listas.
+        self.after(10, self._center_window)
+
     def _center_and_fade_in(self):
         try:
             self.grab_set()
@@ -171,12 +159,14 @@ class BaseDialog(ctk.CTkToplevel):
                     except Exception:
                         pass
                     try:
-                        self.focus_force(); self.focus_set()
+                        self.focus_force();
+                        self.focus_set()
                     except Exception:
                         pass
+                    # Topmost momentáneo
                     try:
                         self.attributes("-topmost", True)
-                        self.after(10, lambda: self.winfo_exists() and self.attributes("-topmost", False))
+                        self.after(50, lambda: self.winfo_exists() and self.attributes("-topmost", False))
                     except Exception:
                         pass
                 except Exception:
@@ -190,15 +180,37 @@ class BaseDialog(ctk.CTkToplevel):
             pass
 
     def _center_window(self):
+        """Centra la ventana estrictamente sobre la ventana principal (parent)."""
         self.update_idletasks()
-        parent_x = self.master.winfo_x()
-        parent_y = self.master.winfo_y()
-        parent_width = self.master.winfo_width()
-        parent_height = self.master.winfo_height()
-        dx, dy = self.winfo_width(), self.winfo_height()
-        x = parent_x + (parent_width - dx) // 2
-        y = parent_y + (parent_height - dy) // 2
-        self.geometry(f"+{x}+{y}")
+        try:
+            if not self.master or not self.master.winfo_exists():
+                return
+
+            # Obtener geometría de la ventana principal (APP)
+            parent_x = self.master.winfo_x()
+            parent_y = self.master.winfo_y()
+            parent_w = self.master.winfo_width()
+            parent_h = self.master.winfo_height()
+
+            # Geometría de esta ventana (Subventana)
+            w = self.winfo_width()
+            h = self.winfo_height()
+
+            # Si las dimensiones aún no están listas (ej. 1x1), reintentar brevemente
+            if w < 50 or h < 50:
+                self.after(10, self._center_window)
+                return
+
+            # Cálculo del centro relativo
+            x = parent_x + (parent_w - w) // 2
+            y = parent_y + (parent_h - h) // 2
+
+            # Aplicar geometría
+            self.geometry(f"+{x}+{y}")
+
+        except Exception as e:
+            print(f"Error al centrar ventana: {e}")
+            # NO usamos fallback a pantalla completa. Si falla, se queda donde el OS la ponga.
 
     def _fade_in(self):
         alpha = self.attributes("-alpha")
@@ -222,12 +234,16 @@ class BaseDialog(ctk.CTkToplevel):
             self.after(15, self._close_with_fade_out)
         else:
             self.destroy()
+            # IMPORTANTE: Restaurar la interacción de la ventana principal
+            if hasattr(self.parent, "restore_ui_from_modal"):
+                self.parent.restore_ui_from_modal()
 
     def _on_ok(self, event=None):
         self._close_with_fade_out()
 
     def _on_cancel(self, event=None):
-        self.result = None; self._close_with_fade_out()
+        self.result = None;
+        self._close_with_fade_out()
 
 
 # Diálogo simple para mostrar un mensaje con un botón de "OK".
@@ -241,7 +257,6 @@ class MessageDialog(BaseDialog):
         # Ajuste para que se vea compacto
         card = self._create_card_frame()
 
-
         ctk.CTkLabel(
             card,
             text=message,
@@ -249,7 +264,7 @@ class MessageDialog(BaseDialog):
             justify="center",
             font=("Segoe UI", 13),
             text_color=_get_color_tuple("text")
-        ).pack(fill="x", padx=20, pady=(20, 20))  # Menos padding
+        ).pack(fill="x", padx=20, pady=(20, 20))
 
         # TRADUCCION APLICADA
         btn_text = parent._tr("btn_ok") if hasattr(parent, "_tr") else "OK"
@@ -567,3 +582,4 @@ class InfographicDialog(BaseDialog):
         except Exception as e:
             parent.show_message("error_title", f"{parent._tr('msg_error_generic')}\n\n{e}")
             self.after(50, self.destroy)
+

@@ -1,4 +1,3 @@
-# src/view/ui.py
 from __future__ import annotations
 
 import customtkinter as ctk
@@ -34,6 +33,7 @@ class LectorcitoApp(ctk.CTk):
 
         self.REPO_URL = REPO_URL
         self.tooltips: dict[str, CustomTooltip] = {}
+        self._is_modal_open = False  # Estado para controlar si hay un diálogo abierto
 
         self.title("Lectorcito Pro")
         self.geometry("600x500")
@@ -331,13 +331,40 @@ class LectorcitoApp(ctk.CTk):
 
     def toggle_ui_for_processing(self, is_active: bool, mode: str = "determinate", text: str = None,
                                  final_status: str = None):
+        if self._is_modal_open:
+            # Si hay un modal abierto, no tocamos los estados, el modal manda.
+            return
+
         state = "disabled" if is_active else "normal"
         for btn in self.main_buttons.values():
             btn.configure(state=state)
         for btn in self.sidebar_buttons.values():
             btn.configure(state=state)
 
+        # NEW: Disable left sidebar
+        self.left_sidebar.configure(state=state)
+
         self.status_panel.set_active(is_active, mode=mode, text=text, final_status=final_status)
+
+    def dim_ui_for_modal(self):
+        self._is_modal_open = True
+        for btn in self.main_buttons.values():
+            btn.configure(state="disabled")
+        for btn in self.sidebar_buttons.values():
+            btn.configure(state="disabled")
+        self.left_sidebar.configure(state="disabled")
+
+    def restore_ui_from_modal(self):
+        """Restaura la UI principal cuando se cierra un diálogo."""
+        self._is_modal_open = False
+        if not self.controller.is_processing:
+            for btn in self.main_buttons.values():
+                btn.configure(state="normal")
+            for btn in self.sidebar_buttons.values():
+                btn.configure(state="normal")
+            self.left_sidebar.configure(state="normal")
+        else:
+            pass
 
     def show_message(self, title_key: str, message_key: str, *args):
         MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
