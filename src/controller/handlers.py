@@ -1,17 +1,25 @@
 import os
+import sys
 import shutil
 import webbrowser
+import subprocess
 import customtkinter
 from tkinter import filedialog
+import win32com.client
 
 import config
-from view.dialogs import ConfirmDialog, ChoiceDialog
+from view.dialogs import ConfirmDialog, ChoiceDialog, MessageDialog
 from view.tags_dialog import TagsConfigDialog
 from view.profiles_dialog import ProfilesDialog
+from view.settings_dialog import SettingsDialog
 
 
-# Maneja la selección de la ruta de destino para los reportes.
+# -----------------------------------------------------------------------------
+# GESTIÓN DE RUTAS Y ARCHIVOS
+# -----------------------------------------------------------------------------
+
 def select_destination_path(controller):
+    """Maneja la selección de la ruta de destino para los reportes."""
     choice = ChoiceDialog.ask(
         parent=controller.view, title=controller.view._tr("dlg_dest_choice_title"),
         message=controller.view._tr("dlg_dest_choice_prompt"),
@@ -33,12 +41,49 @@ def select_destination_path(controller):
     save_preferences_silent(controller)
 
 
-# Muestra el diálogo para configurar qué carpetas y extensiones incluir.
+def open_destination_folder(controller):
+    """Abre la carpeta de destino de los reportes."""
+    path = controller.config.get("lecturas_path")
+    if path and os.path.isdir(path):
+        webbrowser.open(os.path.realpath(path))
+    else:
+        controller.view.show_message("info_title", "msg_select_dest")
+
+
+def open_last_report(controller):
+    """Abre el último reporte generado."""
+    if controller.last_report_path and os.path.isfile(controller.last_report_path):
+        webbrowser.open(os.path.realpath(controller.last_report_path))
+    else:
+        controller.view.show_message("info_title", "msg_no_report_yet")
+
+
+def delete_all_readings(controller):
+    """Elimina la carpeta de lecturas."""
+    path = controller.config.get("lecturas_path")
+    if not (path and os.path.isdir(path)):
+        controller.view.show_message("info_title", "msg_select_dest")
+        return
+
+    if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_del_title"),
+                         controller.view._tr("confirm_del_prompt")):
+        try:
+            shutil.rmtree(path)
+            os.makedirs(path, exist_ok=True)
+            controller.view.show_message("info_title", "msg_delete_success", os.path.basename(path))
+        except Exception as e:
+            controller.view.show_message("error_title", "msg_delete_error", str(e))
+
+
+# -----------------------------------------------------------------------------
+# CONFIGURACIÓN DE FILTROS (TAGS)
+# -----------------------------------------------------------------------------
+
 def show_view_config_dialog(controller):
+    """Muestra el diálogo para configurar qué carpetas y extensiones incluir."""
     current_folders = controller.config.get("etiquetas_carpetas_importantes", [])
     current_files = controller.config.get("etiquetas_extensiones_incluidas", [])
 
-    # DATOS EXTRA PARA AUTODETECTAR (EXCLUSIONES Y MEDIA)
     excl_folders = controller.config.get("etiquetas_carpetas_excluidas", [])
     excl_files = controller.config.get("etiquetas_archivos_excluidos", [])
     media_exts = controller.config.get("media_extensions", [])
@@ -50,10 +95,10 @@ def show_view_config_dialog(controller):
         initial_folders=current_folders,
         files_prompt=controller.view._tr("dlg_ver_file_prompt"),
         initial_files=current_files,
-        allow_autodetect=True,  # Activar botón
-        excluded_folders=excl_folders,  # Pasar exclusiones
+        allow_autodetect=True,
+        excluded_folders=excl_folders,
         excluded_files=excl_files,
-        media_extensions=media_exts  # Pasar multimedia
+        media_extensions=media_exts
     )
 
     if result is not None:
@@ -67,8 +112,8 @@ def show_view_config_dialog(controller):
         save_preferences_silent(controller)
 
 
-# Muestra el diálogo para configurar qué carpetas y archivos excluir.
 def show_no_view_config_dialog(controller):
+    """Muestra el diálogo para configurar qué carpetas y archivos excluir."""
     current_folders = controller.config.get("etiquetas_carpetas_excluidas", [])
     current_files = controller.config.get("etiquetas_archivos_excluidos", [])
 
@@ -88,8 +133,8 @@ def show_no_view_config_dialog(controller):
         save_preferences_silent(controller)
 
 
-# Muestra el diálogo para configurar archivos multimedia y binarios.
 def show_etiqueta_config_dialog(controller):
+    """Muestra el diálogo para configurar archivos multimedia y binarios."""
     tags_stored = controller.config.get("etiquetas_multimedia_config", [])
 
     if not tags_stored:
@@ -98,14 +143,8 @@ def show_etiqueta_config_dialog(controller):
     else:
         current_files = tags_stored
 
-    # --- RECOPILAR ELEMENTOS PROHIBIDOS (CONFLICTOS DE PRIORIDAD) ---
-    # 1. Obtener extensiones de "Ver" (Texto a leer)
     view_exts = {t['nombre'] for t in controller.config.get("etiquetas_extensiones_incluidas", [])}
-
-    # 2. Obtener archivos/extensiones de "No Ver" (Exclusiones)
     no_view_items = {t['nombre'] for t in controller.config.get("etiquetas_archivos_excluidos", [])}
-
-    # 3. Unir ambos conjuntos. Si algo está en Ver o No Ver, NO puede estar en Multimedia.
     forbidden_set = view_exts.union(no_view_items)
 
     result = TagsConfigDialog.get_input(
@@ -115,7 +154,7 @@ def show_etiqueta_config_dialog(controller):
         initial_folders=None,
         files_prompt=controller.view._tr("dlg_etiqueta_file_prompt"),
         initial_files=current_files,
-        forbidden_items=forbidden_set  # PASAMOS LOS PROHIBIDOS
+        forbidden_items=forbidden_set
     )
 
     if result is not None:
@@ -133,14 +172,175 @@ def show_etiqueta_config_dialog(controller):
         save_preferences_silent(controller)
 
 
-# --- GESTIÓN DE PERFILES: MODO "PASO A PASO" (SIN LAG) ---
+# -----------------------------------------------------------------------------
+# AJUSTES GENERALES (FORMATO + SHORTCUTS)
+# -----------------------------------------------------------------------------
+
+def show_settings_dialog(controller):
+    current_ext = controller.config.get("report_extension", ".txt")
+
+    def on_save(new_ext):
+        _update_report_extension(controller, new_ext)
+
+    def on_shortcut(mode, parent_window=None):
+        _create_system_shortcut(controller, mode, parent_window)
+
+    SettingsDialog.ask(
+        parent=controller.view,
+        current_extension=current_ext,
+        on_save_callback=on_save,
+        on_shortcut_callback=on_shortcut
+    )
+
+
+def _update_report_extension(controller, new_ext):
+    """Guarda la preferencia de extensión (.txt o .md)."""
+    if new_ext in [".txt", ".md"]:
+        controller.config["report_extension"] = new_ext
+        save_preferences_silent(controller)
+
+
+def _try_programmatic_pin(link_path, taskbar=True):
+
+    try:
+        path = os.path.abspath(link_path)
+        folder = os.path.dirname(path)
+        filename = os.path.basename(path)
+
+        shell = win32com.client.Dispatch("Shell.Application")
+        ns = shell.NameSpace(folder)
+        item = ns.ParseName(filename)
+        if not item: return False
+
+        # Palabras clave ampliadas
+        keywords = []
+        if taskbar:
+            keywords = ["anclar a la barra de tareas", "pin to taskbar", "taskbar"]
+        else:
+            keywords = ["anclar a inicio", "pin to start", "start"]
+
+        for verb in item.Verbs():
+            v_name = verb.Name.lower()
+            if any(k in v_name for k in keywords):
+                if "desanclar" in v_name or "unpin" in v_name:
+                    continue
+                verb.DoIt()
+                return True
+        return False
+    except Exception as e:
+        print(f"Intento de anclaje fallido: {e}")
+        return False
+
+
+def _create_system_shortcut(controller, mode, parent_window=None):
+
+    msg_parent = parent_window if parent_window else controller.view
+
+    try:
+        if getattr(sys, 'frozen', False):
+            target_path = sys.executable
+        else:
+            target_path = sys.executable
+            print("AVISO: En modo script, el acceso directo apuntará al intérprete Python.")
+
+        work_dir = os.path.dirname(target_path)
+        app_name = "LectorcitoPro"
+
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        if not getattr(sys, 'frozen', False):
+            base_path = os.path.join(base_path, "..")
+
+        icon_path = os.path.join(base_path, 'recursos', 'lector.ico')
+        icon_path = os.path.normpath(icon_path)
+
+        shell = win32com.client.Dispatch("WScript.Shell")
+
+        link_path = ""
+        msg_key = ""
+        open_explorer_at_end = False
+
+        # --- LÓGICA POR MODO ---
+
+        if mode == "desktop":
+            desktop_dir = shell.SpecialFolders("Desktop")
+            link_path = os.path.join(desktop_dir, f"{app_name}.lnk")
+            msg_key = "msg_shortcut_desktop_ok"
+
+        elif mode == "start":
+            start_menu = shell.SpecialFolders("StartMenu")
+            programs_folder = os.path.join(start_menu, "Programs")
+            if not os.path.exists(programs_folder):
+                try:
+                    os.makedirs(programs_folder)
+                except:
+                    programs_folder = start_menu
+            link_path = os.path.join(programs_folder, f"{app_name}.lnk")
+            msg_key = "msg_shortcut_start_ok"
+
+        elif mode == "taskbar":
+            docs_dir = shell.SpecialFolders("MyDocuments")
+            link_path = os.path.join(docs_dir, f"{app_name}.lnk")
+            msg_key = "msg_shortcut_taskbar_ok"
+
+        elif mode == "start_pin":
+            docs_dir = shell.SpecialFolders("MyDocuments")
+            link_path = os.path.join(docs_dir, f"{app_name}.lnk")
+            msg_key = "msg_shortcut_pin_start_ok"
+
+        # Crear acceso directo
+        shortcut = shell.CreateShortCut(link_path)
+        shortcut.TargetPath = target_path
+        shortcut.WorkingDirectory = work_dir
+        if os.path.exists(icon_path):
+            shortcut.IconLocation = icon_path
+        shortcut.WindowStyle = 1
+        shortcut.Description = "Lectorcito Pro - Análisis de Código"
+        shortcut.Save()
+
+        if mode == "taskbar":
+            if not _try_programmatic_pin(link_path, taskbar=True):
+                open_explorer_at_end = True
+        elif mode == "start_pin":
+            if not _try_programmatic_pin(link_path, taskbar=False):
+                open_explorer_at_end = True
+
+        if open_explorer_at_end:
+            try:
+                subprocess.run(f'explorer /select,"{link_path}"', shell=True)
+            except Exception:
+                pass
+
+        # Mensaje centrado en la ventana correcta
+        msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "info_title", msg_key))
+
+    except Exception as e:
+        msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "error_title", "msg_shortcut_error", str(e)))
+
+
+def _show_msg_safe(parent, title_key, msg_key, *args):
+
+    if not hasattr(parent, "_tr") and hasattr(parent, "parent_view"):
+        # Monkey patch temporal o usar parent_view para el texto pero parent para la ventana
+        title = parent.parent_view._tr(title_key)
+        msg = parent.parent_view._tr(msg_key, *args)
+        MessageDialog(parent, title, msg)
+    elif hasattr(parent, "_tr"):
+        title = parent._tr(title_key)
+        msg = parent._tr(msg_key, *args)
+        MessageDialog(parent, title, msg)
+    else:
+        MessageDialog(parent, title_key, msg_key)
+
+
+# -----------------------------------------------------------------------------
+# GESTIÓN DE PERFILES
+# -----------------------------------------------------------------------------
+
 def manage_profiles(controller):
-    # Paso 1: Delay inicial muy generoso (300ms) para que el click termine visualmente
     controller.view.after(300, lambda: _open_profiles_dialog_safe(controller))
 
 
 def _save_meta_immediate(controller, profiles_snapshot):
-    """Callback para guardar perfiles sin necesidad de activarlos."""
     clean_meta = profiles_snapshot.copy()
     for pid, data in clean_meta.items():
         if data == "NEW":
@@ -165,21 +365,15 @@ def _open_profiles_dialog_safe(controller):
 
     if result:
         new_active_id, new_profiles_meta = result
-        # Iniciamos la transición lenta y segura
         _step_1_hide_app(controller, new_active_id, new_profiles_meta)
 
 
-# --- SECUENCIA DE TRANSICIÓN "PASO A PASO" (PERFILES) ---
-
 def _step_1_hide_app(controller, new_active_id, new_profiles_meta):
-    """Paso 1: Ocultar la aplicación inmediatamente."""
     controller.view.attributes("-alpha", 0.0)
-    # Dar un "respiro" largo de 600ms antes de procesar nada
     controller.view.after(600, lambda: _step_2_load_data(controller, new_active_id, new_profiles_meta))
 
 
 def _step_2_load_data(controller, new_active_id, new_profiles_meta):
-    """Paso 2: Cargar datos pesados mientras no se ve nada."""
     try:
         if new_active_id in new_profiles_meta and new_profiles_meta[new_active_id] == "NEW":
             selected_profile_data = config.get_blank_profile()
@@ -192,9 +386,8 @@ def _step_2_load_data(controller, new_active_id, new_profiles_meta):
         controller.config["_active_profile_id"] = new_active_id
 
         save_preferences_silent(controller)
-
-        # Actualizar componentes visuales
         controller._update_active_lecturas_path()
+
         controller.view.lang = controller.config["language"]
         controller.view.update_ui_texts()
 
@@ -206,67 +399,48 @@ def _step_2_load_data(controller, new_active_id, new_profiles_meta):
     except Exception as e:
         print(f"Error cargando perfil: {e}")
 
-    # Dar otro respiro de 300ms para que Tkinter termine de pintar internamente
     controller.view.after(300, lambda: _step_3_show_app(controller, new_active_id))
 
 
 def _step_3_show_app(controller, new_active_id):
-    """Paso 3: Mostrar la aplicación renovada."""
     controller.view.attributes("-alpha", 1.0)
-    # Mensaje final
     controller.view.after(100, lambda:
     controller.view.show_message("info_title", "msg_profile_changed", new_active_id.capitalize())
                           )
 
 
-# --- SECUENCIA DE TRANSICIÓN "PASO A PASO" (RESTAURAR) ---
+# -----------------------------------------------------------------------------
+# RESTAURACIÓN
+# -----------------------------------------------------------------------------
 
 def restore_default_settings(controller):
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
                          controller.view._tr("confirm_restore_prompt")):
-        # Paso 1: Ocultar aplicación (Fantasma)
         _step_1_restore_hide(controller)
 
 
 def _step_1_restore_hide(controller):
     controller.view.attributes("-alpha", 0.0)
-    # Respiro largo (800ms) para operaciones de disco
     controller.view.after(800, lambda: _step_2_restore_logic(controller))
 
 
 def _step_2_restore_logic(controller):
     try:
-        # 1. Eliminar archivo físico
         config.delete_config_file()
-
-        # 2. Reiniciar memoria a estado de fábrica (Default Profile Only)
         default_profile = config.DEFAULT_CONFIG_VALUES.copy()
-
-        # Reconstruir el config del controlador como si fuera la primera ejecución
         controller.config = default_profile.copy()
         controller.config["_profiles_meta"] = {"default": default_profile.copy()}
         controller.config["_active_profile_id"] = "default"
-
-        # 3. Guardar el estado limpio (recrea config.json)
         save_preferences_silent(controller)
-
-        # 4. Actualizar toda la UI
         controller._update_active_lecturas_path()
-
-        # Reset Idioma
         controller.view.lang = controller.config["language"]
         controller.view.update_ui_texts()
-
-        # Reset Tema
         new_theme = controller.config["theme"]
         controller.view.current_theme = new_theme
         customtkinter.set_appearance_mode(new_theme)
         controller.view.apply_theme()
-
     except Exception as e:
         print(f"Error restaurando: {e}")
-
-    # Respiro para renderizado interno
     controller.view.after(300, lambda: _step_3_restore_show(controller))
 
 
@@ -277,12 +451,14 @@ def _step_3_restore_show(controller):
                           )
 
 
-# Guarda la configuración actual sin mostrar notificaciones.
+# -----------------------------------------------------------------------------
+# UTILIDADES GENERALES
+# -----------------------------------------------------------------------------
+
 def save_preferences_silent(controller):
     config.save_config(controller.config)
 
 
-# Alterna entre el tema claro y oscuro.
 def toggle_theme(controller):
     new_theme = "Dark" if controller.view.current_theme == "Light" else "Light"
     controller.config["theme"] = new_theme
@@ -290,43 +466,8 @@ def toggle_theme(controller):
     save_preferences_silent(controller)
 
 
-# Alterna entre español e inglés.
 def toggle_language(controller):
     controller.view.lang = "en" if controller.view.lang == "es" else "es"
     controller.config["language"] = controller.view.lang
     controller.view.update_ui_texts()
     save_preferences_silent(controller)
-
-
-# Abre la carpeta de destino de los reportes.
-def open_destination_folder(controller):
-    path = controller.config.get("lecturas_path")
-    if path and os.path.isdir(path):
-        webbrowser.open(os.path.realpath(path))
-    else:
-        controller.view.show_message("info_title", "msg_select_dest")
-
-
-# Abre el último reporte generado.
-def open_last_report(controller):
-    if controller.last_report_path and os.path.isfile(controller.last_report_path):
-        webbrowser.open(os.path.realpath(controller.last_report_path))
-    else:
-        controller.view.show_message("info_title", "msg_no_report_yet")
-
-
-# Elimina la carpeta de lecturas.
-def delete_all_readings(controller):
-    path = controller.config.get("lecturas_path")
-    if not (path and os.path.isdir(path)):
-        controller.view.show_message("info_title", "msg_select_dest")
-        return
-
-    if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_del_title"),
-                         controller.view._tr("confirm_del_prompt")):
-        try:
-            shutil.rmtree(path)
-            os.makedirs(path, exist_ok=True)
-            controller.view.show_message("info_title", "msg_delete_success", os.path.basename(path))
-        except Exception as e:
-            controller.view.show_message("error_title", "msg_delete_error", str(e))

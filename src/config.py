@@ -22,7 +22,6 @@ def to_tags(items: list[str]) -> list[dict]:
 
 
 # --- Configuración Base (Full Default) ---
-# Esta es la configuración completa típica con filtros pre-cargados (para el perfil Default inicial).
 DEFAULT_CONFIG_VALUES = {
     "use_default_path": True,
     "custom_lecturas_path": "",
@@ -30,6 +29,7 @@ DEFAULT_CONFIG_VALUES = {
     "last_read_folder": "",
     "theme": "Light",
     "language": "es",
+    "report_extension": ".txt",  # NUEVO: Extensión por defecto
 
     "etiquetas_carpetas_importantes": to_tags(["src"]),
     "etiquetas_extensiones_incluidas": to_tags([".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json"]),
@@ -48,14 +48,14 @@ DEFAULT_CONFIG_VALUES = {
 }
 
 # --- Configuración "En Blanco" (Blank Slate) ---
-# CAMBIO: Ahora TODO está vacío, incluidas las extensiones multimedia.
 BLANK_PROFILE_CONFIG = {
     "use_default_path": True,
     "custom_lecturas_path": "",
     "lecturas_path": DEFAULT_LECTURAS_PATH,
     "last_read_folder": "",
-    "theme": "Light",  # Por defecto claro
-    "language": "es",  # Por defecto español
+    "theme": "Light",
+    "language": "es",
+    "report_extension": ".txt",
 
     # Listas vacías para que el usuario personalice desde cero
     "etiquetas_carpetas_importantes": [],
@@ -63,7 +63,6 @@ BLANK_PROFILE_CONFIG = {
     "etiquetas_carpetas_excluidas": [],
     "etiquetas_archivos_excluidos": [],
 
-    # CAMBIO: Multimedia totalmente vacío
     "media_extensions": [],
     "etiquetas_multimedia_config": []
 }
@@ -125,8 +124,8 @@ def load_config() -> dict:
     active_id = base_structure.get("active_profile_id", "default")
     if active_id not in base_structure["profiles"]:
         active_id = "default"
-        if "default" not in base_structure["profiles"]:
-            base_structure["profiles"]["default"] = DEFAULT_CONFIG_VALUES.copy()
+    if "default" not in base_structure["profiles"]:
+        base_structure["profiles"]["default"] = DEFAULT_CONFIG_VALUES.copy()
 
     active_data = base_structure["profiles"][active_id]
 

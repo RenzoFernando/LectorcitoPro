@@ -55,11 +55,13 @@ def generate_report(
     excluded_folders = _get_active_tags(config, "etiquetas_carpetas_excluidas")
     excluded_files = _get_active_tags(config, "etiquetas_archivos_excluidos")
 
+    report_ext = config.get("report_extension", ".txt")
+
     folder_name = os.path.basename(os.path.normpath(source_folder))
     version = 1
     # Genera un nombre de archivo versionado para no sobrescribir reportes.
     while True:
-        report_filename = f"Reporte_{folder_name}_v{version}.txt"
+        report_filename = f"Reporte_{folder_name}_v{version}{report_ext}"
         final_report_path = os.path.join(output_path, report_filename)
         if not os.path.exists(final_report_path): break
         version += 1
@@ -126,10 +128,11 @@ def generate_report(
                                 for line in infile:
                                     outfile.write(f"    {line}")
                         except Exception as e:
-                            outfile.write(f"    [Error al leer el archivo: {e}]\n")
+                            outfile.write(f"     [Error al leer el archivo: {e}]\n")
 
                         outfile.write(f"\n\n    << FIN DEL CONTENIDO: {filename}\n")
                         outfile.write("    " + ("-" * 74) + "\n\n\n")
+
                     # Si es multimedia, solo deja un espacio.
                     elif is_media:
                         outfile.write("\n")
@@ -146,6 +149,7 @@ def generate_report(
         return "cancelled", None
 
     return "success", final_report_path
+
 
 # Genera un reporte en forma de árbol de directorios.
 def generate_tree_report(
@@ -167,6 +171,7 @@ def generate_tree_report(
     except Exception as e:
         print(f"Error al generar el árbol de directorios: {e}")
         return "error", None
+
 
 # Construye recursivamente el árbol de directorios aplicando los filtros.
 def _build_tree_recursive(current_path, prefix, outfile, config):

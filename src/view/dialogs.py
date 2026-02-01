@@ -4,8 +4,9 @@ from tkinter import filedialog
 from PIL import Image
 from view.tooltip import CustomTooltip
 from view.ui_constants import COLORS
+from view.ui_assets import get_app_icon_path
 
-MESSAGE_AUTO_CLOSE_SECONDS = 5
+MESSAGE_AUTO_CLOSE_SECONDS = 10
 
 
 def _get_color_tuple(key: str) -> tuple[str, str]:
@@ -72,8 +73,12 @@ class BaseDialog(ctk.CTkToplevel):
     def _set_icon_safe(self):
         try:
             if not self.winfo_exists(): return
-            if hasattr(self.parent, '_icon_path') and self.parent._icon_path and os.path.exists(self.parent._icon_path):
-                self.iconbitmap(self.parent._icon_path)
+
+            icon_path = get_app_icon_path()
+
+            if icon_path and os.path.exists(icon_path):
+                self.iconbitmap(icon_path)
+                self.after(100, lambda: self.iconbitmap(icon_path))
         except Exception:
             pass
 

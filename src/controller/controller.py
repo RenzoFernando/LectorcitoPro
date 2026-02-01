@@ -43,6 +43,9 @@ class LectorcitoController:
 
         self.view.sidebar_buttons["info"].configure(command=self.view.show_app_info)
 
+        # NUEVO: Botón de Ajustes / Configuración Global
+        self.view.sidebar_buttons["ajustes"].configure(command=lambda: handlers.show_settings_dialog(self))
+
         self.view.btn_cancel.configure(command=self.cancel_processing)
 
     def run(self):
@@ -56,6 +59,7 @@ class LectorcitoController:
             title=self.view._tr("btn_choose_folder"),
             initialdir=self.config.get("last_read_folder", "")
         )
+
         if path:
             self.config["last_read_folder"] = path
             self.start_processing(path)
@@ -148,6 +152,7 @@ class LectorcitoController:
         thread = threading.Thread(
             target=self._tree_thread_target, args=(source_path,), daemon=True
         )
+
         thread.start()
 
     def _tree_thread_target(self, source_path: str):

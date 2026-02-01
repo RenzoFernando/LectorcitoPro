@@ -26,7 +26,7 @@ TRANSLATIONS = {
         "btn_cancel": "Cancelar Lectura",
 
         # --- BOTONES DE DIÁLOGOS ---
-        "btn_ok": "OK",
+        "btn_ok": "Aceptar",
         "btn_yes": "Sí",
         "btn_no": "No",
         "btn_save_changes": "Guardar Cambios",
@@ -34,7 +34,7 @@ TRANSLATIONS = {
         "btn_restore_defaults": "Restaurar Ajustes",
         "btn_autodetect": "Autodetectar",
 
-        # --- DIÁLOGOS DE CONFIGURACIÓN (VER/NO VER/ETIQUETAS) ---
+        # --- DIÁLOGOS DE CONFIGURACIÓN ---
         "dlg_ver_title": "Configurar qué Ver",
         "dlg_ver_folder_prompt": "Carpetas a resaltar como Importantes (ej: src, utils):",
         "dlg_ver_file_prompt": "Extensiones de archivo a Leer (ej: .py, .md):",
@@ -66,11 +66,9 @@ TRANSLATIONS = {
         "msg_no_report_yet": "Aún no se ha generado ningún reporte.",
         "msg_infographic_error": "No se pudo cargar la infografía.\nVerifique que 'Infografía_LectorcitoPro.png' exista en la carpeta 'recursos'.",
         "msg_error_generic": "Ocurrió un error inesperado durante la operación.",
-        "msg_coming_soon": "Próximamente...",  # NUEVO
+        "msg_coming_soon": "Próximamente...",
 
-        # --- CONFLICTOS DE ETIQUETAS ---
         "msg_tag_conflict": "La etiqueta '{}' ya existe en la configuración de 'Ver' o 'No Ver'.\nPor prioridad, no puede añadirla aquí.",
-
         "msg_autodetect_result": "Se detectaron y añadieron {} nuevas extensiones.",
         "msg_autodetect_none": "No se encontraron nuevas extensiones (o ya estaban configuradas/excluidas).",
 
@@ -100,6 +98,20 @@ TRANSLATIONS = {
         "confirm_del_profile": "¿Eliminar el perfil '{}'?\nEsta acción no se puede deshacer.",
         "msg_profile_changed": "Perfil '{}' activado.\nEntorno reconfigurado.",
 
+        # --- AJUSTES AVANZADOS ---
+        "dlg_settings_title": "Configuración General",
+        "lbl_report_format": "Formato de archivo:",
+        "lbl_system_shortcuts": "Accesos directos e integración:",
+        "btn_shortcut_desktop": "Crear acceso directo en Escritorio",
+        "btn_shortcut_start": "Añadir al Menú de Programas",
+        "btn_shortcut_taskbar": "Crear acceso (Manual: Barra de Tareas)",
+        "btn_shortcut_pin_start": "Crear acceso (Manual: Anclar a Inicio)",
+        "msg_shortcut_desktop_ok": "¡Acceso directo creado en el Escritorio correctamente!",
+        "msg_shortcut_start_ok": "¡Añadido a la lista de Programas!\nBúscalo en 'Todas las aplicaciones' del menú Inicio.",
+        "msg_shortcut_taskbar_ok": "¡Archivo creado!\nSe abrió la carpeta. Arrástralo a la Barra de Tareas.",
+        "msg_shortcut_pin_start_ok": "¡Archivo listo!\nSe abrió la carpeta. Click derecho > 'Anclar a Inicio'.",
+        "msg_shortcut_error": "No se pudo realizar la acción:\n{}",
+
         # --- TOOLTIPS ---
         "tooltip_ver": "Configurar qué carpetas y extensiones incluir en la lectura.",
         "tooltip_nover": "Configurar qué carpetas y archivos completos ignorar.",
@@ -110,7 +122,7 @@ TRANSLATIONS = {
         "tooltip_github": "Abrir el repositorio del proyecto en GitHub.",
         "tooltip_perfil": "Gestionar perfiles de configuración (ej: Java, Python).",
         "tooltip_info": "Mostrar el manual de usuario y la información de la aplicación.",
-        "tooltip_ajustes": "Configuración general de la aplicación."
+        "tooltip_ajustes": "Configuración general, formato de reportes y accesos directos."
     },
 
     "en": {
@@ -180,10 +192,9 @@ TRANSLATIONS = {
         "msg_no_report_yet": "No report has been generated yet.",
         "msg_infographic_error": "Could not load the infographic.\nPlease ensure 'Infografía_LectorcitoPro.png' exists in the 'recursos' folder.",
         "msg_error_generic": "An unexpected error occurred during the operation.",
-        "msg_coming_soon": "Coming soon...",  # NUEVO
+        "msg_coming_soon": "Coming soon...",
 
         "msg_tag_conflict": "The tag '{}' already exists in 'View' or 'No View' settings.\nDue to priority, it cannot be added here.",
-
         "msg_autodetect_result": "Detected and added {} new extensions.",
         "msg_autodetect_none": "No new extensions found (or they were already configured/excluded).",
 
@@ -213,6 +224,20 @@ TRANSLATIONS = {
         "confirm_del_profile": "Delete profile '{}'?\nThis action cannot be undone.",
         "msg_profile_changed": "Profile '{}' activated.\nEnvironment reconfigured.",
 
+        # --- SETTINGS ---
+        "dlg_settings_title": "General Settings",
+        "lbl_report_format": "Report File Format:",
+        "lbl_system_shortcuts": "System Integration:",
+        "btn_shortcut_desktop": "Create Desktop Shortcut",
+        "btn_shortcut_start": "Add to Programs Menu",
+        "btn_shortcut_taskbar": "Create Link (Manual: Taskbar)",
+        "btn_shortcut_pin_start": "Create Link (Manual: Pin to Start)",
+        "msg_shortcut_desktop_ok": "Desktop shortcut created successfully!",
+        "msg_shortcut_start_ok": "Added to Windows Programs list!",
+        "msg_shortcut_taskbar_ok": "File created!\nFolder opened. Drag it to the Taskbar.",
+        "msg_shortcut_pin_start_ok": "File ready!\nFolder opened. Right click > 'Pin to Start'.",
+        "msg_shortcut_error": "Could not perform action:\n{}",
+
         # --- TOOLTIPS ---
         "tooltip_ver": "Configure which folders and extensions to include in the reading.",
         "tooltip_nover": "Configure which folders and full filenames to ignore.",
@@ -223,6 +248,6 @@ TRANSLATIONS = {
         "tooltip_github": "Open the project repository on GitHub.",
         "tooltip_perfil": "Manage configuration profiles (e.g., Java, Python).",
         "tooltip_info": "Show the user manual and application information.",
-        "tooltip_ajustes": "General application settings."
+        "tooltip_ajustes": "General settings, report format, and shortcuts."
     }
 }
