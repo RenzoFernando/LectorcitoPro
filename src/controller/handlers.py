@@ -1,3 +1,4 @@
+# src/controller/handlers.py
 import os
 import shutil
 import webbrowser
@@ -76,6 +77,52 @@ def show_no_view_config_dialog(controller):
         save_preferences_silent(controller)
 
 
+# Muestra el diálogo para configurar archivos multimedia y binarios (ETIQUETA - MODO UNIFICADO).
+def show_etiqueta_config_dialog(controller):
+    # Ya no hay carpetas multimedia, solo extensiones.
+
+    # 1. Recuperar configuración de extensiones (media_extensions)
+    tags_stored = controller.config.get("etiquetas_multimedia_config", [])
+
+    if not tags_stored:
+        # Si no hay config de etiquetas guardada, generamos una desde la lista plana de config
+        raw_exts = controller.config.get("media_extensions", [])
+        current_files = [{"nombre": x, "estado": "activo"} for x in raw_exts]
+    else:
+        current_files = tags_stored
+
+    # 2. LLAMAR AL DIÁLOGO EN MODO SOLO EXTENSIONES
+    # Pasamos None en 'folders_prompt' e 'initial_folders' para activar el modo de una sola ventana.
+    result = TagsConfigDialog.get_input(
+        parent=controller.view,
+        title=controller.view._tr("dlg_etiqueta_title"),
+        folders_prompt=None,  # ESTO ACTIVA EL MODO UNIFICADO
+        initial_folders=None,
+        files_prompt=controller.view._tr("dlg_etiqueta_file_prompt"),
+        initial_files=current_files
+    )
+
+    if result is not None:
+        # El resultado devuelve (folders, files), pero folders será None en este modo.
+        _, new_files = result
+
+        # Asegurar formato de extensiones
+        for tag in new_files:
+            if not tag["nombre"].startswith("."):
+                tag["nombre"] = f".{tag['nombre']}"
+
+        # Guardamos la configuración de archivos como Tags (para recordar el estado inactivo en la UI)
+        controller.config["etiquetas_multimedia_config"] = new_files
+
+        # SINCRONIZACIÓN CRÍTICA:
+        # Actualizamos la lista 'media_extensions' (strings planas) que usa el processor.py
+        # Solo añadimos las que están 'activas'.
+        active_media_exts = [t["nombre"] for t in new_files if t["estado"] == "activo"]
+        controller.config["media_extensions"] = active_media_exts
+
+        save_preferences_silent(controller)
+
+
 # Guarda la configuración actual sin mostrar notificaciones.
 def save_preferences_silent(controller):
     config.save_config(controller.config)
@@ -100,7 +147,7 @@ def toggle_language(controller):
 # Restaura todas las configuraciones a sus valores por defecto.
 def restore_default_settings(controller):
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
-                            controller.view._tr("confirm_restore_prompt")):
+                         controller.view._tr("confirm_restore_prompt")):
         config.delete_config_file()
         controller.config = config.load_config()
 
@@ -138,7 +185,7 @@ def delete_all_readings(controller):
         return
 
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_del_title"),
-                            controller.view._tr("confirm_del_prompt")):
+                         controller.view._tr("confirm_del_prompt")):
         try:
             shutil.rmtree(path)
             os.makedirs(path, exist_ok=True)

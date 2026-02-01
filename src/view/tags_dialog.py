@@ -9,11 +9,14 @@ from view.ui_constants import COLORS
 class TagsConfigDialog(BaseDialog):
 
     def __init__(self, parent, title: str,
-                 folders_prompt: str, initial_folders: list,
+                 folders_prompt: str | None, initial_folders: list | None,
                  files_prompt: str, initial_files: list):
         super().__init__(parent, title)
 
-        self.folders_list = copy.deepcopy(initial_folders)
+        # Detectamos si es modo "Solo Archivos" (si no nos dan título para carpetas)
+        self.single_mode = (folders_prompt is None)
+
+        self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
         self.files_list = copy.deepcopy(initial_files)
         self._parent = parent
 
@@ -36,16 +39,21 @@ class TagsConfigDialog(BaseDialog):
         # Creación de las secciones
         text_color = _get_color_tuple("text")
 
-        # Reducimos padding interno de las secciones
-        self._create_tag_section(0, folders_prompt, "folders", text_color)
-        self._create_tag_section(1, files_prompt, "files", text_color)
-
-        self.main_frame.grid_rowconfigure(1, weight=1)
-        self.main_frame.grid_rowconfigure(4, weight=1)
+        if self.single_mode:
+            # MODO UNIFICADO: Solo creamos la sección de archivos (como si fuera la 0)
+            self._create_tag_section(0, files_prompt, "files", text_color)
+            # Hacemos que esta única sección se expanda para llenar todo el espacio
+            self.main_frame.grid_rowconfigure(1, weight=1)
+        else:
+            # MODO ESTÁNDAR (Ver/No Ver): Dos secciones
+            self._create_tag_section(0, folders_prompt, "folders", text_color)
+            self._create_tag_section(1, files_prompt, "files", text_color)
+            self.main_frame.grid_rowconfigure(1, weight=1)
+            self.main_frame.grid_rowconfigure(4, weight=1)
 
         # --- SECCIÓN DE ACCIONES (Botones) ---
 
-        # [SOLUCIÓN BARRA RARA] Línea separadora sutil antes de los botones
+        # Línea separadora sutil antes de los botones
         separator = ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line"))
         separator.grid(row=6, column=0, sticky="ew", padx=0, pady=(10, 0))
 
@@ -77,8 +85,7 @@ class TagsConfigDialog(BaseDialog):
             row=base_row, column=0,
             sticky="w", pady=(10, 2), padx=20)
 
-        # [SOLUCIÓN RECUADRO] Usamos 'inner_area' (surface_alt) para que el fondo sea distinto al de la tarjeta
-        # y 'card_border' para que el contorno se note más.
+        # Recuadro de scroll
         scroll_frame = ctk.CTkScrollableFrame(
             self.main_frame,
             label_text="",
@@ -88,8 +95,9 @@ class TagsConfigDialog(BaseDialog):
         )
         scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew", padx=20)
 
-        # TRADUCCION APLICADA
-        ph_text = self._parent._tr("placeholder_tags") if hasattr(self._parent, "_tr") else "Escribir y presionar Enter..."
+        # Placeholder
+        ph_text = self._parent._tr("placeholder_tags") if hasattr(self._parent,
+                                                                  "_tr") else "Escribir y presionar Enter..."
         entry = ctk.CTkEntry(self.main_frame, placeholder_text=ph_text)
         entry.grid(row=base_row + 2, column=0, sticky="ew", pady=(5, 0), padx=20)
 
@@ -102,7 +110,10 @@ class TagsConfigDialog(BaseDialog):
 
     def redraw_all_tags(self):
         if not self.winfo_exists(): return
-        self._redraw_tags_in_frame(self.folders_scroll_frame, self.folders_list)
+        # Si estamos en modo simple, no intentamos dibujar carpetas
+        if not self.single_mode:
+            self._redraw_tags_in_frame(self.folders_scroll_frame, self.folders_list)
+
         self._redraw_tags_in_frame(self.files_scroll_frame, self.files_list)
 
     def _redraw_tags_in_frame(self, frame, tag_list):
@@ -171,11 +182,16 @@ class TagsConfigDialog(BaseDialog):
             self.redraw_all_tags()
 
     def _on_ok(self, event=None):
-        self.result = (self.folders_list, self.files_list)
+        if self.single_mode:
+            # Retornamos None para carpetas para indicar que no aplica
+            self.result = (None, self.files_list)
+        else:
+            self.result = (self.folders_list, self.files_list)
         super()._on_ok(event)
 
     @classmethod
     def get_input(cls, parent, title, folders_prompt, initial_folders, files_prompt, initial_files):
+        # La clase ahora acepta None para folders_prompt e initial_folders
         dialog = cls(parent, title, folders_prompt, initial_folders, files_prompt, initial_files)
         parent.wait_window(dialog)
         return dialog.result

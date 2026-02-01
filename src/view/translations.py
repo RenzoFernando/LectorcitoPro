@@ -1,5 +1,3 @@
-import random
-
 TRANSLATIONS = {
     "es": {
         "dlg_read_type_title": "Tipo de Lectura",
@@ -54,9 +52,12 @@ TRANSLATIONS = {
         "confirm_del_prompt": "¿Está seguro de que desea eliminar permanentemente la carpeta de lecturas y todo su contenido?",
         "msg_delete_success": "Contenido de '{}' eliminado con éxito.",
         "msg_delete_error": "No se pudo eliminar la carpeta:\n{}",
-        "greet_m": ["¡Buenos días!", "¡Un café y a programar!", "¿Listo para un nuevo día?", "¡Que tengas una mañana productiva!"],
-        "greet_a": ["¡Buenas tardes!", "Espero que tu día vaya de maravilla.", "¡A seguir dándole al código!", "La tarde es para crear."],
-        "greet_n": ["¡Buenas noches!", "Un último vistazo antes de descansar.", "¡Que el código te acompañe!", "Es hora de compilar sueños."],
+        "greet_m": ["¡Buenos días!", "¡Un café y a programar!", "¿Listo para un nuevo día?",
+                    "¡Que tengas una mañana productiva!"],
+        "greet_a": ["¡Buenas tardes!", "Espero que tu día vaya de maravilla.", "¡A seguir dándole al código!",
+                    "La tarde es para crear."],
+        "greet_n": ["¡Buenas noches!", "Un último vistazo antes de descansar.", "¡Que el código te acompañe!",
+                    "Es hora de compilar sueños."],
         "dlg_ver_title": "Configurar qué Ver",
         "dlg_ver_folder_prompt": "Carpetas a resaltar como Importantes (ej: src, utils):",
         "dlg_ver_file_prompt": "Extensiones de archivo a Leer (ej: .py, .md):",
@@ -64,6 +65,10 @@ TRANSLATIONS = {
         "dlg_nover_title": "Configurar qué No Ver",
         "dlg_nover_folder_prompt": "Carpetas a Ignorar por completo (ej: node_modules, .venv):",
         "dlg_nover_file_prompt": "Archivos a Ignorar por nombre completo (ej: license.txt, .env):",
+
+        "dlg_etiqueta_title": "Configurar Multimedia y Binarios",
+        "dlg_etiqueta_file_prompt": "Extensiones a Omitir Contenido (Solo Listar):",
+
         "progress_processing_text": "Procesando...",
         "progress_generating_tree": "Generando árbol de directorios...",
         "progress_done": "¡Completado!",
@@ -75,7 +80,7 @@ TRANSLATIONS = {
 
         "tooltip_ver": "Configurar qué carpetas y extensiones incluir en la lectura.",
         "tooltip_nover": "Configurar qué carpetas y archivos completos ignorar.",
-        "tooltip_etiqueta": "Configurar archivos multimedia y binarios a excluir.",
+        "tooltip_etiqueta": "Configurar archivos que se listarán pero sin leer su contenido.",
         "tooltip_tema": "Cambiar entre el tema claro y el oscuro.",
         "tooltip_idioma": "Cambiar entre Español e Inglés.",
         "tooltip_restaurar": "Restaurar todas las configuraciones a su estado inicial.",
@@ -144,15 +149,23 @@ TRANSLATIONS = {
         "confirm_del_prompt": "Are you sure you want to permanently delete the readings folder and all its contents?",
         "msg_delete_success": "Contents of '{}' deleted successfully.",
         "msg_delete_error": "Could not delete the folder:\n{}",
-        "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?", "Have a productive morning!"],
-        "greet_a": ["Good afternoon!", "Hope your day is going great.", "Let's keep pushing that code!", "The afternoon is for creating."],
-        "greet_n": ["Good evening!", "One last look before logging off.", "May the code be with you.", "Time to compile some dreams."],
+        "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?",
+                    "Have a productive morning!"],
+        "greet_a": ["Good afternoon!", "Hope your day is going great.", "Let's keep pushing that code!",
+                    "The afternoon is for creating."],
+        "greet_n": ["Good evening!", "One last look before logging off.", "May the code be with you.",
+                    "Time to compile some dreams."],
         "dlg_ver_title": "Configure what to View",
         "dlg_ver_folder_prompt": "Folders to highlight as Important (e.g., src, utils):",
         "dlg_ver_file_prompt": "File extensions to Read (e.g., .py, .md):",
+
         "dlg_nover_title": "Configure what Not to View",
         "dlg_nover_folder_prompt": "Folders to Ignore completely (e.g., node_modules, .venv):",
         "dlg_nover_file_prompt": "Files to Ignore by full name (e.g., license.txt, .env):",
+
+        "dlg_etiqueta_title": "Configure Multimedia & Binaries",
+        "dlg_etiqueta_file_prompt": "Extensions to Skip Content (List Only):",
+
         "progress_processing_text": "Processing...",
         "progress_generating_tree": "Generating directory tree...",
         "progress_done": "Completed!",
@@ -164,7 +177,7 @@ TRANSLATIONS = {
 
         "tooltip_ver": "Configure which folders and extensions to include in the reading.",
         "tooltip_nover": "Configure which folders and full filenames to ignore.",
-        "tooltip_etiqueta": "Configure multimedia and binary files to exclude.",
+        "tooltip_etiqueta": "Configure files to list without reading their content.",
         "tooltip_tema": "Toggle between light and dark theme.",
         "tooltip_idioma": "Switch between English and Spanish.",
         "tooltip_restaurar": "Restore all settings to their default state.",

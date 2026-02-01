@@ -31,7 +31,7 @@ class LectorcitoController:
 
         self.view.sidebar_buttons["ver"].configure(command=lambda: handlers.show_view_config_dialog(self))
         self.view.sidebar_buttons["nover"].configure(command=lambda: handlers.show_no_view_config_dialog(self))
-        #etiqueta button para media_extensions config
+        self.view.sidebar_buttons["etiqueta"].configure(command=lambda: handlers.show_etiqueta_config_dialog(self))
         self.view.sidebar_buttons["theme_icon"].configure(command=lambda: handlers.toggle_theme(self))
         self.view.sidebar_buttons["traducir"].configure(command=lambda: handlers.toggle_language(self))
         self.view.sidebar_buttons["restaurar"].configure(command=lambda: handlers.restore_default_settings(self))
