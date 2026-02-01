@@ -1,6 +1,7 @@
 import os
 import threading
 from time import sleep
+from view.translations import TRANSLATIONS  # NUEVO: Importar traducciones
 
 
 # Extrae los nombres de las etiquetas activas desde la configuración.
@@ -32,6 +33,14 @@ def _count_files_to_process(folder: str, config: dict) -> int:
         print(f"Error al contar archivos en {folder}: {e}")
         return 0
     return file_count
+
+
+# Helper para traducción interna en el modelo (sin depender de la UI)
+def _get_tr(config: dict, key: str, *args) -> str:
+    lang = config.get("language", "es")
+    dct = TRANSLATIONS.get(lang, TRANSLATIONS["es"])
+    val = dct.get(key, key)
+    return val.format(*args)
 
 
 # Genera un reporte consolidado de los archivos en un directorio.
@@ -69,11 +78,11 @@ def generate_report(
     processed_files = 0
     try:
         with open(final_report_path, "w", encoding="utf-8") as outfile:
-            # Escribe el encabezado principal del reporte.
+            # Escribe el encabezado principal del reporte (TRADUCIDO).
             outfile.write("=" * 80 + "\n")
-            outfile.write(f" LECTORCITO PRO - REPORTE DE PROYECTO\n")
-            outfile.write(f" PROYECTO: {folder_name}\n")
-            outfile.write(f" RUTA: {source_folder}\n")
+            outfile.write(f" {_get_tr(config, 'rep_title')}\n")
+            outfile.write(f" {_get_tr(config, 'rep_project', folder_name)}\n")
+            outfile.write(f" {_get_tr(config, 'rep_path', source_folder)}\n")
             outfile.write("=" * 80 + "\n\n")
 
             for root, dirs, files in os.walk(source_folder, topdown=True):
@@ -94,9 +103,13 @@ def generate_report(
 
                 # Escribe la cabecera para la carpeta actual.
                 relative_path = os.path.relpath(root, source_folder)
-                folder_name_display = relative_path if relative_path != '.' else 'RAÍZ DEL PROYECTO'
-                highlight = " [IMPORTANTE]" if os.path.basename(root) in important_folders else ""
-                outfile.write(f"■ CARPETA: {folder_name_display}{highlight}\n")
+
+                # Nombre de carpeta raíz traducido o path relativo
+                folder_name_display = relative_path if relative_path != '.' else _get_tr(config, 'rep_root')
+
+                highlight = _get_tr(config, 'rep_important') if os.path.basename(root) in important_folders else ""
+
+                outfile.write(f"{_get_tr(config, 'rep_folder', folder_name_display)}{highlight}\n")
                 outfile.write(f"└" + ("─" * 78) + "\n\n")
 
                 for filename, is_text, is_media in files_in_dir:
@@ -115,22 +128,22 @@ def generate_report(
 
                     rel_path_from_root = os.path.relpath(file_path, source_folder)
 
-                    outfile.write(f"  ● Archivo: {filename}\n")
-                    outfile.write(f"    Ruta: {rel_path_from_root}\n")
+                    outfile.write(f"{_get_tr(config, 'rep_file', filename)}\n")
+                    outfile.write(f"{_get_tr(config, 'rep_file_path', rel_path_from_root)}\n")
 
                     # Escribe el contenido del archivo si es de texto.
                     if is_text:
                         outfile.write("    " + ("-" * 74) + "\n")
-                        outfile.write(f"    >> INICIO DEL CONTENIDO: {filename}\n\n")
+                        outfile.write(f"{_get_tr(config, 'rep_sep_start', filename)}\n\n")
 
                         try:
                             with open(file_path, 'r', encoding='utf-8', errors='ignore') as infile:
                                 for line in infile:
                                     outfile.write(f"    {line}")
                         except Exception as e:
-                            outfile.write(f"     [Error al leer el archivo: {e}]\n")
+                            outfile.write(f"{_get_tr(config, 'rep_read_error', str(e))}\n")
 
-                        outfile.write(f"\n\n    << FIN DEL CONTENIDO: {filename}\n")
+                        outfile.write(f"\n\n{_get_tr(config, 'rep_sep_end', filename)}\n")
                         outfile.write("    " + ("-" * 74) + "\n\n\n")
 
                     # Si es multimedia, solo deja un espacio.

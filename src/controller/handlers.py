@@ -201,7 +201,6 @@ def _update_report_extension(controller, new_ext):
 
 
 def _try_programmatic_pin(link_path, taskbar=True):
-
     try:
         path = os.path.abspath(link_path)
         folder = os.path.dirname(path)
@@ -233,7 +232,6 @@ def _try_programmatic_pin(link_path, taskbar=True):
 
 
 def _create_system_shortcut(controller, mode, parent_window=None):
-
     msg_parent = parent_window if parent_window else controller.view
 
     try:
@@ -241,7 +239,8 @@ def _create_system_shortcut(controller, mode, parent_window=None):
             target_path = sys.executable
         else:
             target_path = sys.executable
-            print("AVISO: En modo script, el acceso directo apuntará al intérprete Python.")
+            # TEXTO QUEMADO ARREGLADO
+            print(controller.view._tr("shortcut_script_warning"))
 
         work_dir = os.path.dirname(target_path)
         app_name = "LectorcitoPro"
@@ -294,7 +293,10 @@ def _create_system_shortcut(controller, mode, parent_window=None):
         if os.path.exists(icon_path):
             shortcut.IconLocation = icon_path
         shortcut.WindowStyle = 1
-        shortcut.Description = "Lectorcito Pro - Análisis de Código"
+
+        # TEXTO QUEMADO ARREGLADO
+        shortcut.Description = controller.view._tr("shortcut_desc")
+
         shortcut.Save()
 
         if mode == "taskbar":
@@ -318,7 +320,6 @@ def _create_system_shortcut(controller, mode, parent_window=None):
 
 
 def _show_msg_safe(parent, title_key, msg_key, *args):
-
     if not hasattr(parent, "_tr") and hasattr(parent, "parent_view"):
         # Monkey patch temporal o usar parent_view para el texto pero parent para la ventana
         title = parent.parent_view._tr(title_key)

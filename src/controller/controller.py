@@ -6,6 +6,7 @@ import webbrowser
 from tkinter import filedialog
 
 import config
+import utils  # Importamos utils para usar el logger
 from model import processor
 from view.ui import LectorcitoApp
 from controller import handlers
@@ -21,6 +22,8 @@ class LectorcitoController:
         self.cancel_event = None
 
         self._assign_commands()
+
+        self._update_active_lecturas_path()
 
     def _assign_commands(self):
         self.view.main_buttons["selpath"].configure(command=lambda: handlers.select_destination_path(self))
@@ -62,6 +65,7 @@ class LectorcitoController:
 
         if path:
             self.config["last_read_folder"] = path
+            config.save_config(self.config)
             self.start_processing(path)
 
     def start_processing(self, folder_path: str):
@@ -79,23 +83,28 @@ class LectorcitoController:
         thread.start()
 
     def _processing_thread_target(self, folder_path: str, cancel_event: threading.Event):
-        overall_status = "success"
+        overall_status = "error"  # Default to error if crash
 
-        folder_name = os.path.basename(folder_path)
-        self.view.after(0, self.view.set_progress, 0, folder_name)
+        try:
+            folder_name = os.path.basename(folder_path)
+            self.view.after(0, self.view.set_progress, 0, folder_name)
 
-        status, report_path = processor.generate_report(
-            source_folder=folder_path,
-            output_path=self.config["lecturas_path"],
-            config=self.config,
-            progress_callback=self._safe_progress_update,
-            cancel_event=cancel_event
-        )
+            status, report_path = processor.generate_report(
+                source_folder=folder_path,
+                output_path=self.config["lecturas_path"],
+                config=self.config,
+                progress_callback=self._safe_progress_update,
+                cancel_event=cancel_event
+            )
 
-        if status == "success":
-            self.last_report_path = report_path
-        else:
+            if status == "success":
+                self.last_report_path = report_path
+
             overall_status = status
+
+        except Exception as e:
+            utils.log_error("Excepción en hilo de procesamiento", e)
+            overall_status = "error"
 
         self.view.after(0, self._on_processing_finished, overall_status)
 
@@ -156,9 +165,14 @@ class LectorcitoController:
         thread.start()
 
     def _tree_thread_target(self, source_path: str):
-        status, report_path = processor.generate_tree_report(
-            source_folder=source_path, output_path=self.config["lecturas_path"], config=self.config
-        )
+        try:
+            status, report_path = processor.generate_tree_report(
+                source_folder=source_path, output_path=self.config["lecturas_path"], config=self.config
+            )
+        except Exception as e:
+            utils.log_error("Excepción en hilo de árbol", e)
+            status, report_path = "error", None
+
         self.view.after(0, self._on_tree_generation_finished, status, report_path)
 
     def _on_tree_generation_finished(self, status: str, report_path: str | None):
@@ -186,4 +200,7 @@ class LectorcitoController:
             self.config["lecturas_path"] = self.config.get("custom_lecturas_path", config.DEFAULT_LECTURAS_PATH)
 
         if self.config["lecturas_path"]:
-            os.makedirs(self.config["lecturas_path"], exist_ok=True)
+            try:
+                os.makedirs(self.config["lecturas_path"], exist_ok=True)
+            except Exception as e:
+                utils.log_error(f"No se pudo crear carpeta lecturas: {self.config['lecturas_path']}", e)

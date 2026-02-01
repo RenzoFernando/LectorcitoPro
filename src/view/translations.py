@@ -97,6 +97,9 @@ TRANSLATIONS = {
         "msg_profile_exists": "Ya existe un perfil con ese nombre.",
         "confirm_del_profile": "¿Eliminar el perfil '{}'?\nEsta acción no se puede deshacer.",
         "msg_profile_changed": "Perfil '{}' activado.\nEntorno reconfigurado.",
+        "msg_max_profiles_reached": "Máx. 5 perfiles",
+        "lbl_default_name": "Predeterminado",
+        "lbl_active_suffix": " (Activo)",
 
         # --- AJUSTES AVANZADOS ---
         "dlg_settings_title": "Configuración General",
@@ -106,11 +109,27 @@ TRANSLATIONS = {
         "btn_shortcut_start": "Añadir al Menú de Programas",
         "btn_shortcut_taskbar": "Crear acceso (Manual: Barra de Tareas)",
         "btn_shortcut_pin_start": "Crear acceso (Manual: Anclar a Inicio)",
+
         "msg_shortcut_desktop_ok": "¡Acceso directo creado en el Escritorio correctamente!",
         "msg_shortcut_start_ok": "¡Añadido a la lista de Programas!\nBúscalo en 'Todas las aplicaciones' del menú Inicio.",
         "msg_shortcut_taskbar_ok": "¡Archivo creado!\nSe abrió la carpeta. Arrástralo a la Barra de Tareas.",
         "msg_shortcut_pin_start_ok": "¡Archivo listo!\nSe abrió la carpeta. Click derecho > 'Anclar a Inicio'.",
         "msg_shortcut_error": "No se pudo realizar la acción:\n{}",
+        "shortcut_desc": "Lectorcito Pro - Análisis de Código",
+        "shortcut_script_warning": "AVISO: En modo script, el acceso directo apuntará al intérprete Python.",
+
+        # --- REPORTES ---
+        "rep_title": "LECTORCITO PRO - REPORTE DE PROYECTO",
+        "rep_project": "PROYECTO: {}",
+        "rep_path": "RUTA: {}",
+        "rep_folder": "■ CARPETA: {}",
+        "rep_root": "RAÍZ DEL PROYECTO",
+        "rep_important": " [IMPORTANTE]",
+        "rep_file": "  ● Archivo: {}",
+        "rep_file_path": "    Ruta: {}",
+        "rep_sep_start": "    >> INICIO DEL CONTENIDO: {}",
+        "rep_sep_end": "    << FIN DEL CONTENIDO: {}",
+        "rep_read_error": "      [Error al leer el archivo: {}]",
 
         # --- TOOLTIPS ---
         "tooltip_ver": "Configurar qué carpetas y extensiones incluir en la lectura.",
@@ -223,6 +242,9 @@ TRANSLATIONS = {
         "msg_profile_exists": "A profile with that name already exists.",
         "confirm_del_profile": "Delete profile '{}'?\nThis action cannot be undone.",
         "msg_profile_changed": "Profile '{}' activated.\nEnvironment reconfigured.",
+        "msg_max_profiles_reached": "Max 5 profiles",
+        "lbl_default_name": "Default",
+        "lbl_active_suffix": " (Active)",
 
         # --- SETTINGS ---
         "dlg_settings_title": "General Settings",
@@ -237,6 +259,21 @@ TRANSLATIONS = {
         "msg_shortcut_taskbar_ok": "File created!\nFolder opened. Drag it to the Taskbar.",
         "msg_shortcut_pin_start_ok": "File ready!\nFolder opened. Right click > 'Pin to Start'.",
         "msg_shortcut_error": "Could not perform action:\n{}",
+        "shortcut_desc": "Lectorcito Pro - Code Analysis",
+        "shortcut_script_warning": "WARNING: In script mode, the shortcut will point to the Python interpreter.",
+
+        # --- REPORTS  ---
+        "rep_title": "LECTORCITO PRO - PROJECT REPORT",
+        "rep_project": "PROJECT: {}",
+        "rep_path": "PATH: {}",
+        "rep_folder": "■ FOLDER: {}",
+        "rep_root": "PROJECT ROOT",
+        "rep_important": " [IMPORTANT]",
+        "rep_file": "  ● File: {}",
+        "rep_file_path": "    Path: {}",
+        "rep_sep_start": "    >> CONTENT START: {}",
+        "rep_sep_end": "    << CONTENT END: {}",
+        "rep_read_error": "      [Error reading file: {}]",
 
         # --- TOOLTIPS ---
         "tooltip_ver": "Configure which folders and extensions to include in the reading.",

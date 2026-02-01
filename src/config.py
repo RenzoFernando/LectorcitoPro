@@ -6,11 +6,13 @@ from appdirs import user_config_dir
 APP_NAME = "LectorcitoPro"
 APP_AUTHOR = "APPS_RenzoFernando"
 CFG_NAME = "config.json"
+LOG_NAME = "error.log"  # NUEVO: Nombre del archivo de log
 
 # --- Rutas de Configuración ---
 _config_dir = user_config_dir(APP_NAME, APP_AUTHOR, roaming=True)
 os.makedirs(_config_dir, exist_ok=True)
 CONFIG_FILE_PATH = os.path.join(_config_dir, CFG_NAME)
+LOG_FILE_PATH = os.path.join(_config_dir, LOG_NAME) # NUEVO: Ruta completa del log
 
 DEFAULT_LECTURAS_PATH = os.path.join(_config_dir, "Lecturas")
 os.makedirs(DEFAULT_LECTURAS_PATH, exist_ok=True)

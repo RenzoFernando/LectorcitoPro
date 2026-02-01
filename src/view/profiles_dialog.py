@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from view.dialogs import BaseDialog, _style_button, _get_color_tuple
+from view.dialogs import BaseDialog, _style_button, _get_color_tuple, ConfirmDialog
 from view.ui_constants import COLORS
 
 
@@ -125,7 +125,8 @@ class ProfilesDialog(BaseDialog):
             self._create_profile_item(pid)
 
         if len(self.profiles) >= 5:
-            self.entry_new.configure(state="disabled", placeholder_text="Max 5 perfiles")
+            self.entry_new.configure(state="disabled",
+                                     placeholder_text=self.parent_view._tr("msg_max_profiles_reached"))
             self.btn_add.configure(state="disabled")
         else:
             self.entry_new.configure(state="normal", placeholder_text=self.parent_view._tr("ph_new_profile"))
@@ -140,7 +141,9 @@ class ProfilesDialog(BaseDialog):
     def _create_profile_item(self, pid):
         is_active = (pid == self.active_id)
         is_default = (pid == "default")
-        display_name = "Default" if pid == "default" else pid
+
+        display_name = self.parent_view._tr("lbl_default_name") if pid == "default" else pid
+        suffix = self.parent_view._tr("lbl_active_suffix") if is_active else ""
 
         item_frame = ctk.CTkFrame(
             self.scroll_frame,
@@ -153,7 +156,7 @@ class ProfilesDialog(BaseDialog):
 
         lbl = ctk.CTkLabel(
             item_frame,
-            text=f"  {display_name}" + (" (Activo)" if is_active else ""),
+            text=f"  {display_name}{suffix}",
             font=("Segoe UI", 12, "bold" if is_active else "normal"),
             text_color="#FFFFFF" if is_active else self.colors["text"]
         )
@@ -224,6 +227,3 @@ class ProfilesDialog(BaseDialog):
         dialog = cls(parent, profiles_meta, active_id, on_save_callback)
         parent.wait_window(dialog)
         return dialog.result
-
-
-from view.dialogs import ConfirmDialog
