@@ -1,6 +1,10 @@
+# =============================================================================
+# DICCIONARIO DE TRADUCCIONES
+# =============================================================================
+
 TRANSLATIONS = {
     "es": {
-        # --- GENERAL / INTERFAZ PRINCIPAL ---
+        # --- GENERAL ---
         "title": "LECTORCITO PRO",
         "welcome": ", por favor seleccione una opción.",
         "footer_copyright": "Copyright © {} - {} - Todos los derechos reservados.",
@@ -25,7 +29,7 @@ TRANSLATIONS = {
         "btn_del": "Eliminar Todas las Lecturas",
         "btn_cancel": "Cancelar Lectura",
 
-        # --- BOTONES DE DIÁLOGOS ---
+        # --- BOTONES COMUNES ---
         "btn_ok": "Aceptar",
         "btn_yes": "Sí",
         "btn_no": "No",
@@ -34,7 +38,7 @@ TRANSLATIONS = {
         "btn_restore_defaults": "Restaurar Ajustes",
         "btn_autodetect": "Autodetectar",
 
-        # --- DIÁLOGOS DE CONFIGURACIÓN ---
+        # --- DIALOGOS TAGS ---
         "dlg_ver_title": "Configurar qué Ver",
         "dlg_ver_folder_prompt": "Carpetas a resaltar como Importantes (ej: src, utils):",
         "dlg_ver_file_prompt": "Extensiones de archivo a Leer (ej: .py, .md):",
@@ -47,8 +51,11 @@ TRANSLATIONS = {
         "dlg_etiqueta_file_prompt": "Extensiones a Omitir Contenido (Solo Listar):",
 
         "placeholder_tags": "Escribir y presionar Enter para añadir...",
+        "msg_tag_conflict": "La etiqueta '{}' ya existe en la configuración de 'Ver' o 'No Ver'.\nPor prioridad, no puede añadirla aquí.",
+        "msg_autodetect_result": "Se detectaron y añadieron {} nuevas extensiones.",
+        "msg_autodetect_none": "No se encontraron nuevas extensiones (o ya estaban configuradas/excluidas).",
 
-        # --- MENSAJES DE ESTADO Y PROGRESO ---
+        # --- PROGRESO ---
         "progress_processing_text": "Procesando...",
         "progress_generating_tree": "Generando árbol de directorios...",
         "progress_done": "¡Completado!",
@@ -57,7 +64,7 @@ TRANSLATIONS = {
         "status_done_panel": "¡Completado!",
         "processing_label": "Procesando:",
 
-        # --- MENSAJES DE ACCIONES ---
+        # --- MENSAJES ACCIONES ---
         "msg_done": "¡Reporte completo guardado en '{}'!",
         "msg_tree_done": "¡Estructura de árbol guardada en '{}'!",
         "msg_cancelled": "La lectura fue cancelada.",
@@ -68,11 +75,7 @@ TRANSLATIONS = {
         "msg_error_generic": "Ocurrió un error inesperado durante la operación.",
         "msg_coming_soon": "Próximamente...",
 
-        "msg_tag_conflict": "La etiqueta '{}' ya existe en la configuración de 'Ver' o 'No Ver'.\nPor prioridad, no puede añadirla aquí.",
-        "msg_autodetect_result": "Se detectaron y añadieron {} nuevas extensiones.",
-        "msg_autodetect_none": "No se encontraron nuevas extensiones (o ya estaban configuradas/excluidas).",
-
-        # --- DESTINO DE GUARDADO ---
+        # --- SELECCION DESTINO ---
         "dlg_dest_choice_title": "Elegir Destino de Reportes",
         "dlg_dest_choice_prompt": "Seleccione dónde guardar los reportes:",
         "dlg_dest_choice_op1": "Usar Ruta por Defecto",
@@ -80,7 +83,7 @@ TRANSLATIONS = {
         "dest_set_default_msg": "Los reportes se guardarán en la ruta por defecto.",
         "dest_set_custom_msg": "Los reportes se guardarán en:\n{}",
 
-        # --- ELIMINACIÓN Y RESTAURACIÓN ---
+        # --- CONFIRMACIONES ---
         "confirm_del_title": "Confirmar Eliminación",
         "confirm_del_prompt": "¿Está seguro de que desea eliminar permanentemente la carpeta de lecturas y todo su contenido?",
         "msg_delete_success": "Contenido de '{}' eliminado con éxito.",
@@ -101,7 +104,7 @@ TRANSLATIONS = {
         "lbl_default_name": "Predeterminado",
         "lbl_active_suffix": " (Activo)",
 
-        # --- AJUSTES AVANZADOS ---
+        # --- AJUSTES ---
         "dlg_settings_title": "Configuración General",
         "lbl_report_format": "Formato de archivo:",
         "lbl_system_shortcuts": "Accesos directos e integración:",
@@ -109,7 +112,6 @@ TRANSLATIONS = {
         "btn_shortcut_start": "Añadir al Menú de Programas",
         "btn_shortcut_taskbar": "Crear acceso (Manual: Barra de Tareas)",
         "btn_shortcut_pin_start": "Crear acceso (Manual: Anclar a Inicio)",
-
         "msg_shortcut_desktop_ok": "¡Acceso directo creado en el Escritorio correctamente!",
         "msg_shortcut_start_ok": "¡Añadido a la lista de Programas!\nBúscalo en 'Todas las aplicaciones' del menú Inicio.",
         "msg_shortcut_taskbar_ok": "¡Archivo creado!\nSe abrió la carpeta. Arrástralo a la Barra de Tareas.",
@@ -118,7 +120,7 @@ TRANSLATIONS = {
         "shortcut_desc": "Lectorcito Pro - Análisis de Código",
         "shortcut_script_warning": "AVISO: En modo script, el acceso directo apuntará al intérprete Python.",
 
-        # --- REPORTES ---
+        # --- CONTENIDO REPORTE ---
         "rep_title": "LECTORCITO PRO - REPORTE DE PROYECTO",
         "rep_project": "PROYECTO: {}",
         "rep_path": "RUTA: {}",
@@ -145,7 +147,7 @@ TRANSLATIONS = {
     },
 
     "en": {
-        # --- GENERAL / MAIN INTERFACE ---
+        # --- GENERAL ---
         "title": "LECTORCITO PRO",
         "welcome": ", please select an option.",
         "footer_copyright": "Copyright © {} - {} - All Rights Reserved.",
@@ -154,12 +156,9 @@ TRANSLATIONS = {
         "error_title": "Error",
 
         # --- GREETINGS ---
-        "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?",
-                    "Have a productive morning!"],
-        "greet_a": ["Good afternoon!", "Hope your day is going great.", "Let's keep pushing that code!",
-                    "The afternoon is for creating."],
-        "greet_n": ["Good evening!", "One last look before logging off.", "May the code be with you.",
-                    "Time to compile some dreams."],
+        "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?", "Have a productive morning!"],
+        "greet_a": ["Good afternoon!", "Hope your day is going great.", "Let's keep pushing that code!", "The afternoon is for creating."],
+        "greet_n": ["Good evening!", "One last look before logging off.", "May the code be with you.", "Time to compile some dreams."],
 
         # --- MAIN BUTTONS ---
         "btn_sel_lecturas": "Select Readings Destination",
@@ -170,7 +169,7 @@ TRANSLATIONS = {
         "btn_del": "Delete All Readings",
         "btn_cancel": "Cancel Reading",
 
-        # --- DIALOG BUTTONS ---
+        # --- COMMON BUTTONS ---
         "btn_ok": "OK",
         "btn_yes": "Yes",
         "btn_no": "No",
@@ -179,7 +178,7 @@ TRANSLATIONS = {
         "btn_restore_defaults": "Restore Defaults",
         "btn_autodetect": "Auto-detect",
 
-        # --- CONFIG DIALOGS ---
+        # --- DIALOGS ---
         "dlg_ver_title": "Configure what to View",
         "dlg_ver_folder_prompt": "Folders to highlight as Important (e.g., src, utils):",
         "dlg_ver_file_prompt": "File extensions to Read (e.g., .py, .md):",
@@ -192,8 +191,11 @@ TRANSLATIONS = {
         "dlg_etiqueta_file_prompt": "Extensions to Skip Content (List Only):",
 
         "placeholder_tags": "Type and press Enter to add...",
+        "msg_tag_conflict": "The tag '{}' already exists in 'View' or 'No View' settings.\nDue to priority, it cannot be added here.",
+        "msg_autodetect_result": "Detected and added {} new extensions.",
+        "msg_autodetect_none": "No new extensions found (or they were already configured/excluded).",
 
-        # --- STATUS AND PROGRESS ---
+        # --- PROGRESS ---
         "progress_processing_text": "Processing...",
         "progress_generating_tree": "Generating directory tree...",
         "progress_done": "Completed!",
@@ -202,7 +204,7 @@ TRANSLATIONS = {
         "status_done_panel": "Completed!",
         "processing_label": "Processing:",
 
-        # --- ACTION MESSAGES ---
+        # --- MESSAGES ---
         "msg_done": "Full report saved in '{}'!",
         "msg_tree_done": "Directory tree saved in '{}'!",
         "msg_cancelled": "The reading process was cancelled.",
@@ -213,11 +215,7 @@ TRANSLATIONS = {
         "msg_error_generic": "An unexpected error occurred during the operation.",
         "msg_coming_soon": "Coming soon...",
 
-        "msg_tag_conflict": "The tag '{}' already exists in 'View' or 'No View' settings.\nDue to priority, it cannot be added here.",
-        "msg_autodetect_result": "Detected and added {} new extensions.",
-        "msg_autodetect_none": "No new extensions found (or they were already configured/excluded).",
-
-        # --- SAVE DESTINATION ---
+        # --- DESTINATION ---
         "dlg_dest_choice_title": "Choose Report Destination",
         "dlg_dest_choice_prompt": "Select where to save the reports:",
         "dlg_dest_choice_op1": "Use Default Path",
@@ -225,7 +223,7 @@ TRANSLATIONS = {
         "dest_set_default_msg": "Reports will be saved to the default path.",
         "dest_set_custom_msg": "Reports will be saved to:\n{}",
 
-        # --- DELETION AND RESTORE ---
+        # --- DELETION ---
         "confirm_del_title": "Confirm Deletion",
         "confirm_del_prompt": "Are you sure you want to permanently delete the readings folder and all its contents?",
         "msg_delete_success": "Contents of '{}' deleted successfully.",
@@ -262,7 +260,7 @@ TRANSLATIONS = {
         "shortcut_desc": "Lectorcito Pro - Code Analysis",
         "shortcut_script_warning": "WARNING: In script mode, the shortcut will point to the Python interpreter.",
 
-        # --- REPORTS  ---
+        # --- REPORT CONTENT ---
         "rep_title": "LECTORCITO PRO - PROJECT REPORT",
         "rep_project": "PROJECT: {}",
         "rep_path": "PATH: {}",

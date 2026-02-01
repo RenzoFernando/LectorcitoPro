@@ -3,24 +3,25 @@ from view.dialogs import BaseDialog, _style_button, _get_color_tuple, ConfirmDia
 from view.ui_constants import COLORS
 
 
+# =============================================================================
+# DIALOGO DE GESTION DE PERFILES
+# =============================================================================
+
 class ProfilesDialog(BaseDialog):
     def __init__(self, parent, profiles_meta: dict, active_id: str, on_save_callback=None):
-        # 1. Configuración básica (sin mostrar ventana aún)
         title = parent._tr("dlg_profiles_title") if hasattr(parent, "_tr") else "Perfiles"
         super().__init__(parent, title)
 
-        # Ocultar explícitamente y quitar opacidad para evitar parpadeos
+        # Ocultamos y quitamos opacidad para evitar parpadeos visuales al calcular geometria
         self.withdraw()
         self.attributes("-alpha", 0.0)
 
-        # Datos
         self.profiles = profiles_meta.copy()
         self.active_id = active_id
         self.result = None
         self.parent_view = parent
         self.on_save_callback = on_save_callback
 
-        # Colores
         self.colors = {
             "card": _get_color_tuple("card"),
             "text": _get_color_tuple("text"),
@@ -28,21 +29,17 @@ class ProfilesDialog(BaseDialog):
             "hover": COLORS["sidebar_hover"]
         }
 
-        # 2. Construcción de UI (En memoria, aún invisible)
         self._build_ui()
         self._redraw_list()
 
-        # 3. PASO A PASO: Programar la visualización para después
-        # Damos 150ms al sistema para respirar antes de calcular geometría
+        # Damos tiempo al sistema para "respirar" antes de calcular la geometria final
         self.after(300, self._step_calculate_geometry)
 
     def _build_ui(self):
         self.geometry("450x500")
 
-        # Frame Principal
         self.main_frame = self._create_card_frame()
 
-        # Título
         ctk.CTkLabel(
             self.main_frame,
             text=self.parent_view._tr("lbl_select_profile") if hasattr(self.parent_view,
@@ -51,7 +48,6 @@ class ProfilesDialog(BaseDialog):
             text_color=self.colors["text"]
         ).pack(pady=(20, 10))
 
-        # Lista Scrollable
         self.scroll_frame = ctk.CTkScrollableFrame(
             self.main_frame,
             fg_color="transparent",
@@ -59,7 +55,6 @@ class ProfilesDialog(BaseDialog):
         )
         self.scroll_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # Frame inferior
         self.bottom_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         self.bottom_frame.pack(fill="x", padx=20, pady=20)
 
@@ -82,37 +77,33 @@ class ProfilesDialog(BaseDialog):
         self.entry_new.bind("<Return>", lambda e: self._add_profile())
 
     def _step_calculate_geometry(self):
-        """Calcula el centro exacto sin mostrar la ventana aún."""
+        # Calcula el centro exacto sin mostrar la ventana aun
         try:
-            self.update_idletasks()  # Forzar cálculo de tamaños internos
+            self.update_idletasks()
 
-            # Obtener dimensiones de pantalla y ventana
             screen_w = self.winfo_screenwidth()
             screen_h = self.winfo_screenheight()
             win_w = 450
             win_h = 500
 
-            # Calcular centro
             x = (screen_w // 2) - (win_w // 2)
             y = (screen_h // 2) - (win_h // 2)
 
             self.geometry(f"{win_w}x{win_h}+{x}+{y}")
 
-            # Siguiente paso: Mostrar visualmente
             self.after(100, self._step_show_window)
         except Exception:
-            # Fallback por si algo falla
             self.geometry("450x500")
             self.deiconify()
             self.attributes("-alpha", 1.0)
 
     def _step_show_window(self):
-        """Hace visible la ventana suavemente."""
+        # Hace visible la ventana suavemente y activa la modalidad
         self.deiconify()
         self.attributes("-alpha", 1.0)
         self.lift()
         self.focus_force()
-        self.grab_set()  # Modalidad
+        self.grab_set()
 
     def _redraw_list(self):
         for w in self.scroll_frame.winfo_children():
@@ -124,6 +115,7 @@ class ProfilesDialog(BaseDialog):
         for pid in keys:
             self._create_profile_item(pid)
 
+        # Limite de perfiles para evitar desorden visual
         if len(self.profiles) >= 5:
             self.entry_new.configure(state="disabled",
                                      placeholder_text=self.parent_view._tr("msg_max_profiles_reached"))
@@ -222,8 +214,6 @@ class ProfilesDialog(BaseDialog):
 
     @classmethod
     def ask(cls, parent, profiles_meta, active_id, on_save_callback=None):
-        # Instanciamos pero NO esperamos 'wait_window' inmediatamente en el init
-        # El init ahora es no-bloqueante visualmente
         dialog = cls(parent, profiles_meta, active_id, on_save_callback)
         parent.wait_window(dialog)
         return dialog.result

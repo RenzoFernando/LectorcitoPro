@@ -1,28 +1,30 @@
-# src/controller/controller.py
 import os
-import shutil
 import threading
 import webbrowser
 from tkinter import filedialog
 
 import config
-import utils  # Importamos utils para usar el logger
+import utils
 from model import processor
 from view.ui import LectorcitoApp
 from controller import handlers
 
+
+# =============================================================================
+# CONTROLADOR PRINCIPAL
+# =============================================================================
 
 class LectorcitoController:
 
     def __init__(self):
         self.config = config.load_config()
         self.view = LectorcitoApp(self.config, self)
+
         self.last_report_path = None
         self.is_processing = False
         self.cancel_event = None
 
         self._assign_commands()
-
         self._update_active_lecturas_path()
 
     def _assign_commands(self):
@@ -32,6 +34,7 @@ class LectorcitoController:
         self.view.main_buttons["openlect"].configure(command=lambda: handlers.open_destination_folder(self))
         self.view.main_buttons["openlast"].configure(command=lambda: handlers.open_last_report(self))
         self.view.main_buttons["delete"].configure(command=lambda: handlers.delete_all_readings(self))
+        self.view.btn_cancel.configure(command=self.cancel_processing)
 
         self.view.sidebar_buttons["ver"].configure(command=lambda: handlers.show_view_config_dialog(self))
         self.view.sidebar_buttons["nover"].configure(command=lambda: handlers.show_no_view_config_dialog(self))
@@ -39,20 +42,17 @@ class LectorcitoController:
         self.view.sidebar_buttons["theme_icon"].configure(command=lambda: handlers.toggle_theme(self))
         self.view.sidebar_buttons["traducir"].configure(command=lambda: handlers.toggle_language(self))
         self.view.sidebar_buttons["restaurar"].configure(command=lambda: handlers.restore_default_settings(self))
-        self.view.sidebar_buttons["github"].configure(command=lambda: webbrowser.open_new(self.view.REPO_URL))
-
-        # --- CAMBIO AQUÍ: Vinculamos el botón perfil a la gestión de perfiles ---
         self.view.sidebar_buttons["perfil"].configure(command=lambda: handlers.manage_profiles(self))
-
+        self.view.sidebar_buttons["github"].configure(command=lambda: webbrowser.open_new(self.view.REPO_URL))
         self.view.sidebar_buttons["info"].configure(command=self.view.show_app_info)
-
-        # NUEVO: Botón de Ajustes / Configuración Global
         self.view.sidebar_buttons["ajustes"].configure(command=lambda: handlers.show_settings_dialog(self))
-
-        self.view.btn_cancel.configure(command=self.cancel_processing)
 
     def run(self):
         self.view.mainloop()
+
+    # =========================================================================
+    # LOGICA DE PROCESAMIENTO
+    # =========================================================================
 
     def select_reading_type(self):
         if not self._check_destination_path():
@@ -78,13 +78,14 @@ class LectorcitoController:
         self.view.toggle_ui_for_processing(is_active=True)
 
         thread = threading.Thread(
-            target=self._processing_thread_target, args=(folder_path, self.cancel_event), daemon=True
+            target=self._processing_thread_target,
+            args=(folder_path, self.cancel_event),
+            daemon=True
         )
         thread.start()
 
     def _processing_thread_target(self, folder_path: str, cancel_event: threading.Event):
-        overall_status = "error"  # Default to error if crash
-
+        overall_status = "error"
         try:
             folder_name = os.path.basename(folder_path)
             self.view.after(0, self.view.set_progress, 0, folder_name)
@@ -99,7 +100,6 @@ class LectorcitoController:
 
             if status == "success":
                 self.last_report_path = report_path
-
             overall_status = status
 
         except Exception as e:
@@ -107,6 +107,9 @@ class LectorcitoController:
             overall_status = "error"
 
         self.view.after(0, self._on_processing_finished, overall_status)
+
+    def _safe_progress_update(self, percentage: float, file_context: str):
+        self.view.after(0, self.view.set_progress, percentage, file_context)
 
     def _on_processing_finished(self, status: str):
         if status == "success":
@@ -133,18 +136,13 @@ class LectorcitoController:
                 title_key, msg_key = message_map[status]
                 self.view.show_message(title_key, msg_key)
 
-    def _safe_progress_update(self, percentage: float, file_context: str):
-        self.view.after(0, self.view.set_progress, percentage, file_context)
-
     def cancel_processing(self):
         if self.cancel_event:
             self.cancel_event.set()
 
-    def _check_destination_path(self) -> bool:
-        if not self.config.get("lecturas_path"):
-            self.view.show_message("info_title", "msg_select_dest")
-            return False
-        return True
+    # =========================================================================
+    # LOGICA DE ARBOL
+    # =========================================================================
 
     def create_tree_structure(self):
         if self.is_processing or not self._check_destination_path():
@@ -155,13 +153,13 @@ class LectorcitoController:
             return
 
         self.is_processing = True
-        self.view.toggle_ui_for_processing(is_active=True, mode='indeterminate',
-                                           text=self.view._tr("progress_generating_tree"))
+        self.view.toggle_ui_for_processing(
+            is_active=True, mode='indeterminate', text=self.view._tr("progress_generating_tree")
+        )
 
         thread = threading.Thread(
             target=self._tree_thread_target, args=(source_path,), daemon=True
         )
-
         thread.start()
 
     def _tree_thread_target(self, source_path: str):
@@ -193,6 +191,16 @@ class LectorcitoController:
         else:
             self.view.show_message("error_title", "msg_error_generic")
 
+    # =========================================================================
+    # UTILIDADES INTERNAS
+    # =========================================================================
+
+    def _check_destination_path(self) -> bool:
+        if not self.config.get("lecturas_path"):
+            self.view.show_message("info_title", "msg_select_dest")
+            return False
+        return True
+
     def _update_active_lecturas_path(self):
         if self.config.get("use_default_path", True):
             self.config["lecturas_path"] = config.DEFAULT_LECTURAS_PATH
@@ -203,4 +211,4 @@ class LectorcitoController:
             try:
                 os.makedirs(self.config["lecturas_path"], exist_ok=True)
             except Exception as e:
-                utils.log_error(f"No se pudo crear carpeta lecturas: {self.config['lecturas_path']}", e)
+                utils.log_error(f"Error creando carpeta lecturas: {self.config['lecturas_path']}", e)

@@ -8,6 +8,9 @@ from view.ui_assets import get_app_icon_path
 
 MESSAGE_AUTO_CLOSE_SECONDS = 10
 
+# =============================================================================
+# UTILIDADES DE ESTILO
+# =============================================================================
 
 def _get_color_tuple(key: str) -> tuple[str, str]:
     key_map = {
@@ -34,6 +37,10 @@ def _style_button(btn: ctk.CTkButton, color_type="blue"):
         hover_color=hover
     )
 
+
+# =============================================================================
+# CLASE BASE PARA DIALOGOS
+# =============================================================================
 
 class BaseDialog(ctk.CTkToplevel):
 
@@ -73,9 +80,7 @@ class BaseDialog(ctk.CTkToplevel):
     def _set_icon_safe(self):
         try:
             if not self.winfo_exists(): return
-
             icon_path = get_app_icon_path()
-
             if icon_path and os.path.exists(icon_path):
                 self.iconbitmap(icon_path)
                 self.after(100, lambda: self.iconbitmap(icon_path))
@@ -133,9 +138,7 @@ class BaseDialog(ctk.CTkToplevel):
         if not self.winfo_exists(): return
 
         try:
-            # CAMBIO: Forzamos la actualización de la UI para calcular el tamaño real del contenido
             self.update_idletasks()
-
             w = self.winfo_width()
             h = self.winfo_height()
 
@@ -164,7 +167,6 @@ class BaseDialog(ctk.CTkToplevel):
 
     def _fade_in(self):
         if not self.winfo_exists(): return
-
         try:
             alpha = self.attributes("-alpha")
         except Exception:
@@ -207,6 +209,10 @@ class BaseDialog(ctk.CTkToplevel):
         self._close_with_fade_out()
 
 
+# =============================================================================
+# DIALOGOS ESPECIFICOS
+# =============================================================================
+
 class MessageDialog(BaseDialog):
     def __init__(self, parent, title, message):
         super().__init__(parent, title)
@@ -247,7 +253,6 @@ class MessageDialog(BaseDialog):
             seconds = 0.0
         if seconds <= 0: return
         ms = max(1, int(seconds * 1000))
-
         self._auto_close_after_id = self.after(ms, self._auto_close)
 
     def _cancel_auto_close(self):

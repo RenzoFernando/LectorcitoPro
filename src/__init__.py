@@ -1,2 +1,10 @@
-# Este archivo convierte al directorio 'src' en un paquete de Python,
-# lo que permite importaciones relativas y una mejor organización del proyecto.
+"""
+PAQUETE SRC
+-------------
+Contiene los paquetes principales de la aplicación:
+- model: Lógica de negocio y procesamiento de datos.
+- controller: Controla la interacción entre la UI y el modelo.
+- view: Interfaz gráfica de usuario.
+
+Además, aquí está el main y también este paquete contiene módulos auxiliares como config y utils.
+"""

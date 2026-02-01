@@ -1,29 +1,21 @@
-# src/view/status_panel.py
 from __future__ import annotations
 
 import time
 import customtkinter as ctk
 
 from view.gradient_progress import GradientProgressBar
-from view.ui_constants import COLORS  # Importamos constantes
+from view.ui_constants import COLORS
 
+
+# =============================================================================
+# PANEL DE ESTADO Y PROGRESO
+# =============================================================================
 
 class StatusPanel(ctk.CTkFrame):
-    """
-    Panel de Estado:
-    - Texto de estado con puntos animados (., .., ...)
-    - Porcentaje alineado a la derecha
-    - Barra de progreso gradiente (track visible + sin puntico)
-    - Ruta del archivo (durante lectura) dentro del mismo panel
-    - Botón cancelar (icono ✕ compacto)
-    - Regla UX: mínimo visible del progreso (evita parpadeo 0→100)
-    """
-
     def __init__(self, parent, *, min_visible_seconds: float = 2.0):
         super().__init__(parent, fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
-        # --- Config / Estado ---
         self._min_visible_s = float(min_visible_seconds)
         self._processing_started_at: float | None = None
         self._min_end_time: float | None = None
@@ -39,16 +31,16 @@ class StatusPanel(ctk.CTkFrame):
         self._progress_after_id = None
         self._last_tick = None
 
-        # --- UI ---
+        # --- Construccion UI ---
         self.status_panel = ctk.CTkFrame(self, corner_radius=16, border_width=1)
         self.status_panel.grid(row=0, column=0, padx=10, pady=(4, 6), sticky="ew")
         self.status_panel.grid_columnconfigure(0, weight=1)
 
         top_row = ctk.CTkFrame(self.status_panel, fg_color="transparent")
         top_row.grid(row=0, column=0, padx=12, pady=(10, 4), sticky="ew")
-        top_row.grid_columnconfigure(0, weight=1)  # status text
-        top_row.grid_columnconfigure(1, weight=0)  # percent
-        top_row.grid_columnconfigure(2, weight=0)  # cancel
+        top_row.grid_columnconfigure(0, weight=1)
+        top_row.grid_columnconfigure(1, weight=0)
+        top_row.grid_columnconfigure(2, weight=0)
 
         self.lbl_status = ctk.CTkLabel(
             top_row, text="", font=("Segoe UI", 11, "normal"), anchor="w"
@@ -60,14 +52,13 @@ class StatusPanel(ctk.CTkFrame):
         )
         self.lbl_percent.grid(row=0, column=1, sticky="e", padx=(0, 8))
 
-        # Cancel (icono compacto dentro del panel)
         self.btn_cancel = ctk.CTkButton(
             top_row,
             text="✕",
             width=28,
             height=28,
             corner_radius=14,
-            fg_color=COLORS["button"]["red"]["bg"],  # Usamos constantes
+            fg_color=COLORS["button"]["red"]["bg"],
             hover_color=COLORS["button"]["red"]["hover"],
             text_color="white",
             font=("Segoe UI", 13, "bold"),
@@ -79,7 +70,6 @@ class StatusPanel(ctk.CTkFrame):
         self.progress_bar.grid(row=1, column=0, padx=12, pady=(0, 6), sticky="ew")
         self.progress_bar.set(0.0)
 
-        # Ruta (ruta actual / carpeta)
         self.file_row = ctk.CTkFrame(self.status_panel, fg_color="transparent")
         self.file_row.grid(row=2, column=0, padx=12, pady=(0, 12), sticky="ew")
         self.file_row.grid_columnconfigure(1, weight=1)
@@ -101,6 +91,7 @@ class StatusPanel(ctk.CTkFrame):
 
         self.status_panel.bind("<Configure>", self._on_panel_resize)
 
+        # Estados de traduccion
         self._processing_label_text = ""
         self._btn_cancel_full_text = ""
         self._tr = None
@@ -143,11 +134,8 @@ class StatusPanel(ctk.CTkFrame):
 
     def apply_theme(self, theme_name: str):
         is_light = theme_name == "Light"
-
-        # Obtenemos los colores del diccionario centralizado
         theme = COLORS["light"] if is_light else COLORS["dark"]
 
-        # Aplicamos colores consistentes
         try:
             self.status_panel.configure(fg_color=theme["surface"], border_color=theme["border"], border_width=1)
         except Exception:
@@ -240,6 +228,7 @@ class StatusPanel(ctk.CTkFrame):
         dt = (now - (self._last_tick or now))
         self._last_tick = now
 
+        # Suavizado de progreso al final
         if self._forced_end_time is not None and now < self._forced_end_time:
             self.target_progress = max(self.target_progress, 98.0)
         elif self._forced_end_time is not None and now >= self._forced_end_time:
@@ -304,6 +293,7 @@ class StatusPanel(ctk.CTkFrame):
             final_status: str | None = None
     ):
         if is_active:
+            # Reseteo de tiempos para calculo UX
             self._processing_started_at = time.monotonic()
             self._min_end_time = self._processing_started_at + self._min_visible_s
             self._forced_end_time = None

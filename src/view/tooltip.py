@@ -4,12 +4,16 @@ from tkinter import TclError
 
 TOOLTIP_AUTOHIDE_SECONDS = 2.5
 
+# =============================================================================
+# DETECCION DE PANTALLA
+# =============================================================================
 
 def _is_windows() -> bool:
     return sys.platform.startswith("win")
 
 
 def _get_monitor_workarea_for_point(x: int, y: int, widget):
+    # Intento obtener el area de trabajo real en Windows (excluyendo barra de tareas)
     if _is_windows():
         try:
             import ctypes
@@ -50,7 +54,7 @@ def _get_monitor_workarea_for_point(x: int, y: int, widget):
         except Exception:
             pass
 
-    # --- Fallback: Virtual root (suele funcionar mejor que screenwidth en multi-monitor) ---
+    # Fallback: Virtual root
     try:
         vx = int(widget.winfo_vrootx())
         vy = int(widget.winfo_vrooty())
@@ -60,7 +64,7 @@ def _get_monitor_workarea_for_point(x: int, y: int, widget):
     except Exception:
         pass
 
-    # --- Último fallback: pantalla “principal” ---
+    # Fallback final: Screen size basico
     try:
         sw = int(widget.winfo_screenwidth())
         sh = int(widget.winfo_screenheight())
@@ -69,14 +73,11 @@ def _get_monitor_workarea_for_point(x: int, y: int, widget):
         return 0, 0, 1920, 1080
 
 
+# =============================================================================
+# VENTANA COMPARTIDA DEL TOOLTIP
+# =============================================================================
+
 class _SharedTooltipWindow:
-    """
-    Ventana única (reutilizable) para TODOS los tooltips.
-    - Se muestra/oculta
-    - Cambia texto + posición
-    - Estilo minimalista + elegante
-    - Fade in/out corto y seguro (sin callbacks colgando)
-    """
     _instance = None
 
     @classmethod
@@ -103,8 +104,6 @@ class _SharedTooltipWindow:
         self._fade_after_id = None
         self._visible = False
 
-        # Intento de “transparentcolor” (Windows) para bordes limpios.
-        # Si falla, no pasa nada.
         self._transparent_color = "#E532F1"
         try:
             self._window.configure(fg_color=self._transparent_color)
@@ -112,7 +111,6 @@ class _SharedTooltipWindow:
         except Exception:
             self._transparent_color = None
 
-        # Contenedor con borde (elegante, minimal)
         self._frame = ctk.CTkFrame(
             self._window,
             corner_radius=12,
@@ -145,7 +143,6 @@ class _SharedTooltipWindow:
 
     def _apply_theme(self):
         mode = ctk.get_appearance_mode()
-        # Paleta “tipo GitHub” (minimal y elegante)
         if mode == "Dark":
             bg = "#1F2328"
             border = "#2B3137"
@@ -162,9 +159,6 @@ class _SharedTooltipWindow:
             pass
 
     def show(self, widget, text: str, placement: str = "auto", gap: int = 10):
-        """
-        placement: "auto" | "right" | "left" | "top" | "bottom"
-        """
         if not widget or not self._safe_exists(widget):
             return
 
@@ -175,7 +169,6 @@ class _SharedTooltipWindow:
         except Exception:
             return
 
-        # Medir tamaño real del tooltip antes de posicionar
         try:
             self._window.update_idletasks()
         except Exception:
@@ -189,7 +182,7 @@ class _SharedTooltipWindow:
         except Exception:
             return
 
-        # Fade in suave
+        # Animacion Fade In
         self._cancel_fade()
         try:
             self._window.attributes("-alpha", 0.0)
@@ -215,7 +208,6 @@ class _SharedTooltipWindow:
         self._fade_out_step()
 
     def hide_immediate(self):
-        """Oculta la ventana instantáneamente sin animación."""
         self._cancel_fade()
         self._visible = False
         if self._safe_exists(self._window):
@@ -234,7 +226,6 @@ class _SharedTooltipWindow:
         try:
             a = float(self._window.attributes("-alpha"))
         except Exception:
-            # Si alpha no está soportado, mostramos directo
             return
 
         if a < self._target_alpha:
@@ -255,7 +246,6 @@ class _SharedTooltipWindow:
         try:
             a = float(self._window.attributes("-alpha"))
         except Exception:
-            # Sin alpha: ocultar directo
             try:
                 self._window.withdraw()
             except Exception:
@@ -279,7 +269,6 @@ class _SharedTooltipWindow:
             self._visible = False
 
     def _reposition(self, widget, placement: str = "auto", gap: int = 10):
-        # Coordenadas del widget en pantalla
         try:
             wx = int(widget.winfo_rootx())
             wy = int(widget.winfo_rooty())
@@ -288,33 +277,26 @@ class _SharedTooltipWindow:
         except Exception:
             return
 
-        # Tamaño tooltip
         try:
             tw = max(1, int(self._window.winfo_reqwidth()))
             th = max(1, int(self._window.winfo_reqheight()))
         except Exception:
             tw, th = 240, 40
 
-        # Punto de referencia: centro del widget
         cx = wx + ww // 2
         cy = wy + wh // 2
 
-        # Monitor correcto (work area)
         left, top, right, bottom = _get_monitor_workarea_for_point(cx, cy, widget)
-
         pad = 8
         gap = int(gap)
 
-        # Espacios disponibles
-        space_right = (right - (wx + ww))  # desde borde derecho del widget hasta borde del monitor
+        space_right = (right - (wx + ww))
         space_left = (wx - left)
         space_bottom = (bottom - (wy + wh))
         space_top = (wy - top)
 
-        # Auto placement: elige el lado con más espacio (prioridad horizontal)
         pl = placement.lower().strip() if placement else "auto"
         if pl == "auto":
-            # preferimos lateral; si no cabe, probamos vertical
             if space_right >= tw + gap:
                 pl = "right"
             elif space_left >= tw + gap:
@@ -324,7 +306,6 @@ class _SharedTooltipWindow:
             else:
                 pl = "top"
 
-        # Calcular x,y según placement
         if pl == "right":
             x = wx + ww + gap
             y = cy - th // 2
@@ -334,11 +315,10 @@ class _SharedTooltipWindow:
         elif pl == "bottom":
             x = cx - tw // 2
             y = wy + wh + gap
-        else:  # "top"
+        else:
             x = cx - tw // 2
             y = wy - th - gap
 
-        # Clamp final al monitor (work area)
         x = max(left + pad, min(x, right - tw - pad))
         y = max(top + pad, min(y, bottom - th - pad))
 
@@ -348,8 +328,12 @@ class _SharedTooltipWindow:
             pass
 
 
+# =============================================================================
+# CLASE WRAPPER (USO PUBLICO)
+# =============================================================================
+
 class CustomTooltip:
-    _active_tooltip = None  # solo 1 tooltip visible a la vez
+    _active_tooltip = None
 
     def __init__(self, widget, text: str, delay: int = 500, placement: str = "auto", gap: int = 10):
         self.widget = widget
@@ -372,7 +356,6 @@ class CustomTooltip:
         except Exception:
             pass
 
-    # Compatible con tu update_ui_texts() (asigna self.tooltips[key].text = ...)
     @property
     def text(self) -> str:
         return self._text
@@ -426,7 +409,6 @@ class CustomTooltip:
 
     def hide_tooltip(self):
         self._cancel_scheduled_show()
-
         self._cancel_scheduled_auto_hide()
 
         if CustomTooltip._active_tooltip is self:
@@ -442,20 +424,15 @@ class CustomTooltip:
         self.hide_tooltip()
         self._cancel_scheduled_show()
 
-    # --- NUEVO MÉTODO PARA ELIMINAR TODO RASTRO AL ABRIR DIÁLOGOS ---
     @classmethod
     def hide_global(cls):
-        """Fuerza el cierre inmediato de cualquier tooltip activo (sin animación)."""
         active = cls._active_tooltip
         if active:
             active._cancel_scheduled_show()
             active._cancel_scheduled_auto_hide()
-
-            # Obtener ventana y forzar cierre inmediato
             win = active._get_shared_window()
             if win:
                 win.hide_immediate()
-
             cls._active_tooltip = None
 
     def _cancel_scheduled_show(self):
@@ -467,7 +444,6 @@ class CustomTooltip:
         self._after_id = None
 
     def _schedule_auto_hide(self):
-        # Si el tiempo es <= 0, se desactiva el auto-ocultado.
         try:
             seconds = float(TOOLTIP_AUTOHIDE_SECONDS)
         except Exception:
@@ -483,9 +459,6 @@ class CustomTooltip:
 
         try:
             ms = max(1, int(seconds * 1000))
-
-            # Programar el after en el toplevel (no en el widget).
-            # Así, si el widget se destruye mientras el tooltip está visible, el auto-hide NO se pierde.
             master = None
             try:
                 if self._safe_widget():
@@ -494,7 +467,7 @@ class CustomTooltip:
                 master = None
 
             if master is None:
-                master = self.widget  # fallback
+                master = self.widget
 
             self._auto_hide_master = master
             self._auto_hide_id = master.after(ms, self._on_auto_hide)
@@ -519,9 +492,7 @@ class CustomTooltip:
         self._auto_hide_master = None
 
     def _get_shared_window(self):
-        # Intentar por el widget; si ya no existe, usar el master del auto-hide (toplevel).
         root_window = None
-
         if self._safe_widget():
             try:
                 root_window = self.widget.winfo_toplevel()
@@ -540,10 +511,7 @@ class CustomTooltip:
             return None
 
     def _on_auto_hide(self):
-        # Se ejecuta cuando se cumple el tiempo máximo visible.
         self._auto_hide_id = None
-
-        # Solo ocultamos si ESTE tooltip sigue siendo el activo.
         if CustomTooltip._active_tooltip is self:
             self.hide_tooltip()
 

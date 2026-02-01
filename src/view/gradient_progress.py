@@ -1,9 +1,10 @@
-# src/view/gradient_progress.py
 from __future__ import annotations
-
 import customtkinter as ctk
 from tkinter import Canvas
 
+# =============================================================================
+# UTILIDADES DE COLOR
+# =============================================================================
 
 def _hex_to_rgb(h: str) -> tuple[int, int, int]:
     h = h.lstrip("#")
@@ -28,18 +29,13 @@ def _lerp_color(c1: str, c2: str, t: float) -> str:
 
 
 def gradient_color_at(t: float) -> str:
-    """
-    Gradiente continuo:
-    rojo -> naranja -> ámbar -> lima -> verde
-    (colores ajustados a la paleta de la app)
-    """
+    # Rojo -> Naranja -> Ambar -> Lima -> Verde
     stops = [
-        # Paleta de la app (mismo rojo/verde que botones) + tonos intermedios coherentes
-        (0.00, "#D03B3D"),  # rojo (app)
-        (0.30, "#D06A3B"),  # rojo-naranja
-        (0.55, "#D0A33B"),  # ámbar
-        (0.78, "#A8D03B"),  # lima
-        (1.00, "#3BD056"),  # verde (app)
+        (0.00, "#D03B3D"),
+        (0.30, "#D06A3B"),
+        (0.55, "#D0A33B"),
+        (0.78, "#A8D03B"),
+        (1.00, "#3BD056"),
     ]
     t = max(0.0, min(1.0, float(t)))
 
@@ -72,21 +68,18 @@ def rounded_rect_points(x1: int, y1: int, x2: int, y2: int, r: int) -> list[int]
     return pts
 
 
+# =============================================================================
+# WIDGET BARRA DE PROGRESO
+# =============================================================================
+
 class GradientProgressBar(ctk.CTkFrame):
-    """
-    Barra custom:
-    - track visible
-    - fill con degradado
-    - sin “puntico”
-    - modo indeterminate opcional
-    """
     def __init__(self, parent, height: int = 12, corner_radius: int = 8):
         super().__init__(parent, fg_color="transparent")
         self._h = height
         self._r = corner_radius
 
-        self._value = 0.0  # 0..1
-        self._mode = "determinate"  # determinate | indeterminate
+        self._value = 0.0
+        self._mode = "determinate"
         self._ind_phase = 0.0
         self._ind_after_id = None
 
@@ -169,7 +162,7 @@ class GradientProgressBar(ctk.CTkFrame):
         pts_left = rounded_rect_points(x1, y1, min(x1 + cap_r * 2, x2), y2, cap_r)
         self._canvas.create_polygon(pts_left, smooth=True, fill=gradient_color_at(0.0), outline="")
 
-        # Si llegó al 100%, redondeado derecho
+        # Redondeado derecho al completar
         if self._value >= 0.999:
             pts_right = rounded_rect_points(max(x1, x2 - cap_r * 2), y1, x2, y2, cap_r)
             self._canvas.create_polygon(pts_right, smooth=True, fill=gradient_color_at(1.0), outline="")

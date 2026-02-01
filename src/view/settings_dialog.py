@@ -2,12 +2,15 @@ import customtkinter as ctk
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple
 
 
+# =============================================================================
+# DIALOGO DE CONFIGURACION GENERAL
+# =============================================================================
+
 class SettingsDialog(BaseDialog):
     def __init__(self, parent, current_extension: str, on_save_callback=None, on_shortcut_callback=None):
         title = parent._tr("dlg_settings_title") if hasattr(parent, "_tr") else "Ajustes"
         super().__init__(parent, title)
 
-        # 1. ESTADO INICIAL
         self.withdraw()
         self.attributes("-alpha", 0.0)
 
@@ -19,7 +22,7 @@ class SettingsDialog(BaseDialog):
 
         self.geometry("400x370")
 
-        # 2. INICIAR SECUENCIA
+        # Inicia la construccion secuencial para no congelar la UI
         self.after(650, self._step_1_build_frame)
 
     def _step_1_build_frame(self):
@@ -27,7 +30,6 @@ class SettingsDialog(BaseDialog):
         self.after(10, self._step_2_add_format_section)
 
     def _step_2_add_format_section(self):
-        # Etiqueta
         ctk.CTkLabel(
             self.main_frame,
             text=self.parent_view._tr("lbl_report_format"),
@@ -35,7 +37,7 @@ class SettingsDialog(BaseDialog):
             text_color=_get_color_tuple("text")
         ).pack(pady=(20, 5), padx=20, anchor="w")
 
-        # AJUSTE: Usamos OptionMenu en lugar de SegmentedButton para mejor estética
+        # Usamos OptionMenu para mejor estetica
         self.fmt_var = ctk.StringVar(value=self.selected_extension)
         self.opt_format = ctk.CTkOptionMenu(
             self.main_frame,
@@ -45,13 +47,14 @@ class SettingsDialog(BaseDialog):
             width=150,
             height=28,
             font=("Segoe UI", 12),
-            fg_color=_get_color_tuple("card_border"), # Color neutro
+            fg_color=_get_color_tuple("card_border"),
             button_color=_get_color_tuple("card_border"),
             text_color=_get_color_tuple("text")
         )
         self.opt_format.pack(padx=20, pady=(0, 20), anchor="w")
 
-        ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line")).pack(fill="x", padx=20, pady=5)
+        ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line")).pack(fill="x", padx=20,
+                                                                                                  pady=5)
         self.after(50, self._step_3_add_shortcuts_header)
 
     def _step_3_add_shortcuts_header(self):
@@ -109,7 +112,7 @@ class SettingsDialog(BaseDialog):
         self.after(50, self._step_8_finalize)
 
     def _step_8_finalize(self):
-        # Espaciador flexible para empujar el botón OK abajo
+        # Espaciador flexible
         ctk.CTkFrame(self.main_frame, fg_color="transparent").pack(expand=True, fill="both")
 
         self.btn_close = ctk.CTkButton(
@@ -120,12 +123,10 @@ class SettingsDialog(BaseDialog):
         _style_button(self.btn_close, "green")
         self.btn_close.pack(pady=20)
 
-
         self.deiconify()
         self._animate_fade_in()
 
-        # CORRECCIÓN MODALIDAD (Bloqueo de ventana principal):
-        # Aseguramos el foco y el "grab" para que no se pueda usar la ventana de atrás.
+        # Aseguramos el foco y el bloqueo modal
         self.lift()
         self.focus_force()
         try:
@@ -141,7 +142,6 @@ class SettingsDialog(BaseDialog):
             self.after(20, self._animate_fade_in)
         else:
             self.attributes("-alpha", 1.0)
-            # Reafirmar bloqueo
             try:
                 self.grab_set()
             except Exception:
@@ -154,7 +154,6 @@ class SettingsDialog(BaseDialog):
 
     def _trigger_shortcut(self, shortcut_type):
         if self.on_shortcut_callback:
-            # AJUSTE CLAVE: Pasamos 'self' como ventana padre para el mensaje
             self.on_shortcut_callback(shortcut_type, parent_window=self)
 
     def _on_ok(self):

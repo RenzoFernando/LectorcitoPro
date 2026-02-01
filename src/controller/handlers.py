@@ -14,22 +14,25 @@ from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
 
 
-# -----------------------------------------------------------------------------
-# GESTIÓN DE RUTAS Y ARCHIVOS
-# -----------------------------------------------------------------------------
+# =============================================================================
+# MANEJADORES DE RUTAS Y ARCHIVOS
+# =============================================================================
 
 def select_destination_path(controller):
-    """Maneja la selección de la ruta de destino para los reportes."""
     choice = ChoiceDialog.ask(
-        parent=controller.view, title=controller.view._tr("dlg_dest_choice_title"),
+        parent=controller.view,
+        title=controller.view._tr("dlg_dest_choice_title"),
         message=controller.view._tr("dlg_dest_choice_prompt"),
         option1_text=controller.view._tr("dlg_dest_choice_op1"),
         option2_text=controller.view._tr("dlg_dest_choice_op2"),
-        option1_value="default", option2_value="custom"
+        option1_value="default",
+        option2_value="custom"
     )
+
     if choice == "default":
         controller.config["use_default_path"] = True
         controller.view.show_message("info_title", "dest_set_default_msg")
+
     elif choice == "custom":
         path = filedialog.askdirectory(title=controller.view._tr("btn_sel_lecturas"))
         if path:
@@ -42,7 +45,6 @@ def select_destination_path(controller):
 
 
 def open_destination_folder(controller):
-    """Abre la carpeta de destino de los reportes."""
     path = controller.config.get("lecturas_path")
     if path and os.path.isdir(path):
         webbrowser.open(os.path.realpath(path))
@@ -51,7 +53,6 @@ def open_destination_folder(controller):
 
 
 def open_last_report(controller):
-    """Abre el último reporte generado."""
     if controller.last_report_path and os.path.isfile(controller.last_report_path):
         webbrowser.open(os.path.realpath(controller.last_report_path))
     else:
@@ -59,7 +60,6 @@ def open_last_report(controller):
 
 
 def delete_all_readings(controller):
-    """Elimina la carpeta de lecturas."""
     path = controller.config.get("lecturas_path")
     if not (path and os.path.isdir(path)):
         controller.view.show_message("info_title", "msg_select_dest")
@@ -75,12 +75,11 @@ def delete_all_readings(controller):
             controller.view.show_message("error_title", "msg_delete_error", str(e))
 
 
-# -----------------------------------------------------------------------------
-# CONFIGURACIÓN DE FILTROS (TAGS)
-# -----------------------------------------------------------------------------
+# =============================================================================
+# MANEJADORES DE FILTROS (TAGS)
+# =============================================================================
 
 def show_view_config_dialog(controller):
-    """Muestra el diálogo para configurar qué carpetas y extensiones incluir."""
     current_folders = controller.config.get("etiquetas_carpetas_importantes", [])
     current_files = controller.config.get("etiquetas_extensiones_incluidas", [])
 
@@ -113,7 +112,6 @@ def show_view_config_dialog(controller):
 
 
 def show_no_view_config_dialog(controller):
-    """Muestra el diálogo para configurar qué carpetas y archivos excluir."""
     current_folders = controller.config.get("etiquetas_carpetas_excluidas", [])
     current_files = controller.config.get("etiquetas_archivos_excluidos", [])
 
@@ -134,7 +132,6 @@ def show_no_view_config_dialog(controller):
 
 
 def show_etiqueta_config_dialog(controller):
-    """Muestra el diálogo para configurar archivos multimedia y binarios."""
     tags_stored = controller.config.get("etiquetas_multimedia_config", [])
 
     if not tags_stored:
@@ -172,9 +169,9 @@ def show_etiqueta_config_dialog(controller):
         save_preferences_silent(controller)
 
 
-# -----------------------------------------------------------------------------
-# AJUSTES GENERALES (FORMATO + SHORTCUTS)
-# -----------------------------------------------------------------------------
+# =============================================================================
+# MANEJADORES DE AJUSTES Y SHORTCUTS
+# =============================================================================
 
 def show_settings_dialog(controller):
     current_ext = controller.config.get("report_extension", ".txt")
@@ -194,41 +191,9 @@ def show_settings_dialog(controller):
 
 
 def _update_report_extension(controller, new_ext):
-    """Guarda la preferencia de extensión (.txt o .md)."""
     if new_ext in [".txt", ".md"]:
         controller.config["report_extension"] = new_ext
         save_preferences_silent(controller)
-
-
-def _try_programmatic_pin(link_path, taskbar=True):
-    try:
-        path = os.path.abspath(link_path)
-        folder = os.path.dirname(path)
-        filename = os.path.basename(path)
-
-        shell = win32com.client.Dispatch("Shell.Application")
-        ns = shell.NameSpace(folder)
-        item = ns.ParseName(filename)
-        if not item: return False
-
-        # Palabras clave ampliadas
-        keywords = []
-        if taskbar:
-            keywords = ["anclar a la barra de tareas", "pin to taskbar", "taskbar"]
-        else:
-            keywords = ["anclar a inicio", "pin to start", "start"]
-
-        for verb in item.Verbs():
-            v_name = verb.Name.lower()
-            if any(k in v_name for k in keywords):
-                if "desanclar" in v_name or "unpin" in v_name:
-                    continue
-                verb.DoIt()
-                return True
-        return False
-    except Exception as e:
-        print(f"Intento de anclaje fallido: {e}")
-        return False
 
 
 def _create_system_shortcut(controller, mode, parent_window=None):
@@ -239,7 +204,6 @@ def _create_system_shortcut(controller, mode, parent_window=None):
             target_path = sys.executable
         else:
             target_path = sys.executable
-            # TEXTO QUEMADO ARREGLADO
             print(controller.view._tr("shortcut_script_warning"))
 
         work_dir = os.path.dirname(target_path)
@@ -248,17 +212,13 @@ def _create_system_shortcut(controller, mode, parent_window=None):
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         if not getattr(sys, 'frozen', False):
             base_path = os.path.join(base_path, "..")
-
         icon_path = os.path.join(base_path, 'recursos', 'lector.ico')
         icon_path = os.path.normpath(icon_path)
 
         shell = win32com.client.Dispatch("WScript.Shell")
-
         link_path = ""
         msg_key = ""
         open_explorer_at_end = False
-
-        # --- LÓGICA POR MODO ---
 
         if mode == "desktop":
             desktop_dir = shell.SpecialFolders("Desktop")
@@ -276,34 +236,23 @@ def _create_system_shortcut(controller, mode, parent_window=None):
             link_path = os.path.join(programs_folder, f"{app_name}.lnk")
             msg_key = "msg_shortcut_start_ok"
 
-        elif mode == "taskbar":
+        elif mode in ["taskbar", "start_pin"]:
             docs_dir = shell.SpecialFolders("MyDocuments")
             link_path = os.path.join(docs_dir, f"{app_name}.lnk")
-            msg_key = "msg_shortcut_taskbar_ok"
+            msg_key = "msg_shortcut_taskbar_ok" if mode == "taskbar" else "msg_shortcut_pin_start_ok"
+            open_explorer_at_end = True
 
-        elif mode == "start_pin":
-            docs_dir = shell.SpecialFolders("MyDocuments")
-            link_path = os.path.join(docs_dir, f"{app_name}.lnk")
-            msg_key = "msg_shortcut_pin_start_ok"
-
-        # Crear acceso directo
         shortcut = shell.CreateShortCut(link_path)
         shortcut.TargetPath = target_path
         shortcut.WorkingDirectory = work_dir
         if os.path.exists(icon_path):
             shortcut.IconLocation = icon_path
         shortcut.WindowStyle = 1
-
-        # TEXTO QUEMADO ARREGLADO
         shortcut.Description = controller.view._tr("shortcut_desc")
-
         shortcut.Save()
 
-        if mode == "taskbar":
-            if not _try_programmatic_pin(link_path, taskbar=True):
-                open_explorer_at_end = True
-        elif mode == "start_pin":
-            if not _try_programmatic_pin(link_path, taskbar=False):
+        if mode in ["taskbar", "start_pin"]:
+            if not _try_programmatic_pin(link_path, taskbar=(mode == "taskbar")):
                 open_explorer_at_end = True
 
         if open_explorer_at_end:
@@ -312,20 +261,40 @@ def _create_system_shortcut(controller, mode, parent_window=None):
             except Exception:
                 pass
 
-        # Mensaje centrado en la ventana correcta
         msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "info_title", msg_key))
 
     except Exception as e:
         msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "error_title", "msg_shortcut_error", str(e)))
 
 
+def _try_programmatic_pin(link_path, taskbar=True):
+    try:
+        path = os.path.abspath(link_path)
+        folder = os.path.dirname(path)
+        filename = os.path.basename(path)
+
+        shell = win32com.client.Dispatch("Shell.Application")
+        ns = shell.NameSpace(folder)
+        item = ns.ParseName(filename)
+        if not item: return False
+
+        keywords = ["anclar a la barra de tareas", "pin to taskbar", "taskbar"] if taskbar else \
+            ["anclar a inicio", "pin to start", "start"]
+
+        for verb in item.Verbs():
+            v_name = verb.Name.lower()
+            if any(k in v_name for k in keywords):
+                if "desanclar" in v_name or "unpin" in v_name: continue
+                verb.DoIt()
+                return True
+        return False
+    except Exception as e:
+        print(f"Intento de anclaje fallido: {e}")
+        return False
+
+
 def _show_msg_safe(parent, title_key, msg_key, *args):
-    if not hasattr(parent, "_tr") and hasattr(parent, "parent_view"):
-        # Monkey patch temporal o usar parent_view para el texto pero parent para la ventana
-        title = parent.parent_view._tr(title_key)
-        msg = parent.parent_view._tr(msg_key, *args)
-        MessageDialog(parent, title, msg)
-    elif hasattr(parent, "_tr"):
+    if hasattr(parent, "_tr"):
         title = parent._tr(title_key)
         msg = parent._tr(msg_key, *args)
         MessageDialog(parent, title, msg)
@@ -333,9 +302,9 @@ def _show_msg_safe(parent, title_key, msg_key, *args):
         MessageDialog(parent, title_key, msg_key)
 
 
-# -----------------------------------------------------------------------------
-# GESTIÓN DE PERFILES
-# -----------------------------------------------------------------------------
+# =============================================================================
+# MANEJADORES DE PERFILES
+# =============================================================================
 
 def manage_profiles(controller):
     controller.view.after(300, lambda: _open_profiles_dialog_safe(controller))
@@ -366,15 +335,15 @@ def _open_profiles_dialog_safe(controller):
 
     if result:
         new_active_id, new_profiles_meta = result
-        _step_1_hide_app(controller, new_active_id, new_profiles_meta)
+        _switch_profile_sequence(controller, new_active_id, new_profiles_meta)
 
 
-def _step_1_hide_app(controller, new_active_id, new_profiles_meta):
+def _switch_profile_sequence(controller, new_active_id, new_profiles_meta):
     controller.view.attributes("-alpha", 0.0)
-    controller.view.after(600, lambda: _step_2_load_data(controller, new_active_id, new_profiles_meta))
+    controller.view.after(600, lambda: _load_profile_data(controller, new_active_id, new_profiles_meta))
 
 
-def _step_2_load_data(controller, new_active_id, new_profiles_meta):
+def _load_profile_data(controller, new_active_id, new_profiles_meta):
     try:
         if new_active_id in new_profiles_meta and new_profiles_meta[new_active_id] == "NEW":
             selected_profile_data = config.get_blank_profile()
@@ -400,61 +369,58 @@ def _step_2_load_data(controller, new_active_id, new_profiles_meta):
     except Exception as e:
         print(f"Error cargando perfil: {e}")
 
-    controller.view.after(300, lambda: _step_3_show_app(controller, new_active_id))
+    controller.view.after(300, lambda: _show_app_after_switch(controller, new_active_id))
 
 
-def _step_3_show_app(controller, new_active_id):
+def _show_app_after_switch(controller, new_active_id):
     controller.view.attributes("-alpha", 1.0)
     controller.view.after(100, lambda:
     controller.view.show_message("info_title", "msg_profile_changed", new_active_id.capitalize())
                           )
 
 
-# -----------------------------------------------------------------------------
-# RESTAURACIÓN
-# -----------------------------------------------------------------------------
+# =============================================================================
+# MANEJADORES DE RESTAURACION Y OTROS
+# =============================================================================
 
 def restore_default_settings(controller):
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
                          controller.view._tr("confirm_restore_prompt")):
-        _step_1_restore_hide(controller)
+        controller.view.attributes("-alpha", 0.0)
+        controller.view.after(800, lambda: _execute_restore(controller))
 
 
-def _step_1_restore_hide(controller):
-    controller.view.attributes("-alpha", 0.0)
-    controller.view.after(800, lambda: _step_2_restore_logic(controller))
-
-
-def _step_2_restore_logic(controller):
+def _execute_restore(controller):
     try:
         config.delete_config_file()
         default_profile = config.DEFAULT_CONFIG_VALUES.copy()
+
         controller.config = default_profile.copy()
         controller.config["_profiles_meta"] = {"default": default_profile.copy()}
         controller.config["_active_profile_id"] = "default"
+
         save_preferences_silent(controller)
         controller._update_active_lecturas_path()
+
         controller.view.lang = controller.config["language"]
         controller.view.update_ui_texts()
+
         new_theme = controller.config["theme"]
         controller.view.current_theme = new_theme
         customtkinter.set_appearance_mode(new_theme)
         controller.view.apply_theme()
     except Exception as e:
         print(f"Error restaurando: {e}")
-    controller.view.after(300, lambda: _step_3_restore_show(controller))
+
+    controller.view.after(300, lambda: _finish_restore(controller))
 
 
-def _step_3_restore_show(controller):
+def _finish_restore(controller):
     controller.view.attributes("-alpha", 1.0)
     controller.view.after(100, lambda:
     controller.view.show_message("info_title", "msg_restore_success")
                           )
 
-
-# -----------------------------------------------------------------------------
-# UTILIDADES GENERALES
-# -----------------------------------------------------------------------------
 
 def save_preferences_silent(controller):
     config.save_config(controller.config)

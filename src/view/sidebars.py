@@ -3,9 +3,10 @@ from tkinter import Canvas
 from PIL import Image, ImageDraw, ImageTk
 from view.ui_constants import COLORS, SIDEBAR_WIDTH, BTN_H_ICON
 
-# -------------------------
-# Helpers de color
-# -------------------------
+
+# =============================================================================
+# UTILIDADES DE COLOR
+# =============================================================================
 
 def _hex_to_rgb(h: str):
     h = (h or "").strip().lstrip("#")
@@ -13,9 +14,12 @@ def _hex_to_rgb(h: str):
         return (0, 0, 0)
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
+
 def _luma(h: str) -> float:
+    # Calculo de brillo perceptual para determinar contraste
     r, g, b = _hex_to_rgb(h)
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
 
 def _mix(a: str, b: str, t: float) -> str:
     ar, ag, ab = _hex_to_rgb(a)
@@ -25,14 +29,18 @@ def _mix(a: str, b: str, t: float) -> str:
     b2 = int(ab + (bb - ab) * t)
     return f"#{r:02X}{g:02X}{b2:02X}"
 
+
 def _auto_border(fill: str) -> str:
+    # Genera un borde automatico basado en la luminosidad del relleno
     if _luma(fill) < 140:
         return _mix(fill, "#FFFFFF", 0.2)
     return _mix(fill, "#000000", 0.15)
 
-# -------------------------
-# Left Sidebar (pill suave)
-# -------------------------
+
+# =============================================================================
+# BARRA LATERAL IZQUIERDA (VERTICAL)
+# =============================================================================
+
 class LeftSidebar(ctk.CTkFrame):
     def __init__(self, parent, text: str, height: int = 415):
         super().__init__(parent, width=SIDEBAR_WIDTH, height=height, fg_color="transparent")
@@ -60,7 +68,7 @@ class LeftSidebar(ctk.CTkFrame):
 
         if "state" in kwargs:
             self._state = kwargs.pop("state")
-            self._paint()
+        self._paint()
 
         super().configure(**kwargs)
 
@@ -141,9 +149,11 @@ class LeftSidebar(ctk.CTkFrame):
             fill=text_fill
         )
 
-# -------------------------
-# Pill Icon Button
-# -------------------------
+
+# =============================================================================
+# COMPONENTES DE BOTONES (PILL SHAPE)
+# =============================================================================
+
 class PillIconButton(ctk.CTkFrame):
     def __init__(
             self,
@@ -153,7 +163,7 @@ class PillIconButton(ctk.CTkFrame):
             width: int = SIDEBAR_WIDTH,
             height: int = BTN_H_ICON,
             outside_bg: str = COLORS["light"]["bg"],
-            fg_color: str = COLORS["light"]["left_bar"],  # Default al contraste
+            fg_color: str = COLORS["light"]["left_bar"],
             hover_color: str = COLORS["sidebar_hover"]["light"],
             border_color: str = None,
             border_width: int = 2,
@@ -393,17 +403,16 @@ class PillIconButton(ctk.CTkFrame):
             try:
                 icon = pil_icon.convert("RGBA")
                 fill_lum = _luma(fill)
-
                 need_light_icon = (fill_lum < 140)
 
                 r, g, b, a = icon.split()
 
+                # Ajustamos color del icono segun el fondo para asegurar contraste
                 if need_light_icon:
-                    # Pintar de blanco
                     icon = Image.merge("RGBA", (
-                        a.point(lambda _: 255),  # R
-                        a.point(lambda _: 255),  # G
-                        a.point(lambda _: 255),  # B
+                        a.point(lambda _: 255),
+                        a.point(lambda _: 255),
+                        a.point(lambda _: 255),
                         a
                     ))
                 else:
@@ -440,11 +449,7 @@ class PillIconButton(ctk.CTkFrame):
         self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
 
 
-# -------------------------
-# Pill Text Button
-# -------------------------
 class PillTextButton(ctk.CTkFrame):
-
     def __init__(
             self,
             parent,
@@ -681,9 +686,10 @@ class PillTextButton(ctk.CTkFrame):
         )
 
 
-# -------------------------
-# Right Sidebar
-# -------------------------
+# =============================================================================
+# BARRA LATERAL DERECHA (ICONOS)
+# =============================================================================
+
 class RightSidebar(ctk.CTkFrame):
     def __init__(self, parent, icons: dict, current_theme: str):
         bg = COLORS["light"]["bg"] if current_theme == "Light" else COLORS["dark"]["bg"]
@@ -696,7 +702,8 @@ class RightSidebar(ctk.CTkFrame):
         self._button_container = ctk.CTkFrame(self, fg_color=bg)
         self._button_container.pack(expand=True, anchor="center")
 
-        keys = ["ver", "nover", "etiqueta", "theme_icon", "traducir", "restaurar", "perfil", "github", "info", "ajustes"]
+        keys = ["ver", "nover", "etiqueta", "theme_icon", "traducir", "restaurar", "perfil", "github", "info",
+                "ajustes"]
 
         for key in keys:
             btn = self._create_button(key, current_theme)

@@ -3,6 +3,9 @@ import customtkinter as ctk
 from PIL import Image
 from utils import resource_path
 
+# =============================================================================
+# GESTION DE RECURSOS VISUALES
+# =============================================================================
 
 def get_app_icon_path() -> str:
     return resource_path("lector.ico")

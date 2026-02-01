@@ -19,11 +19,16 @@ from view.status_panel import StatusPanel
 from utils import resource_path
 
 
+# =============================================================================
+# INTERFAZ PRINCIPAL (MAIN WINDOW)
+# =============================================================================
+
 class LectorcitoApp(ctk.CTk):
 
     def __init__(self, cfg: dict, controller):
         super().__init__()
 
+        # Ocultamos ventana inicialmente para evitar parpadeos durante la carga
         self.withdraw()
         self.attributes("-alpha", 0.0)
 
@@ -37,30 +42,32 @@ class LectorcitoApp(ctk.CTk):
         self.tooltips: dict[str, CustomTooltip] = {}
         self._is_modal_open = False
 
+        # --- Configuracion de Ventana ---
         self.title("Lectorcito Pro")
-
         self._app_w = 600
         self._app_h = 500
-
         self.geometry(f"{self._app_w}x{self._app_h}")
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
 
         safe_set_window_icon(self)
 
+        # --- Carga de Recursos ---
         self.icons = load_sidebar_icons()
         self.logo_image = load_logo(target_width=150)
 
+        # --- Construccion UI ---
         self._build_ui()
-
         self.update_ui_texts()
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
+        # Retraso intencional para asegurar carga completa de recursos antes de mostrar
         self.after(1000, self._precise_center_and_show)
 
     def _precise_center_and_show(self):
         try:
+            # Necesario para obtener las dimensiones reales tras el renderizado
             self.update_idletasks()
 
             screen_width = self.winfo_screenwidth()
@@ -86,6 +93,7 @@ class LectorcitoApp(ctk.CTk):
             self.after(15, self._fade_in)
 
     def _close_with_fade_out(self):
+        # Limpieza explicita para evitar referencias colgadas
         try:
             for tp in self.tooltips.values():
                 tp.cleanup()
@@ -109,15 +117,20 @@ class LectorcitoApp(ctk.CTk):
             return random.choice(entry).format(*args)
         return entry.format(*args)
 
+    # =========================================================================
+    # CONSTRUCCION DE UI
+    # =========================================================================
+
     def _build_ui(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
+        # Contenedores principales
         left_container = ctk.CTkFrame(self, fg_color="transparent")
-        left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(0,14))
+        left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(0, 14))
 
         right_container = ctk.CTkFrame(self, fg_color="transparent")
-        right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(0,15))
+        right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(0, 15))
 
         center = ctk.CTkFrame(self, fg_color="transparent")
         center.grid(row=0, column=1, sticky="nsew", pady=(5, 5))
@@ -155,14 +168,12 @@ class LectorcitoApp(ctk.CTk):
             border_width=1,
             border_color=theme_keys["border"]
         )
-
         self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=(0, 5))
 
         self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame, fg_color="transparent")
         self.main_buttons_frame.pack(pady=8, padx=10)
 
         outside_bg = theme_keys["surface"]
-
         btn_blue = COLORS["button"]["blue"]
         btn_green = COLORS["button"]["green"]
         btn_red = COLORS["button"]["red"]
@@ -240,7 +251,12 @@ class LectorcitoApp(ctk.CTk):
         )
         self.lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
 
+    # =========================================================================
+    # LOGICA DE ACTUALIZACION VISUAL
+    # =========================================================================
+
     def update_ui_texts(self):
+        # Saludo dinamico segun la hora
         hour = datetime.datetime.now().hour
         greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
         try:
@@ -249,6 +265,7 @@ class LectorcitoApp(ctk.CTk):
             user = "User"
         self.lbl_greet.configure(text=f"{self._tr(greet_key)} {user}{self._tr('welcome')}")
 
+        # Mapeo de botones principales
         key_map = {
             "selpath": "btn_sel_lecturas",
             "choose": "btn_choose_folder",
@@ -263,9 +280,9 @@ class LectorcitoApp(ctk.CTk):
                 btn.configure(text=self._tr(key_map[key]))
 
         self.status_panel.set_translator(lambda k: self._tr(k))
-
         self.lbl_copyright.configure(text=self._tr("footer_copyright", YEAR, AUTHOR))
 
+        # Tooltips de barra lateral
         tooltip_map = {
             "ver": "tooltip_ver",
             "nover": "tooltip_nover",
@@ -313,7 +330,6 @@ class LectorcitoApp(ctk.CTk):
         try:
             self.footer_frame.configure(fg_color=theme_keys["footer_bg"])
             self.footer_line.configure(fg_color=theme_keys["separator_line"])
-
             self.lbl_greet.configure(text_color=theme_keys["text"])
 
             for widget in self.footer_frame.winfo_children():
@@ -323,7 +339,6 @@ class LectorcitoApp(ctk.CTk):
             pass
 
     def switch_theme_animated(self, new_theme: str):
-        """Inicia el proceso de cambio de tema con efecto fantasma."""
         self._pending_new_theme = new_theme
         self._fade_out_for_switch()
 
@@ -331,20 +346,21 @@ class LectorcitoApp(ctk.CTk):
         try:
             alpha = self.attributes("-alpha")
             if alpha > 0.0:
-                # Reducimos opacidad rápidamente (0.12 por frame)
                 self.attributes("-alpha", max(alpha - 0.12, 0.0))
                 self.after(12, self._fade_out_for_switch)
             else:
-                # Una vez invisible, aplicamos el cambio de tema
                 self.current_theme = self._pending_new_theme
                 self.apply_theme()
-                # Usamos el método _fade_in que ya existe en la clase para reaparecer
                 self._fade_in()
         except Exception:
-            # Fallback de seguridad por si algo falla en la UI
+            # Fallback seguro en caso de error UI
             self.current_theme = self._pending_new_theme
             self.apply_theme()
             self.attributes("-alpha", 1.0)
+
+    # =========================================================================
+    # ESTADO Y CONTROL
+    # =========================================================================
 
     def get_min_visible_completion_delay_ms(self) -> int:
         return self.status_panel.get_min_visible_completion_delay_ms()
@@ -364,7 +380,6 @@ class LectorcitoApp(ctk.CTk):
             btn.configure(state=state)
 
         self.left_sidebar.configure(state=state)
-
         self.status_panel.set_active(is_active, mode=mode, text=text, final_status=final_status)
 
     def dim_ui_for_modal(self):
