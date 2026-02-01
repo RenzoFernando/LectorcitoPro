@@ -1,4 +1,3 @@
-# src/view/ui_assets.py
 import os
 import customtkinter as ctk
 from PIL import Image
@@ -11,7 +10,7 @@ def get_app_icon_path() -> str:
 
 def load_sidebar_icons(size=(22, 22)) -> dict:
     icons = {}
-    icon_keys = ["ver", "nover", "traducir", "restaurar", "github", "info"]
+    icon_keys = ["ver", "nover", "etiqueta", "traducir", "restaurar", "github", "perfil", "info"]
 
     for key in icon_keys:
         try:
@@ -22,7 +21,6 @@ def load_sidebar_icons(size=(22, 22)) -> dict:
             print(f"Error cargando icono '{key}': {e}")
             icons[key] = None
 
-    # Íconos tema
     try:
         icons["sun"] = ctk.CTkImage(Image.open(resource_path("sol.png")), size=(24, 24))
         icons["moon"] = ctk.CTkImage(Image.open(resource_path("luna.png")), size=(24, 24))
@@ -56,6 +54,6 @@ def safe_set_window_icon(window) -> None:
     if icon_path and os.path.exists(icon_path):
         try:
             window.iconbitmap(icon_path)
-            window._icon_path = icon_path  # compat con diálogos
+            window._icon_path = icon_path
         except Exception as e:
             print(f"Error al asignar icono: {e}")

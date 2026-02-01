@@ -75,10 +75,12 @@ TRANSLATIONS = {
 
         "tooltip_ver": "Configurar qué carpetas y extensiones incluir en la lectura.",
         "tooltip_nover": "Configurar qué carpetas y archivos completos ignorar.",
+        "tooltip_etiqueta": "Configurar archivos multimedia y binarios a excluir.",
         "tooltip_tema": "Cambiar entre el tema claro y el oscuro.",
         "tooltip_idioma": "Cambiar entre Español e Inglés.",
         "tooltip_restaurar": "Restaurar todas las configuraciones a su estado inicial.",
         "tooltip_github": "Abrir el repositorio del proyecto en GitHub.",
+        "tooltip_perfil": "Gestionar perfiles de configuración (ej: Java, Python).",
         "tooltip_info": "Mostrar el manual de usuario y la información de la aplicación.",
 
         "btn_ok": "OK",
@@ -162,10 +164,12 @@ TRANSLATIONS = {
 
         "tooltip_ver": "Configure which folders and extensions to include in the reading.",
         "tooltip_nover": "Configure which folders and full filenames to ignore.",
+        "tooltip_etiqueta": "Configure multimedia and binary files to exclude.",
         "tooltip_tema": "Toggle between light and dark theme.",
         "tooltip_idioma": "Switch between English and Spanish.",
         "tooltip_restaurar": "Restore all settings to their default state.",
         "tooltip_github": "Open the project repository on GitHub.",
+        "tooltip_perfil": "Manage configuration profiles (e.g., Java, Python).",
         "tooltip_info": "Show the user manual and application information.",
 
         "btn_ok": "OK",

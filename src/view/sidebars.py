@@ -5,9 +5,9 @@ from PIL import Image, ImageDraw, ImageTk
 
 from view.ui_constants import COLORS, SIDEBAR_WIDTH, BTN_H_ICON
 
-    # -------------------------
-    # Helpers de color
-    # -------------------------
+# -------------------------
+# Helpers de color
+# -------------------------
 
 def _hex_to_rgb(h: str):
     h = (h or "").strip().lstrip("#")
@@ -15,11 +15,9 @@ def _hex_to_rgb(h: str):
         return (0, 0, 0)
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
-
 def _luma(h: str) -> float:
     r, g, b = _hex_to_rgb(h)
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
 
 def _mix(a: str, b: str, t: float) -> str:
     ar, ag, ab = _hex_to_rgb(a)
@@ -29,12 +27,10 @@ def _mix(a: str, b: str, t: float) -> str:
     b2 = int(ab + (bb - ab) * t)
     return f"#{r:02X}{g:02X}{b2:02X}"
 
-
 def _auto_border(fill: str) -> str:
     if _luma(fill) < 140:
         return _mix(fill, "#FFFFFF", 0.2)
     return _mix(fill, "#000000", 0.15)
-
 
 # -------------------------
 # Left Sidebar (pill suave)
@@ -47,9 +43,7 @@ class LeftSidebar(ctk.CTkFrame):
         self._text = text
         self._outside_bg = COLORS["light"]["bg"]
         self._pill_bg = COLORS["light"]["left_bar"]
-        self._text_color = COLORS["light"]["sidebar_text"]  # Texto contrastante
-
-        # Estado para controlar si está habilitado o deshabilitado (gris)
+        self._text_color = COLORS["light"]["sidebar_text"]
         self._state = "normal"
 
         self._border_w = 2
@@ -63,13 +57,12 @@ class LeftSidebar(ctk.CTkFrame):
         self.bind("<Configure>", self._paint, add="+")
 
     def configure(self, cnf=None, **kwargs):
-        """Permite configurar el estado (state='disabled' | 'normal')."""
         if cnf:
             kwargs.update(cnf)
 
         if "state" in kwargs:
             self._state = kwargs.pop("state")
-            self._paint()  # Redibujar inmediatamente al cambiar estado
+            self._paint()
 
         super().configure(**kwargs)
 
@@ -82,10 +75,9 @@ class LeftSidebar(ctk.CTkFrame):
         theme = COLORS["light" if is_light else "dark"]
 
         self._outside_bg = theme["bg"]
-        self._pill_bg = theme["left_bar"]  # Oscuro en Light, Claro en Dark
+        self._pill_bg = theme["left_bar"]
         self._text_color = theme["sidebar_text"]
 
-        # Borde sutil automático
         if _luma(self._pill_bg) < 140:
             self._border_color = _mix(self._pill_bg, "#FFFFFF", 0.18)
         else:
@@ -107,13 +99,11 @@ class LeftSidebar(ctk.CTkFrame):
 
         outside_rgb = _hex_to_rgb(self._outside_bg)
 
-        # --- Lógica de Colores (Normal vs Disabled) ---
         pill_fill = self._pill_bg
         text_fill = self._text_color
         border_fill = self._border_color
 
         if self._state == "disabled":
-            # Mezclamos con el fondo para dar efecto "gris" o desactivado
             pill_fill = _mix(pill_fill, self._outside_bg, 0.35)
             text_fill = _mix(text_fill, self._outside_bg, 0.55)
             if border_fill:
@@ -152,7 +142,6 @@ class LeftSidebar(ctk.CTkFrame):
             font=("Segoe UI", 10, "bold"),
             fill=text_fill
         )
-
 
 # -------------------------
 # Pill Icon Button
@@ -406,21 +395,12 @@ class PillIconButton(ctk.CTkFrame):
         if pil_icon is not None:
             try:
                 icon = pil_icon.convert("RGBA")
-
-                # INVERSION INTELIGENTE DE COLOR DE ICONO
-                # Si el botón es oscuro (modo light), invertimos el icono para que se vea blanco
-                # Si el botón es claro (modo dark), dejamos el icono oscuro (o lo oscurecemos)
-
-                # Detectamos si el fondo del botón es oscuro
                 fill_lum = _luma(fill)
 
-                # Si el fondo es oscuro, queremos iconos claros
                 need_light_icon = (fill_lum < 140)
 
-                # Obtenemos canal alpha
                 r, g, b, a = icon.split()
 
-                # Coloreamos el icono según necesidad
                 if need_light_icon:
                     # Pintar de blanco
                     icon = Image.merge("RGBA", (
@@ -430,7 +410,6 @@ class PillIconButton(ctk.CTkFrame):
                         a
                     ))
                 else:
-                    # Pintar de casi negro (para botones claros en modo oscuro)
                     icon = Image.merge("RGBA", (
                         a.point(lambda _: 30),
                         a.point(lambda _: 30),
@@ -454,6 +433,7 @@ class PillIconButton(ctk.CTkFrame):
 
                     ix = (W - new_w) // 2
                     iy = (H - new_h) // 2
+
                     img.alpha_composite(icon, (ix, iy))
             except Exception:
                 pass
@@ -464,7 +444,7 @@ class PillIconButton(ctk.CTkFrame):
 
 
 # -------------------------
-# Pill Text Button (Sin cambios lógicos, solo se mantiene igual)
+# Pill Text Button
 # -------------------------
 class PillTextButton(ctk.CTkFrame):
 
@@ -719,10 +699,11 @@ class RightSidebar(ctk.CTkFrame):
         self._button_container = ctk.CTkFrame(self, fg_color=bg)
         self._button_container.pack(expand=True, anchor="center")
 
-        keys = ["ver", "nover", "theme_icon", "traducir", "restaurar", "github", "info"]
+        keys = ["ver", "nover", "etiqueta", "theme_icon", "traducir", "restaurar", "github", "perfil", "info"]
+
         for key in keys:
             btn = self._create_button(key, current_theme)
-            btn.pack(pady=5)
+            btn.pack(pady=2.5)
             self.buttons[key] = btn
 
     def _create_button(self, key: str, theme_name: str) -> PillIconButton:
@@ -731,10 +712,6 @@ class RightSidebar(ctk.CTkFrame):
             img = self.icons.get("moon") if is_light else self.icons.get("sun")
         else:
             img = self.icons.get(key)
-
-        # ARREGLADO: Usamos 'left_bar' para asegurar que coincida con el lateral izquierdo
-        # En modo claro, 'left_bar' es oscuro -> Botones derechos oscuros
-        # En modo oscuro, 'left_bar' es claro -> Botones derechos claros
 
         theme_keys = COLORS["light"] if is_light else COLORS["dark"]
 

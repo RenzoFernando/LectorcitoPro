@@ -267,10 +267,12 @@ class LectorcitoApp(ctk.CTk):
         tooltip_map = {
             "ver": "tooltip_ver",
             "nover": "tooltip_nover",
+            "etiqueta": "tooltip_etiqueta",
             "theme_icon": "tooltip_tema",
             "traducir": "tooltip_idioma",
             "restaurar": "tooltip_restaurar",
             "github": "tooltip_github",
+            "perfil": "tooltip_perfil",
             "info": "tooltip_info",
         }
 
