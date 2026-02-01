@@ -57,7 +57,7 @@ def generate_report(
     version = 1
     # Genera un nombre de archivo versionado para no sobrescribir reportes.
     while True:
-        report_filename = f"{folder_name}_v{version}.txt"
+        report_filename = f"Reporte_{folder_name}_v{version}.txt"
         final_report_path = os.path.join(output_path, report_filename)
         if not os.path.exists(final_report_path): break
         version += 1
@@ -108,19 +108,28 @@ def generate_report(
                     sleep(0.01)
 
                     file_path = os.path.join(root, filename)
+                    # CAMBIO: Obtenemos la ruta absoluta del archivo
+                    abs_path = os.path.abspath(file_path)
+
                     outfile.write(f"  ● Archivo: {filename}\n")
+                    # CAMBIO: Se agrega la ruta absoluta debajo del nombre del archivo
+                    outfile.write(f"    Ruta: {abs_path}\n")
 
                     # Escribe el contenido del archivo si es de texto.
                     if is_text:
                         outfile.write("    " + ("-" * 74) + "\n")
-                        outfile.write("    >> INICIO DEL CONTENIDO\n\n")
+                        # CAMBIO: Se añade el nombre del archivo al marcador de inicio
+                        outfile.write(f"    >> INICIO DEL CONTENIDO: {filename}\n\n")
+
                         try:
                             with open(file_path, 'r', encoding='utf-8', errors='ignore') as infile:
                                 for line in infile:
                                     outfile.write(f"    {line}")
                         except Exception as e:
                             outfile.write(f"    [Error al leer el archivo: {e}]\n")
-                        outfile.write(f"\n\n    << FIN DEL CONTENIDO\n")
+
+                        # CAMBIO: Se añade el nombre del archivo al marcador de fin
+                        outfile.write(f"\n\n    << FIN DEL CONTENIDO: {filename}\n")
                         outfile.write("    " + ("-" * 74) + "\n\n\n")
                     # Si es multimedia, solo deja un espacio.
                     elif is_media:

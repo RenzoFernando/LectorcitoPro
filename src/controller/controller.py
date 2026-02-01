@@ -110,7 +110,8 @@ class LectorcitoController:
         self.view.toggle_ui_for_processing(is_active=False, final_status=status)
 
         if status == "success":
-            self.view.show_message("info_title", "msg_done")
+            report_name = os.path.basename(self.last_report_path) if self.last_report_path else "Reporte"
+            self.view.show_message("info_title", "msg_done", report_name)
         else:
             message_map = {
                 "cancelled": ("info_title", "msg_cancelled"),

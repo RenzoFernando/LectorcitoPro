@@ -57,7 +57,7 @@ class LectorcitoApp(ctk.CTk):
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
-        self.after(50, self._precise_center_and_show)
+        self.after(350, self._precise_center_and_show)
 
     def _precise_center_and_show(self):
         try:
@@ -71,6 +71,7 @@ class LectorcitoApp(ctk.CTk):
 
             self.geometry(f"{self._app_w}x{self._app_h}+{x}+{y}")
 
+            self.attributes("-alpha", 0.0)
             self.deiconify()
             self._fade_in()
 
