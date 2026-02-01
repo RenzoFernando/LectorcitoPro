@@ -1,9 +1,9 @@
-# src/controller/handlers.py
 import os
 import shutil
 import webbrowser
 import customtkinter
 from tkinter import filedialog
+
 import config
 from view.dialogs import ConfirmDialog, ChoiceDialog
 from view.tags_dialog import TagsConfigDialog
@@ -38,13 +38,22 @@ def show_view_config_dialog(controller):
     current_folders = controller.config.get("etiquetas_carpetas_importantes", [])
     current_files = controller.config.get("etiquetas_extensiones_incluidas", [])
 
+    # DATOS EXTRA PARA AUTODETECTAR (EXCLUSIONES Y MEDIA)
+    excl_folders = controller.config.get("etiquetas_carpetas_excluidas", [])
+    excl_files = controller.config.get("etiquetas_archivos_excluidos", [])
+    media_exts = controller.config.get("media_extensions", [])
+
     result = TagsConfigDialog.get_input(
         parent=controller.view,
         title=controller.view._tr("dlg_ver_title"),
         folders_prompt=controller.view._tr("dlg_ver_folder_prompt"),
         initial_folders=current_folders,
         files_prompt=controller.view._tr("dlg_ver_file_prompt"),
-        initial_files=current_files
+        initial_files=current_files,
+        allow_autodetect=True,  # Activar botón
+        excluded_folders=excl_folders,  # Pasar exclusiones
+        excluded_files=excl_files,
+        media_extensions=media_exts  # Pasar multimedia
     )
 
     if result is not None:
@@ -89,13 +98,24 @@ def show_etiqueta_config_dialog(controller):
     else:
         current_files = tags_stored
 
+    # --- RECOPILAR ELEMENTOS PROHIBIDOS (CONFLICTOS DE PRIORIDAD) ---
+    # 1. Obtener extensiones de "Ver" (Texto a leer)
+    view_exts = {t['nombre'] for t in controller.config.get("etiquetas_extensiones_incluidas", [])}
+
+    # 2. Obtener archivos/extensiones de "No Ver" (Exclusiones)
+    no_view_items = {t['nombre'] for t in controller.config.get("etiquetas_archivos_excluidos", [])}
+
+    # 3. Unir ambos conjuntos. Si algo está en Ver o No Ver, NO puede estar en Multimedia.
+    forbidden_set = view_exts.union(no_view_items)
+
     result = TagsConfigDialog.get_input(
         parent=controller.view,
         title=controller.view._tr("dlg_etiqueta_title"),
         folders_prompt=None,
         initial_folders=None,
         files_prompt=controller.view._tr("dlg_etiqueta_file_prompt"),
-        initial_files=current_files
+        initial_files=current_files,
+        forbidden_items=forbidden_set  # PASAMOS LOS PROHIBIDOS
     )
 
     if result is not None:

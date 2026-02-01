@@ -1,6 +1,7 @@
-# src/view/tags_dialog.py
 import customtkinter as ctk
 import copy
+import os
+from tkinter import filedialog
 from view.dialogs import BaseDialog, _get_color_tuple, _style_button
 from view.ui_constants import COLORS
 
@@ -10,11 +11,25 @@ class TagsConfigDialog(BaseDialog):
 
     def __init__(self, parent, title: str,
                  folders_prompt: str | None, initial_folders: list | None,
-                 files_prompt: str, initial_files: list):
+                 files_prompt: str, initial_files: list,
+                 allow_autodetect: bool = False,
+                 excluded_folders: list = None,
+                 excluded_files: list = None,
+                 media_extensions: list = None,
+                 forbidden_items: set = None):  # NUEVO: Lista de prohibidos
         super().__init__(parent, title)
 
-        # Detectamos si es modo "Solo Archivos" (si no nos dan título para carpetas)
+        # Detectamos si es modo "Solo Archivos"
         self.single_mode = (folders_prompt is None)
+        self.allow_autodetect = allow_autodetect
+
+        # GUARDAMOS LAS LISTAS DE EXCLUSIÓN Y MULTIMEDIA PARA LA AUTODETECCIÓN
+        self.excluded_folders = excluded_folders if excluded_folders else []
+        self.excluded_files = excluded_files if excluded_files else []
+        self.media_extensions = media_extensions if media_extensions else []
+
+        # NUEVO: Set de items prohibidos (para evitar conflictos de prioridad)
+        self.forbidden_items = forbidden_items if forbidden_items else set()
 
         self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
         self.files_list = copy.deepcopy(initial_files)
@@ -40,20 +55,17 @@ class TagsConfigDialog(BaseDialog):
         text_color = _get_color_tuple("text")
 
         if self.single_mode:
-            # MODO UNIFICADO: Solo creamos la sección de archivos (como si fuera la 0)
+            # MODO UNIFICADO
             self._create_tag_section(0, files_prompt, "files", text_color)
-            # Hacemos que esta única sección se expanda para llenar todo el espacio
             self.main_frame.grid_rowconfigure(1, weight=1)
         else:
-            # MODO ESTÁNDAR (Ver/No Ver): Dos secciones
+            # MODO ESTÁNDAR
             self._create_tag_section(0, folders_prompt, "folders", text_color)
             self._create_tag_section(1, files_prompt, "files", text_color)
             self.main_frame.grid_rowconfigure(1, weight=1)
             self.main_frame.grid_rowconfigure(4, weight=1)
 
         # --- SECCIÓN DE ACCIONES (Botones) ---
-
-        # Línea separadora sutil antes de los botones
         separator = ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line"))
         separator.grid(row=6, column=0, sticky="ew", padx=0, pady=(10, 0))
 
@@ -61,7 +73,6 @@ class TagsConfigDialog(BaseDialog):
         button_frame.grid(row=7, column=0, pady=(15, 15), sticky="ew")
         button_frame.grid_columnconfigure((0, 1), weight=1)
 
-        # TRADUCCION APLICADA
         txt_save = parent._tr("btn_save_changes") if hasattr(parent, "_tr") else "Guardar Cambios"
         txt_cancel = parent._tr("btn_cancel_simple") if hasattr(parent, "_tr") else "Cancelar"
 
@@ -80,12 +91,10 @@ class TagsConfigDialog(BaseDialog):
 
     def _create_tag_section(self, section_index, prompt, section_id, text_color):
         base_row = section_index * 3
-        # Título más pegado al contenido
         ctk.CTkLabel(self.main_frame, text=prompt, font=("Segoe UI", 12, "bold"), text_color=text_color).grid(
             row=base_row, column=0,
             sticky="w", pady=(10, 2), padx=20)
 
-        # Recuadro de scroll
         scroll_frame = ctk.CTkScrollableFrame(
             self.main_frame,
             label_text="",
@@ -95,22 +104,94 @@ class TagsConfigDialog(BaseDialog):
         )
         scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew", padx=20)
 
-        # Placeholder
-        ph_text = self._parent._tr("placeholder_tags") if hasattr(self._parent,
-                                                                  "_tr") else "Escribir y presionar Enter..."
-        entry = ctk.CTkEntry(self.main_frame, placeholder_text=ph_text)
-        entry.grid(row=base_row + 2, column=0, sticky="ew", pady=(5, 0), padx=20)
+        # Frame contenedor para Input + Botón Autodetectar
+        input_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        input_container.grid(row=base_row + 2, column=0, sticky="ew", pady=(5, 0), padx=20)
+
+        ph_text = self._parent._tr("placeholder_tags") if hasattr(self._parent, "_tr") else "Escribir..."
+
+        entry = ctk.CTkEntry(input_container, placeholder_text=ph_text)
+        entry.pack(side="left", fill="x", expand=True)
 
         if section_id == "folders":
             self.folders_scroll_frame = scroll_frame
-            entry.bind("<Return>", lambda event: self._add_tag(entry, self.folders_list))
+            entry.bind("<Return>", lambda event: self._add_tag(entry, self.folders_list, is_folder=True))
         else:
             self.files_scroll_frame = scroll_frame
-            entry.bind("<Return>", lambda event: self._add_tag(entry, self.files_list))
+            entry.bind("<Return>", lambda event: self._add_tag(entry, self.files_list, is_folder=False))
+
+            if self.allow_autodetect:
+                txt_auto = self._parent._tr("btn_autodetect") if hasattr(self._parent, "_tr") else "Autodetectar"
+                btn_auto = ctk.CTkButton(
+                    input_container,
+                    text=txt_auto,
+                    width=80,
+                    height=28,
+                    command=self._on_autodetect
+                )
+                _style_button(btn_auto, "blue")
+                btn_auto.pack(side="left", padx=(8, 0))
+
+    def _on_autodetect(self):
+        """Escanea respetando exclusiones y multimedia."""
+        path = filedialog.askdirectory(title=self._parent._tr("btn_autodetect"))
+        if not path:
+            return
+
+        added_count = 0
+
+        # 1. Preparar conjuntos de exclusión (Solo los activos)
+        excl_folders_set = {t["nombre"] for t in self.excluded_folders if t["estado"] == "activo"}
+        excl_files_set = {t["nombre"] for t in self.excluded_files if t["estado"] == "activo"}
+
+        # 2. Extensiones multimedia (ya vienen como lista de strings)
+        media_set = {ext.lower() for ext in self.media_extensions}
+
+        # 3. Extensiones que ya tengo en la lista actual (para no duplicar)
+        current_exts = {t["nombre"].lower() for t in self.files_list}
+
+        try:
+            for root, dirs, files in os.walk(path):
+                # A. Filtrar directorios excluidos para que os.walk NO entre en ellos
+                # Modificamos dirs in-place para podar el árbol
+                dirs[:] = [d for d in dirs if d not in excl_folders_set]
+
+                for filename in files:
+                    # B. Si el archivo está excluido por nombre completo, ignorar
+                    if filename in excl_files_set:
+                        continue
+
+                    _, ext = os.path.splitext(filename)
+                    ext = ext.lower()
+
+                    if not ext: continue
+
+                    # C. Si es multimedia, ignorar
+                    if ext in media_set:
+                        continue
+
+                    # D. Si ya la tengo, ignorar
+                    if ext in current_exts:
+                        continue
+
+                    # Agregamos
+                    self.files_list.append({"nombre": ext, "estado": "activo"})
+                    current_exts.add(ext)
+                    added_count += 1
+
+            self.redraw_all_tags()
+
+            if added_count > 0:
+                self._parent.show_message("info_title", "msg_autodetect_result", str(added_count))
+            else:
+                self._parent.show_message("info_title", "msg_autodetect_none")
+
+        except Exception as e:
+            print(f"Error autodetectando: {e}")
+            self._parent.show_message("error_title", "msg_error_generic")
 
     def redraw_all_tags(self):
         if not self.winfo_exists(): return
-        # Si estamos en modo simple, no intentamos dibujar carpetas
         if not self.single_mode:
             self._redraw_tags_in_frame(self.folders_scroll_frame, self.folders_list)
 
@@ -163,12 +244,33 @@ class TagsConfigDialog(BaseDialog):
         label.bind("<Button-1>", lambda e, i=index, l=tag_list: self._toggle_tag_state(e, i, l))
         return pill_frame
 
-    def _add_tag(self, entry, tag_list):
-        tag_name = entry.get().strip()
-        if tag_name and not any(t["nombre"] == tag_name for t in tag_list):
-            tag_list.append({"nombre": tag_name, "estado": "activo"})
+    def _add_tag(self, entry, tag_list, is_folder=False):
+        raw_val = entry.get().strip()
+        if not raw_val:
+            return
+
+        # Normalización automática si es archivo (añadir punto)
+        if not is_folder and not raw_val.startswith("."):
+            tag_to_check = f".{raw_val}"
+        else:
+            tag_to_check = raw_val
+
+        # VALIDACIÓN 1: Verificar si ya existe en la lista actual
+        if any(t["nombre"] == tag_to_check for t in tag_list):
             entry.delete(0, "end")
-            self.redraw_all_tags()
+            return
+
+        # VALIDACIÓN 2: Verificar Conflictos de Prioridad (Ver/No Ver vs Multimedia)
+        if tag_to_check in self.forbidden_items:
+            # Bloqueamos y mostramos error
+            self._parent.show_message("error_title", "msg_tag_conflict", tag_to_check)
+            entry.delete(0, "end")
+            return
+
+        # Si pasa validaciones, agregamos
+        tag_list.append({"nombre": tag_to_check, "estado": "activo"})
+        entry.delete(0, "end")
+        self.redraw_all_tags()
 
     def _delete_tag(self, index, tag_list):
         if index < len(tag_list):
@@ -183,15 +285,18 @@ class TagsConfigDialog(BaseDialog):
 
     def _on_ok(self, event=None):
         if self.single_mode:
-            # Retornamos None para carpetas para indicar que no aplica
             self.result = (None, self.files_list)
         else:
             self.result = (self.folders_list, self.files_list)
         super()._on_ok(event)
 
     @classmethod
-    def get_input(cls, parent, title, folders_prompt, initial_folders, files_prompt, initial_files):
-        # La clase ahora acepta None para folders_prompt e initial_folders
-        dialog = cls(parent, title, folders_prompt, initial_folders, files_prompt, initial_files)
+    def get_input(cls, parent, title, folders_prompt, initial_folders, files_prompt, initial_files,
+                  allow_autodetect=False, excluded_folders=None, excluded_files=None, media_extensions=None,
+                  forbidden_items=None):  # NUEVO ARGUMENTO
+
+        dialog = cls(parent, title, folders_prompt, initial_folders, files_prompt, initial_files,
+                     allow_autodetect, excluded_folders, excluded_files, media_extensions,
+                     forbidden_items)  # Pasamos el argumento
         parent.wait_window(dialog)
         return dialog.result

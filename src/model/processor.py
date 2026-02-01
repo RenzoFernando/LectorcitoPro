@@ -42,6 +42,8 @@ def generate_report(
         cancel_event: threading.Event,
         progress_callback: callable
 ) -> tuple[str, str | None]:
+    source_folder = os.path.abspath(source_folder)
+
     total_files = _count_files_to_process(source_folder, config)
     if total_files == 0:
         return "no_files", None
@@ -108,17 +110,15 @@ def generate_report(
                     sleep(0.01)
 
                     file_path = os.path.join(root, filename)
-                    # CAMBIO: Obtenemos la ruta absoluta del archivo
-                    abs_path = os.path.abspath(file_path)
+
+                    rel_path_from_root = os.path.relpath(file_path, source_folder)
 
                     outfile.write(f"  ● Archivo: {filename}\n")
-                    # CAMBIO: Se agrega la ruta absoluta debajo del nombre del archivo
-                    outfile.write(f"    Ruta: {abs_path}\n")
+                    outfile.write(f"    Ruta: {rel_path_from_root}\n")
 
                     # Escribe el contenido del archivo si es de texto.
                     if is_text:
                         outfile.write("    " + ("-" * 74) + "\n")
-                        # CAMBIO: Se añade el nombre del archivo al marcador de inicio
                         outfile.write(f"    >> INICIO DEL CONTENIDO: {filename}\n\n")
 
                         try:
@@ -128,7 +128,6 @@ def generate_report(
                         except Exception as e:
                             outfile.write(f"    [Error al leer el archivo: {e}]\n")
 
-                        # CAMBIO: Se añade el nombre del archivo al marcador de fin
                         outfile.write(f"\n\n    << FIN DEL CONTENIDO: {filename}\n")
                         outfile.write("    " + ("-" * 74) + "\n\n\n")
                     # Si es multimedia, solo deja un espacio.

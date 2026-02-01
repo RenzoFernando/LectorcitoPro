@@ -128,6 +128,9 @@ class BaseDialog(ctk.CTkToplevel):
         if not self.winfo_exists(): return
 
         try:
+            # CAMBIO: Forzamos la actualización de la UI para calcular el tamaño real del contenido
+            self.update_idletasks()
+
             w = self.winfo_width()
             h = self.winfo_height()
 
@@ -239,6 +242,7 @@ class MessageDialog(BaseDialog):
             seconds = 0.0
         if seconds <= 0: return
         ms = max(1, int(seconds * 1000))
+
         self._auto_close_after_id = self.after(ms, self._auto_close)
 
     def _cancel_auto_close(self):
