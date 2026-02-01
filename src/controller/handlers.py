@@ -128,13 +128,20 @@ def save_preferences_silent(controller):
     config.save_config(controller.config)
 
 
-# Alterna entre el tema claro y oscuro.
+# Alterna entre el tema claro y oscuro con animación de transición.
 def toggle_theme(controller):
-    controller.view.current_theme = "Dark" if controller.view.current_theme == "Light" else "Light"
-    controller.config["theme"] = controller.view.current_theme
-    controller.view.apply_theme()
-    save_preferences_silent(controller)
+    # Determinamos el nuevo tema
+    new_theme = "Dark" if controller.view.current_theme == "Light" else "Light"
 
+    # Actualizamos la configuración
+    controller.config["theme"] = new_theme
+
+    # Ejecutamos la transición visual (Fade Out -> Cambio -> Fade In)
+    controller.view.switch_theme_animated(new_theme)
+
+    # Guardamos la preferencia
+    save_preferences_silent(controller)
+    save_preferences_silent(controller)
 
 # Alterna entre español e inglés.
 def toggle_language(controller):

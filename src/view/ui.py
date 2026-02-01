@@ -57,7 +57,7 @@ class LectorcitoApp(ctk.CTk):
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
-        self.after(350, self._precise_center_and_show)
+        self.after(500, self._precise_center_and_show)
 
     def _precise_center_and_show(self):
         try:
@@ -319,6 +319,30 @@ class LectorcitoApp(ctk.CTk):
                     widget.configure(text_color=theme_keys["text_secondary"])
         except Exception:
             pass
+
+    def switch_theme_animated(self, new_theme: str):
+        """Inicia el proceso de cambio de tema con efecto fantasma."""
+        self._pending_new_theme = new_theme
+        self._fade_out_for_switch()
+
+    def _fade_out_for_switch(self):
+        try:
+            alpha = self.attributes("-alpha")
+            if alpha > 0.0:
+                # Reducimos opacidad rápidamente (0.12 por frame)
+                self.attributes("-alpha", max(alpha - 0.12, 0.0))
+                self.after(12, self._fade_out_for_switch)
+            else:
+                # Una vez invisible, aplicamos el cambio de tema
+                self.current_theme = self._pending_new_theme
+                self.apply_theme()
+                # Usamos el método _fade_in que ya existe en la clase para reaparecer
+                self._fade_in()
+        except Exception:
+            # Fallback de seguridad por si algo falla en la UI
+            self.current_theme = self._pending_new_theme
+            self.apply_theme()
+            self.attributes("-alpha", 1.0)
 
     def get_min_visible_completion_delay_ms(self) -> int:
         return self.status_panel.get_min_visible_completion_delay_ms()
