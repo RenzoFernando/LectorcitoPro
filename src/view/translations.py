@@ -1,7 +1,8 @@
 TRANSLATIONS = {
     "es": {
+        # ... (Mantener todo lo anterior igual hasta "msg_delete_error") ...
         "manual_title": "Manual de Usuario",
-        "msg_infographic_error": "No se pudo cargar la infografía. Verifique que 'Infografía_LectorcitoPro.png' exista en la carpeta 'recursos'.",
+        "msg_infographic_error": "No se pudo cargar la infografía.\nVerifique que 'Infografía_LectorcitoPro.png' exista en la carpeta 'recursos'.",
         "btn_restore_defaults": "Restaurar Ajustes",
         "confirm_restore_title": "Confirmar Restauración",
         "confirm_restore_prompt": "¿Está seguro de que desea restaurar todos los ajustes a sus valores por defecto?\n\nEsto eliminará sus configuraciones guardadas.",
@@ -13,6 +14,7 @@ TRANSLATIONS = {
         "btn_open_last": "Abrir Ultimo Reporte",
         "btn_del": "Eliminar Todas las Lecturas",
         "msg_tree_done": "¡Estructura de árbol guardada en '{}'!",
+
         "btn_cancel": "Cancelar Lectura",
         "msg_cancelled": "La lectura fue cancelada.",
         "error_title": "Error",
@@ -34,6 +36,16 @@ TRANSLATIONS = {
         "confirm_del_prompt": "¿Está seguro de que desea eliminar permanentemente la carpeta de lecturas y todo su contenido?",
         "msg_delete_success": "Contenido de '{}' eliminado con éxito.",
         "msg_delete_error": "No se pudo eliminar la carpeta:\n{}",
+
+        # --- NUEVOS TEXTOS DE PERFILES (ES) ---
+        "dlg_profiles_title": "Gestión de Perfiles",
+        "lbl_select_profile": "Seleccione un Perfil de Trabajo",
+        "ph_new_profile": "Nombre nuevo perfil (ej: Python)...",
+        "msg_profile_exists": "Ya existe un perfil con ese nombre.",
+        "confirm_del_profile": "¿Eliminar el perfil '{}'?\nEsta acción no se puede deshacer.",
+        "msg_profile_changed": "Perfil '{}' activado.\nEntorno reconfigurado.",
+        # --------------------------------------
+
         "greet_m": ["¡Buenos días!", "¡Un café y a programar!", "¿Listo para un nuevo día?",
                     "¡Que tengas una mañana productiva!"],
         "greet_a": ["¡Buenas tardes!", "Espero que tu día vaya de maravilla.", "¡A seguir dándole al código!",
@@ -79,8 +91,9 @@ TRANSLATIONS = {
         "footer_copyright": "Copyright © {} - {} - Todos los derechos reservados."
     },
     "en": {
+        # ... (Mantener todo lo anterior igual hasta "msg_delete_error") ...
         "manual_title": "User Manual",
-        "msg_infographic_error": "Could not load the infographic. Please ensure 'Infografía_LectorcitoPro.png' exists in the 'recursos' folder.",
+        "msg_infographic_error": "Could not load the infographic.\nPlease ensure 'Infografía_LectorcitoPro.png' exists in the 'recursos' folder.",
         "btn_restore_defaults": "Restore Defaults",
         "confirm_restore_title": "Confirm Restore",
         "confirm_restore_prompt": "Are you sure you want to restore all settings to their default values?\n\nThis will delete your saved configurations.",
@@ -113,6 +126,16 @@ TRANSLATIONS = {
         "confirm_del_prompt": "Are you sure you want to permanently delete the readings folder and all its contents?",
         "msg_delete_success": "Contents of '{}' deleted successfully.",
         "msg_delete_error": "Could not delete the folder:\n{}",
+
+        # --- NUEVOS TEXTOS DE PERFILES (EN) ---
+        "dlg_profiles_title": "Profile Management",
+        "lbl_select_profile": "Select Work Profile",
+        "ph_new_profile": "New profile name (e.g. Python)...",
+        "msg_profile_exists": "A profile with that name already exists.",
+        "confirm_del_profile": "Delete profile '{}'?\nThis action cannot be undone.",
+        "msg_profile_changed": "Profile '{}' activated.\nEnvironment reconfigured.",
+        # --------------------------------------
+
         "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?",
                     "Have a productive morning!"],
         "greet_a": ["Good afternoon!", "Hope your day is going great.", "Let's keep pushing that code!",

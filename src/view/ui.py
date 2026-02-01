@@ -57,7 +57,7 @@ class LectorcitoApp(ctk.CTk):
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
-        self.after(500, self._precise_center_and_show)
+        self.after(1000, self._precise_center_and_show)
 
     def _precise_center_and_show(self):
         try:

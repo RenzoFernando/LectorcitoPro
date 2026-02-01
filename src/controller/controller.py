@@ -19,13 +19,12 @@ class LectorcitoController:
         self.last_report_path = None
         self.is_processing = False
         self.cancel_event = None
+
         self._assign_commands()
 
     def _assign_commands(self):
         self.view.main_buttons["selpath"].configure(command=lambda: handlers.select_destination_path(self))
-        # Ahora llama directamente a la lectura única
         self.view.main_buttons["choose"].configure(command=self.select_reading_type)
-        # Ahora llama directamente a la creación de árbol filtrado
         self.view.main_buttons["create_tree"].configure(command=self.create_tree_structure)
         self.view.main_buttons["openlect"].configure(command=lambda: handlers.open_destination_folder(self))
         self.view.main_buttons["openlast"].configure(command=lambda: handlers.open_last_report(self))
@@ -38,7 +37,10 @@ class LectorcitoController:
         self.view.sidebar_buttons["traducir"].configure(command=lambda: handlers.toggle_language(self))
         self.view.sidebar_buttons["restaurar"].configure(command=lambda: handlers.restore_default_settings(self))
         self.view.sidebar_buttons["github"].configure(command=lambda: webbrowser.open_new(self.view.REPO_URL))
-        # perfil button para tener perfiles de trabajo
+
+        # --- CAMBIO AQUÍ: Vinculamos el botón perfil a la gestión de perfiles ---
+        self.view.sidebar_buttons["perfil"].configure(command=lambda: handlers.manage_profiles(self))
+
         self.view.sidebar_buttons["info"].configure(command=self.view.show_app_info)
 
         self.view.btn_cancel.configure(command=self.cancel_processing)
@@ -46,31 +48,27 @@ class LectorcitoController:
     def run(self):
         self.view.mainloop()
 
-    # --- MODIFICADO: Flujo directo a selección de carpeta única ---
     def select_reading_type(self):
         if not self._check_destination_path():
             return
 
-        # Lógica directa de carpeta única
         path = filedialog.askdirectory(
             title=self.view._tr("btn_choose_folder"),
             initialdir=self.config.get("last_read_folder", "")
         )
         if path:
             self.config["last_read_folder"] = path
-            # Iniciamos el proceso directo
             self.start_processing(path)
 
-    # Reemplaza a start_batch_processing, simplificado para 1 sola carpeta
     def start_processing(self, folder_path: str):
         if self.is_processing:
             return
 
         self.is_processing = True
         self.cancel_event = threading.Event()
+
         self.view.toggle_ui_for_processing(is_active=True)
 
-        # Aunque sea 1 carpeta, usamos hilo para no congelar la UI
         thread = threading.Thread(
             target=self._processing_thread_target, args=(folder_path, self.cancel_event), daemon=True
         )
@@ -135,12 +133,10 @@ class LectorcitoController:
             return False
         return True
 
-    # --- MODIFICADO: Flujo directo a árbol filtrado ---
     def create_tree_structure(self):
         if self.is_processing or not self._check_destination_path():
             return
 
-        # Directamente pedimos la carpeta
         source_path = filedialog.askdirectory(title=self.view._tr("btn_create_tree"))
         if not source_path:
             return
@@ -155,7 +151,6 @@ class LectorcitoController:
         thread.start()
 
     def _tree_thread_target(self, source_path: str):
-        # Ya no pasamos use_config=True, el procesador lo asume por defecto
         status, report_path = processor.generate_tree_report(
             source_folder=source_path, output_path=self.config["lecturas_path"], config=self.config
         )

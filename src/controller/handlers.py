@@ -2,10 +2,12 @@
 import os
 import shutil
 import webbrowser
+import customtkinter
 from tkinter import filedialog
 import config
 from view.dialogs import ConfirmDialog, ChoiceDialog
 from view.tags_dialog import TagsConfigDialog
+from view.profiles_dialog import ProfilesDialog
 
 
 # Maneja la selección de la ruta de destino para los reportes.
@@ -77,50 +79,182 @@ def show_no_view_config_dialog(controller):
         save_preferences_silent(controller)
 
 
-# Muestra el diálogo para configurar archivos multimedia y binarios (ETIQUETA - MODO UNIFICADO).
+# Muestra el diálogo para configurar archivos multimedia y binarios.
 def show_etiqueta_config_dialog(controller):
-    # Ya no hay carpetas multimedia, solo extensiones.
-
-    # 1. Recuperar configuración de extensiones (media_extensions)
     tags_stored = controller.config.get("etiquetas_multimedia_config", [])
 
     if not tags_stored:
-        # Si no hay config de etiquetas guardada, generamos una desde la lista plana de config
         raw_exts = controller.config.get("media_extensions", [])
         current_files = [{"nombre": x, "estado": "activo"} for x in raw_exts]
     else:
         current_files = tags_stored
 
-    # 2. LLAMAR AL DIÁLOGO EN MODO SOLO EXTENSIONES
-    # Pasamos None en 'folders_prompt' e 'initial_folders' para activar el modo de una sola ventana.
     result = TagsConfigDialog.get_input(
         parent=controller.view,
         title=controller.view._tr("dlg_etiqueta_title"),
-        folders_prompt=None,  # ESTO ACTIVA EL MODO UNIFICADO
+        folders_prompt=None,
         initial_folders=None,
         files_prompt=controller.view._tr("dlg_etiqueta_file_prompt"),
         initial_files=current_files
     )
 
     if result is not None:
-        # El resultado devuelve (folders, files), pero folders será None en este modo.
         _, new_files = result
 
-        # Asegurar formato de extensiones
         for tag in new_files:
             if not tag["nombre"].startswith("."):
                 tag["nombre"] = f".{tag['nombre']}"
 
-        # Guardamos la configuración de archivos como Tags (para recordar el estado inactivo en la UI)
         controller.config["etiquetas_multimedia_config"] = new_files
 
-        # SINCRONIZACIÓN CRÍTICA:
-        # Actualizamos la lista 'media_extensions' (strings planas) que usa el processor.py
-        # Solo añadimos las que están 'activas'.
         active_media_exts = [t["nombre"] for t in new_files if t["estado"] == "activo"]
         controller.config["media_extensions"] = active_media_exts
 
         save_preferences_silent(controller)
+
+
+# --- GESTIÓN DE PERFILES: MODO "PASO A PASO" (SIN LAG) ---
+def manage_profiles(controller):
+    # Paso 1: Delay inicial muy generoso (300ms) para que el click termine visualmente
+    controller.view.after(300, lambda: _open_profiles_dialog_safe(controller))
+
+
+def _save_meta_immediate(controller, profiles_snapshot):
+    """Callback para guardar perfiles sin necesidad de activarlos."""
+    clean_meta = profiles_snapshot.copy()
+    for pid, data in clean_meta.items():
+        if data == "NEW":
+            clean_meta[pid] = config.get_blank_profile()
+    controller.config["_profiles_meta"] = clean_meta
+    save_preferences_silent(controller)
+
+
+def _open_profiles_dialog_safe(controller):
+    profiles = controller.config.get("_profiles_meta", {})
+    active_id = controller.config.get("_active_profile_id", "default")
+
+    if not profiles:
+        profiles = {"default": config.DEFAULT_CONFIG_VALUES.copy()}
+
+    result = ProfilesDialog.ask(
+        controller.view,
+        profiles,
+        active_id,
+        on_save_callback=lambda p: _save_meta_immediate(controller, p)
+    )
+
+    if result:
+        new_active_id, new_profiles_meta = result
+        # Iniciamos la transición lenta y segura
+        _step_1_hide_app(controller, new_active_id, new_profiles_meta)
+
+
+# --- SECUENCIA DE TRANSICIÓN "PASO A PASO" (PERFILES) ---
+
+def _step_1_hide_app(controller, new_active_id, new_profiles_meta):
+    """Paso 1: Ocultar la aplicación inmediatamente."""
+    controller.view.attributes("-alpha", 0.0)
+    # Dar un "respiro" largo de 600ms antes de procesar nada
+    controller.view.after(600, lambda: _step_2_load_data(controller, new_active_id, new_profiles_meta))
+
+
+def _step_2_load_data(controller, new_active_id, new_profiles_meta):
+    """Paso 2: Cargar datos pesados mientras no se ve nada."""
+    try:
+        if new_active_id in new_profiles_meta and new_profiles_meta[new_active_id] == "NEW":
+            selected_profile_data = config.get_blank_profile()
+            new_profiles_meta[new_active_id] = selected_profile_data
+        else:
+            selected_profile_data = new_profiles_meta[new_active_id]
+
+        controller.config = selected_profile_data.copy()
+        controller.config["_profiles_meta"] = new_profiles_meta
+        controller.config["_active_profile_id"] = new_active_id
+
+        save_preferences_silent(controller)
+
+        # Actualizar componentes visuales
+        controller._update_active_lecturas_path()
+        controller.view.lang = controller.config["language"]
+        controller.view.update_ui_texts()
+
+        new_theme = controller.config["theme"]
+        controller.view.current_theme = new_theme
+        customtkinter.set_appearance_mode(new_theme)
+        controller.view.apply_theme()
+
+    except Exception as e:
+        print(f"Error cargando perfil: {e}")
+
+    # Dar otro respiro de 300ms para que Tkinter termine de pintar internamente
+    controller.view.after(300, lambda: _step_3_show_app(controller, new_active_id))
+
+
+def _step_3_show_app(controller, new_active_id):
+    """Paso 3: Mostrar la aplicación renovada."""
+    controller.view.attributes("-alpha", 1.0)
+    # Mensaje final
+    controller.view.after(100, lambda:
+    controller.view.show_message("info_title", "msg_profile_changed", new_active_id.capitalize())
+                          )
+
+
+# --- SECUENCIA DE TRANSICIÓN "PASO A PASO" (RESTAURAR) ---
+
+def restore_default_settings(controller):
+    if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
+                         controller.view._tr("confirm_restore_prompt")):
+        # Paso 1: Ocultar aplicación (Fantasma)
+        _step_1_restore_hide(controller)
+
+
+def _step_1_restore_hide(controller):
+    controller.view.attributes("-alpha", 0.0)
+    # Respiro largo (800ms) para operaciones de disco
+    controller.view.after(800, lambda: _step_2_restore_logic(controller))
+
+
+def _step_2_restore_logic(controller):
+    try:
+        # 1. Eliminar archivo físico
+        config.delete_config_file()
+
+        # 2. Reiniciar memoria a estado de fábrica (Default Profile Only)
+        default_profile = config.DEFAULT_CONFIG_VALUES.copy()
+
+        # Reconstruir el config del controlador como si fuera la primera ejecución
+        controller.config = default_profile.copy()
+        controller.config["_profiles_meta"] = {"default": default_profile.copy()}
+        controller.config["_active_profile_id"] = "default"
+
+        # 3. Guardar el estado limpio (recrea config.json)
+        save_preferences_silent(controller)
+
+        # 4. Actualizar toda la UI
+        controller._update_active_lecturas_path()
+
+        # Reset Idioma
+        controller.view.lang = controller.config["language"]
+        controller.view.update_ui_texts()
+
+        # Reset Tema
+        new_theme = controller.config["theme"]
+        controller.view.current_theme = new_theme
+        customtkinter.set_appearance_mode(new_theme)
+        controller.view.apply_theme()
+
+    except Exception as e:
+        print(f"Error restaurando: {e}")
+
+    # Respiro para renderizado interno
+    controller.view.after(300, lambda: _step_3_restore_show(controller))
+
+
+def _step_3_restore_show(controller):
+    controller.view.attributes("-alpha", 1.0)
+    controller.view.after(100, lambda:
+    controller.view.show_message("info_title", "msg_restore_success")
+                          )
 
 
 # Guarda la configuración actual sin mostrar notificaciones.
@@ -128,20 +262,13 @@ def save_preferences_silent(controller):
     config.save_config(controller.config)
 
 
-# Alterna entre el tema claro y oscuro con animación de transición.
+# Alterna entre el tema claro y oscuro.
 def toggle_theme(controller):
-    # Determinamos el nuevo tema
     new_theme = "Dark" if controller.view.current_theme == "Light" else "Light"
-
-    # Actualizamos la configuración
     controller.config["theme"] = new_theme
-
-    # Ejecutamos la transición visual (Fade Out -> Cambio -> Fade In)
     controller.view.switch_theme_animated(new_theme)
+    save_preferences_silent(controller)
 
-    # Guardamos la preferencia
-    save_preferences_silent(controller)
-    save_preferences_silent(controller)
 
 # Alterna entre español e inglés.
 def toggle_language(controller):
@@ -149,22 +276,6 @@ def toggle_language(controller):
     controller.config["language"] = controller.view.lang
     controller.view.update_ui_texts()
     save_preferences_silent(controller)
-
-
-# Restaura todas las configuraciones a sus valores por defecto.
-def restore_default_settings(controller):
-    if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
-                         controller.view._tr("confirm_restore_prompt")):
-        config.delete_config_file()
-        controller.config = config.load_config()
-
-        controller._update_active_lecturas_path()
-        controller.view.lang = controller.config["language"]
-        controller.view.current_theme = controller.config["theme"]
-        controller.view.update_ui_texts()
-        controller.view.apply_theme()
-        save_preferences_silent(controller)
-        controller.view.show_message("info_title", "msg_restore_success")
 
 
 # Abre la carpeta de destino de los reportes.
@@ -184,7 +295,7 @@ def open_last_report(controller):
         controller.view.show_message("info_title", "msg_no_report_yet")
 
 
-# Elimina la carpeta de lecturas y todo su contenido, previa confirmación.
+# Elimina la carpeta de lecturas.
 def delete_all_readings(controller):
     path = controller.config.get("lecturas_path")
     if not (path and os.path.isdir(path)):

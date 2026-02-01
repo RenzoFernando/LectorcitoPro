@@ -8,25 +8,22 @@ APP_AUTHOR = "APPS_RenzoFernando"
 CFG_NAME = "config.json"
 
 # --- Rutas de Configuración ---
-# Define el directorio de configuración del usuario usando appdirs para compatibilidad multiplataforma.
 _config_dir = user_config_dir(APP_NAME, APP_AUTHOR, roaming=True)
 os.makedirs(_config_dir, exist_ok=True)
 CONFIG_FILE_PATH = os.path.join(_config_dir, CFG_NAME)
 
-# Define y crea la ruta por defecto para guardar los reportes.
 DEFAULT_LECTURAS_PATH = os.path.join(_config_dir, "Lecturas")
 os.makedirs(DEFAULT_LECTURAS_PATH, exist_ok=True)
 
 
 # --- Estructura de Etiqueta por Defecto ---
-# Convierte una lista simple de strings a una lista de diccionarios para las etiquetas.
 def to_tags(items: list[str]) -> list[dict]:
     return [{"nombre": item, "estado": "activo"} for item in items]
 
 
-# --- Configuración por Defecto ---
-# Diccionario con todos los ajustes predeterminados de la aplicación.
-DEFAULT_CONFIG = {
+# --- Configuración Base (Full Default) ---
+# Esta es la configuración completa típica con filtros pre-cargados (para el perfil Default inicial).
+DEFAULT_CONFIG_VALUES = {
     "use_default_path": True,
     "custom_lecturas_path": "",
     "lecturas_path": DEFAULT_LECTURAS_PATH,
@@ -34,24 +31,11 @@ DEFAULT_CONFIG = {
     "theme": "Light",
     "language": "es",
 
-    # Carpetas a resaltar en el reporte.
-    "etiquetas_carpetas_importantes": to_tags(
-        ["src"]
-    ),
-    # Extensiones de archivo a leer.
-    "etiquetas_extensiones_incluidas": to_tags(
-        [".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json"]
-    ),
-    # Carpetas a ignorar durante la lectura.
-    "etiquetas_carpetas_excluidas": to_tags(
-        ["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]
-    ),
-    # Archivos específicos a ignorar por nombre.
-    "etiquetas_archivos_excluidos": to_tags(
-        ["Pipfile.lock", "package.json", "package-lock.json"]
-    ),
+    "etiquetas_carpetas_importantes": to_tags(["src"]),
+    "etiquetas_extensiones_incluidas": to_tags([".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json"]),
+    "etiquetas_carpetas_excluidas": to_tags(["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]),
+    "etiquetas_archivos_excluidos": to_tags(["Pipfile.lock", "package.json", "package-lock.json"]),
 
-    # Extensiones de archivos multimedia y otros binarios que no se deben leer.
     "media_extensions": [
         '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.ico', '.webp',
         '.mp4', '.mkv', '.avi', '.mov', '.webm',
@@ -59,15 +43,36 @@ DEFAULT_CONFIG = {
         '.zip', '.rar', '.7z', '.tar', '.gz',
         '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
         '.exe', '.dll', '.bin', '.iso', '.so', '.dylib', ".cer", ".pfx"
-    ]
+    ],
+    "etiquetas_multimedia_config": []
+}
+
+# --- Configuración "En Blanco" (Blank Slate) ---
+# CAMBIO: Ahora TODO está vacío, incluidas las extensiones multimedia.
+BLANK_PROFILE_CONFIG = {
+    "use_default_path": True,
+    "custom_lecturas_path": "",
+    "lecturas_path": DEFAULT_LECTURAS_PATH,
+    "last_read_folder": "",
+    "theme": "Light",  # Por defecto claro
+    "language": "es",  # Por defecto español
+
+    # Listas vacías para que el usuario personalice desde cero
+    "etiquetas_carpetas_importantes": [],
+    "etiquetas_extensiones_incluidas": [],
+    "etiquetas_carpetas_excluidas": [],
+    "etiquetas_archivos_excluidos": [],
+
+    # CAMBIO: Multimedia totalmente vacío
+    "media_extensions": [],
+    "etiquetas_multimedia_config": []
 }
 
 
-# --- Funciones de Manejo de Configuración ---
+# --- Funciones de Migración y Manejo ---
 
-# Migra una configuración de formato antiguo (listas simples) al nuevo formato (lista de etiquetas).
-def _migrate_config(config_data: dict) -> dict:
-    migrated = False
+def _migrate_old_keys(data: dict) -> dict:
+    """Migra claves antiguas (listas planas) al formato de etiquetas."""
     migration_map = {
         "important_folders": "etiquetas_carpetas_importantes",
         "text_extensions": "etiquetas_extensiones_incluidas",
@@ -75,51 +80,98 @@ def _migrate_config(config_data: dict) -> dict:
         "excluded_files": "etiquetas_archivos_excluidos",
     }
     for old_key, new_key in migration_map.items():
-        if old_key in config_data and isinstance(config_data[old_key], list):
-            # Comprueba si la lista no está en el nuevo formato de diccionarios.
-            if not config_data[old_key] or not isinstance(config_data[old_key][0], dict):
-                config_data[new_key] = to_tags(config_data[old_key])
-                del config_data[old_key]
-                migrated = True
-    if migrated:
-        print("Configuración migrada al nuevo formato de etiquetas.")
-    return config_data
+        if old_key in data and isinstance(data[old_key], list):
+            if not data[old_key] or not isinstance(data[old_key][0], dict):
+                data[new_key] = to_tags(data[old_key])
+                del data[old_key]
+    return data
 
 
-# Carga la configuración desde el archivo JSON.
+def get_blank_profile() -> dict:
+    """Retorna una copia de la configuración en blanco."""
+    return BLANK_PROFILE_CONFIG.copy()
+
+
 def load_config() -> dict:
+    """
+    Carga la configuración.
+    Retorna un diccionario que representa el PERFIL ACTIVO, pero inyecta metadata oculta.
+    """
+    base_structure = {
+        "active_profile_id": "default",
+        "profiles": {
+            "default": DEFAULT_CONFIG_VALUES.copy()
+        }
+    }
+
     if os.path.exists(CONFIG_FILE_PATH):
         try:
             with open(CONFIG_FILE_PATH, 'r', encoding="utf-8") as f:
-                data = json.load(f)
+                loaded_data = json.load(f)
 
-            # Intenta migrar la configuración si es de un formato antiguo.
-            data = _migrate_config(data)
+            if "profiles" in loaded_data:
+                base_structure = loaded_data
+            else:
+                migrated_data = _migrate_old_keys(loaded_data)
+                full_default = DEFAULT_CONFIG_VALUES.copy()
+                full_default.update(migrated_data)
 
-            # Asegura que todas las claves por defecto existan en el archivo cargado.
-            config_completa = DEFAULT_CONFIG.copy()
-            config_completa.update(data)
-            return config_completa
+                base_structure["profiles"]["default"] = full_default
+                base_structure["active_profile_id"] = "default"
+
         except (json.JSONDecodeError, TypeError):
-            # Si el archivo está corrupto, retorna la configuración por defecto.
-            return DEFAULT_CONFIG.copy()
-    return DEFAULT_CONFIG.copy()
+            print("Error leyendo config, usando defaults.")
+
+    active_id = base_structure.get("active_profile_id", "default")
+    if active_id not in base_structure["profiles"]:
+        active_id = "default"
+        if "default" not in base_structure["profiles"]:
+            base_structure["profiles"]["default"] = DEFAULT_CONFIG_VALUES.copy()
+
+    active_data = base_structure["profiles"][active_id]
+
+    # Aseguramos claves mínimas
+    if active_id == "default":
+        config_completa = DEFAULT_CONFIG_VALUES.copy()
+        config_completa.update(active_data)
+    else:
+        # Para perfiles custom, usamos la base BLANK + datos guardados
+        config_completa = BLANK_PROFILE_CONFIG.copy()
+        config_completa.update(active_data)
+
+    config_completa["_profiles_meta"] = base_structure["profiles"]
+    config_completa["_active_profile_id"] = active_id
+
+    return config_completa
 
 
-# Guarda el diccionario de configuración en el archivo JSON.
 def save_config(config: dict):
+    """
+    Guarda la configuración reconstruyendo el JSON global.
+    """
     try:
-        # Usa una copia para asegurar que solo se guarden las claves relevantes.
-        config_to_save = DEFAULT_CONFIG.copy()
-        config_to_save.update(config)
+        profiles = config.get("_profiles_meta", {"default": DEFAULT_CONFIG_VALUES.copy()})
+        active_id = config.get("_active_profile_id", "default")
+
+        # Limpiar metadata del perfil actual antes de guardar
+        current_profile_data = config.copy()
+        if "_profiles_meta" in current_profile_data: del current_profile_data["_profiles_meta"]
+        if "_active_profile_id" in current_profile_data: del current_profile_data["_active_profile_id"]
+
+        profiles[active_id] = current_profile_data
+
+        final_json = {
+            "active_profile_id": active_id,
+            "profiles": profiles
+        }
 
         with open(CONFIG_FILE_PATH, 'w', encoding="utf-8") as f:
-            json.dump(config_to_save, f, indent=4, ensure_ascii=False)
+            json.dump(final_json, f, indent=4, ensure_ascii=False)
+
     except Exception as e:
         print(f"Error al guardar la configuración: {e}")
 
 
-# Elimina el archivo de configuración para restaurar los valores por defecto.
 def delete_config_file():
     try:
         if os.path.exists(CONFIG_FILE_PATH):
