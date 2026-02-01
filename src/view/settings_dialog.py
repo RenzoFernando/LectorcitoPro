@@ -17,11 +17,10 @@ class SettingsDialog(BaseDialog):
         self.on_shortcut_callback = on_shortcut_callback
         self.result = None
 
-        # AJUSTE: Altura reducida para que no sea tan larga
         self.geometry("400x370")
 
         # 2. INICIAR SECUENCIA
-        self.after(550, self._step_1_build_frame)
+        self.after(650, self._step_1_build_frame)
 
     def _step_1_build_frame(self):
         self.main_frame = self._create_card_frame()
