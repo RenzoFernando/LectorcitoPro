@@ -1,8 +1,6 @@
 import customtkinter as ctk
 from tkinter import Canvas
-
 from PIL import Image, ImageDraw, ImageTk
-
 from view.ui_constants import COLORS, SIDEBAR_WIDTH, BTN_H_ICON
 
 # -------------------------
@@ -36,7 +34,7 @@ def _auto_border(fill: str) -> str:
 # Left Sidebar (pill suave)
 # -------------------------
 class LeftSidebar(ctk.CTkFrame):
-    def __init__(self, parent, text: str, height: int = 400):
+    def __init__(self, parent, text: str, height: int = 415):
         super().__init__(parent, width=SIDEBAR_WIDTH, height=height, fg_color="transparent")
         self.pack_propagate(False)
 
@@ -304,6 +302,7 @@ class PillIconButton(ctk.CTkFrame):
             mode = ctk.get_appearance_mode()
         except Exception:
             mode = "Light"
+
         pil = None
         if mode == "Dark":
             for a in ("_dark_image", "dark_image"):
@@ -378,9 +377,7 @@ class PillIconButton(ctk.CTkFrame):
         x1, y1 = pad, pad
         x2, y2 = W - pad, H - pad
 
-        usable_w = max(10 * scale, (x2 - x1))
-        usable_h = max(10 * scale, (y2 - y1))
-        radius = min(usable_w, usable_h) // 2
+        radius = 100
         bw = max(1, int(self._border_w * scale))
 
         draw.rounded_rectangle(
@@ -427,14 +424,14 @@ class PillIconButton(ctk.CTkFrame):
                     resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
                     icon = icon.resize((new_w, new_h), resample)
 
-                    if self._state == "disabled":
-                        alpha = icon.split()[-1].point(lambda a: int(a * 0.45))
-                        icon.putalpha(alpha)
+                if self._state == "disabled":
+                    alpha = icon.split()[-1].point(lambda a: int(a * 0.45))
+                    icon.putalpha(alpha)
 
-                    ix = (W - new_w) // 2
-                    iy = (H - new_h) // 2
+                ix = (W - new_w) // 2
+                iy = (H - new_h) // 2
 
-                    img.alpha_composite(icon, (ix, iy))
+                img.alpha_composite(icon, (ix, iy))
             except Exception:
                 pass
 
@@ -699,11 +696,11 @@ class RightSidebar(ctk.CTkFrame):
         self._button_container = ctk.CTkFrame(self, fg_color=bg)
         self._button_container.pack(expand=True, anchor="center")
 
-        keys = ["ver", "nover", "etiqueta", "theme_icon", "traducir", "restaurar", "github", "perfil", "info"]
+        keys = ["ver", "nover", "etiqueta", "theme_icon", "traducir", "restaurar", "perfil", "github", "info", "ajustes"]
 
         for key in keys:
             btn = self._create_button(key, current_theme)
-            btn.pack(pady=2.5)
+            btn.pack(pady=1)
             self.buttons[key] = btn
 
     def _create_button(self, key: str, theme_name: str) -> PillIconButton:

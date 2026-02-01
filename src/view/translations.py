@@ -32,7 +32,7 @@ TRANSLATIONS = {
         "btn_save_changes": "Guardar Cambios",
         "btn_cancel_simple": "Cancelar",
         "btn_restore_defaults": "Restaurar Ajustes",
-        "btn_autodetect": "Autodetectar",  # NUEVO
+        "btn_autodetect": "Autodetectar",
 
         # --- DIÁLOGOS DE CONFIGURACIÓN (VER/NO VER/ETIQUETAS) ---
         "dlg_ver_title": "Configurar qué Ver",
@@ -66,6 +66,7 @@ TRANSLATIONS = {
         "msg_no_report_yet": "Aún no se ha generado ningún reporte.",
         "msg_infographic_error": "No se pudo cargar la infografía.\nVerifique que 'Infografía_LectorcitoPro.png' exista en la carpeta 'recursos'.",
         "msg_error_generic": "Ocurrió un error inesperado durante la operación.",
+        "msg_coming_soon": "Próximamente...",  # NUEVO
 
         # --- CONFLICTOS DE ETIQUETAS ---
         "msg_tag_conflict": "La etiqueta '{}' ya existe en la configuración de 'Ver' o 'No Ver'.\nPor prioridad, no puede añadirla aquí.",
@@ -108,7 +109,8 @@ TRANSLATIONS = {
         "tooltip_restaurar": "Restaurar todas las configuraciones a su estado inicial.",
         "tooltip_github": "Abrir el repositorio del proyecto en GitHub.",
         "tooltip_perfil": "Gestionar perfiles de configuración (ej: Java, Python).",
-        "tooltip_info": "Mostrar el manual de usuario y la información de la aplicación."
+        "tooltip_info": "Mostrar el manual de usuario y la información de la aplicación.",
+        "tooltip_ajustes": "Configuración general de la aplicación."
     },
 
     "en": {
@@ -144,7 +146,7 @@ TRANSLATIONS = {
         "btn_save_changes": "Save Changes",
         "btn_cancel_simple": "Cancel",
         "btn_restore_defaults": "Restore Defaults",
-        "btn_autodetect": "Auto-detect",  # NEW
+        "btn_autodetect": "Auto-detect",
 
         # --- CONFIG DIALOGS ---
         "dlg_ver_title": "Configure what to View",
@@ -178,11 +180,12 @@ TRANSLATIONS = {
         "msg_no_report_yet": "No report has been generated yet.",
         "msg_infographic_error": "Could not load the infographic.\nPlease ensure 'Infografía_LectorcitoPro.png' exists in the 'recursos' folder.",
         "msg_error_generic": "An unexpected error occurred during the operation.",
+        "msg_coming_soon": "Coming soon...",  # NUEVO
 
         "msg_tag_conflict": "The tag '{}' already exists in 'View' or 'No View' settings.\nDue to priority, it cannot be added here.",
 
-        "msg_autodetect_result": "Detected and added {} new extensions.",  # NEW
-        "msg_autodetect_none": "No new extensions found (or they were already configured/excluded).",  # NEW
+        "msg_autodetect_result": "Detected and added {} new extensions.",
+        "msg_autodetect_none": "No new extensions found (or they were already configured/excluded).",
 
         # --- SAVE DESTINATION ---
         "dlg_dest_choice_title": "Choose Report Destination",
@@ -219,6 +222,7 @@ TRANSLATIONS = {
         "tooltip_restaurar": "Restore all settings to their default state.",
         "tooltip_github": "Open the project repository on GitHub.",
         "tooltip_perfil": "Manage configuration profiles (e.g., Java, Python).",
-        "tooltip_info": "Show the user manual and application information."
+        "tooltip_info": "Show the user manual and application information.",
+        "tooltip_ajustes": "General application settings."
     }
 }

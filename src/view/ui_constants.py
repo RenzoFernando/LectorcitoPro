@@ -1,7 +1,7 @@
 # src/view/ui_constants.py
 import datetime
 
-VERSION = "6.5.7"
+VERSION = "7.0.0"
 YEAR = datetime.datetime.now().year
 AUTHOR = "Renzo Fernando Mosquera Daza"
 REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"

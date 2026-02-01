@@ -114,10 +114,10 @@ class LectorcitoApp(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
 
         left_container = ctk.CTkFrame(self, fg_color="transparent")
-        left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(5, 30))
+        left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(0,14))
 
         right_container = ctk.CTkFrame(self, fg_color="transparent")
-        right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(5, 30))
+        right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(0,15))
 
         center = ctk.CTkFrame(self, fg_color="transparent")
         center.grid(row=0, column=1, sticky="nsew", pady=(5, 5))
@@ -257,6 +257,7 @@ class LectorcitoApp(ctk.CTk):
             "openlast": "btn_open_last",
             "delete": "btn_del",
         }
+
         for key, btn in self.main_buttons.items():
             if key in key_map:
                 btn.configure(text=self._tr(key_map[key]))
@@ -272,9 +273,10 @@ class LectorcitoApp(ctk.CTk):
             "theme_icon": "tooltip_tema",
             "traducir": "tooltip_idioma",
             "restaurar": "tooltip_restaurar",
-            "github": "tooltip_github",
             "perfil": "tooltip_perfil",
+            "github": "tooltip_github",
             "info": "tooltip_info",
+            "ajustes": "tooltip_ajustes",
         }
 
         for key, btn in self.sidebar_buttons.items():

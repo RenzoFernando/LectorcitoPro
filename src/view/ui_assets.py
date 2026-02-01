@@ -10,7 +10,7 @@ def get_app_icon_path() -> str:
 
 def load_sidebar_icons(size=(22, 22)) -> dict:
     icons = {}
-    icon_keys = ["ver", "nover", "etiqueta", "traducir", "restaurar", "github", "perfil", "info"]
+    icon_keys = ["ver", "nover", "etiqueta", "traducir", "restaurar", "perfil", "github", "info", "ajustes"]
 
     for key in icon_keys:
         try:
