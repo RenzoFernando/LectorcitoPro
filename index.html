@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - Lectorcito Pro</title>
+    <link rel="stylesheet" href="recursos/estilos.css">
+    <link rel="icon" type="image/x-icon" href="recursos/lector.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo-container">
+            <img src="recursos/logo_oscuro.png" alt="Lectorcito Pro Logo" id="app-logo" class="nav-logo">
+            <span class="version-tag">v7.2.3</span>
+        </div>
+        <div class="nav-links">
+            <a href="#intro">Inicio</a>
+            <a href="#workflow">Flujo</a>
+            <a href="#main-menu">Funciones</a>
+            <a href="#sidebar-tools">Herramientas</a>
+        </div>
+        <div class="nav-controls">
+            <button id="theme-toggle" class="icon-btn" title="Cambiar Tema">
+                <img src="recursos/luna.png" alt="Tema" id="theme-icon">
+            </button>
+            <a href="#descargas" class="btn btn-sm btn-blue">Descargar</a>
+        </div>
+    </nav>
+
+    <header id="intro" class="hero">
+        <div class="container">
+            <div class="hero-content fade-in-up">
+                <h1>Documentación y Análisis de Código Simplificado</h1>
+                <p class="hero-desc">
+                    <strong>Lectorcito Pro</strong> es la herramienta definitiva para desarrolladores que necesitan consolidar proyectos complejos en un solo archivo de texto. Ideal para crear contextos para Inteligencia Artificial (LLMs), auditorías de código y documentación técnica.
+                </p>
+                <div class="hero-buttons">
+                    <a href="#descargas" class="btn btn-blue">Obtener Lectorcito</a>
+                    <a href="https://github.com/RenzoFernando/LectorcitoPro.git" target="_blank" class="btn btn-outline">
+                        <img src="recursos/github_oscuro.png" class="btn-icon-img" id="github-btn-icon" alt="Github"> Ver Código
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image fade-in-up">
+                <img src="recursos/lector.png" alt="Mascota Lectorcito" class="floating-img">
+            </div>
+        </div>
+    </header>
+
+    <section id="workflow" class="section">
+        <div class="container">
+            <h2 class="section-title">Flujo de Trabajo Sugerido</h2>
+            <p class="section-subtitle">Sigue estos 3 pasos para obtener el mejor resultado.</p>
+
+            <div class="timeline">
+                <div class="timeline-item fade-in-up">
+                    <div class="timeline-number">1</div>
+                    <div class="timeline-content">
+                        <h3>Configura los Filtros</h3>
+                        <p>Antes de leer, ve a la barra lateral. Usa <strong>"Qué No Ver"</strong> para excluir carpetas pesadas (como <code>node_modules</code> o <code>venv</code>) y <strong>"Qué Ver"</strong> para asegurar que lees las extensiones correctas (.py, .js, .html).</p>
+                    </div>
+                </div>
+                <div class="timeline-item fade-in-up">
+                    <div class="timeline-number">2</div>
+                    <div class="timeline-content">
+                        <h3>Selecciona y Genera</h3>
+                        <p>Presiona <strong>"Generar Lectura Completa"</strong>. Selecciona la carpeta raíz de tu proyecto. Lectorcito escaneara recursivamente todo el contenido.</p>
+                    </div>
+                </div>
+                <div class="timeline-item fade-in-up">
+                    <div class="timeline-number">3</div>
+                    <div class="timeline-content">
+                        <h3>Resultados Listos</h3>
+                        <p>El reporte se guardará automáticamente. Usa el botón <strong>"Abrir Último Reporte"</strong> para ver el archivo `.txt` consolidado y listo para copiar a tu IA favorita.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="main-menu" class="section alt-bg">
+        <div class="container">
+            <h2 class="section-title">Menú Principal</h2>
+            <p class="section-subtitle">Explicación detallada de las 6 funciones centrales de la aplicación.</p>
+
+            <div class="cards-grid">
+                <div class="feature-card fade-in-up">
+                    <div class="card-header color-blue">
+                        <h3>1. Seleccionar Destino</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>Por defecto, los reportes se guardan dentro de la aplicación. Con este botón puedes elegir una carpeta externa personalizada (ej: Escritorio o Documentos) para que todos tus reportes se guarden allí.</p>
+                    </div>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="card-header color-blue">
+                        <h3>2. Generar Lectura Completa</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>La función principal.</strong> Abre un selector para elegir la carpeta de tu proyecto. Analiza archivos, ignora lo configurado en los filtros y crea un archivo único con todo el código fuente.</p>
+                    </div>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="card-header color-blue">
+                        <h3>3. Crear Estructura de Árbol</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>No lee el contenido de los archivos. Solo genera un diagrama visual de la jerarquía de carpetas y archivos. Muy útil para entender la arquitectura del proyecto sin leer el código.</p>
+                    </div>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="card-header color-blue">
+                        <h3>4. Abrir Carpeta Lecturas</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>Abre el explorador de archivos de Windows directamente en la carpeta donde se están guardando tus reportes generados.</p>
+                    </div>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="card-header color-green">
+                        <h3>5. Abrir Último Reporte</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>Acceso rápido. Abre inmediatamente el archivo `.txt` o `.md` más reciente que hayas generado, ahorrándote tiempo de búsqueda.</p>
+                    </div>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="card-header color-red">
+                        <h3>6. Eliminar Lecturas</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>Función de limpieza. Borra todos los archivos dentro de la carpeta de "Lecturas" actual para liberar espacio o reiniciar auditorías.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="sidebar-tools" class="section">
+        <div class="container">
+            <h2 class="section-title">Barra de Herramientas</h2>
+            <p class="section-subtitle">Domina la configuración con las 10 herramientas laterales.</p>
+
+            <div class="tools-list">
+                <div class="tool-group fade-in-up">
+                    <h3>Control de Archivos</h3>
+                    <div class="tool-item">
+                        <img src="recursos/ver_claro.png" class="tool-icon bg-dark" alt="Ver">
+                        <div>
+                            <h4>Qué Ver (Inclusión)</h4>
+                            <p>Define explícitamente qué extensiones (<code>.py</code>, <code>.js</code>) y qué carpetas importantes (<code>src</code>) quieres leer. Soporta autodeteción de extensiones.</p>
+                        </div>
+                    </div>
+                    <div class="tool-item">
+                        <img src="recursos/nover_claro.png" class="tool-icon bg-dark" alt="No Ver">
+                        <div>
+                            <h4>Qué No Ver (Exclusión)</h4>
+                            <p>Crucial para el rendimiento. Bloquea carpetas basura como <code>node_modules</code>, <code>.git</code> o archivos sensibles como <code>.env</code>.</p>
+                        </div>
+                    </div>
+                    <div class="tool-item">
+                        <img src="recursos/etiqueta_claro.png" class="tool-icon bg-dark" alt="Etiqueta">
+                        <div>
+                            <h4>Multimedia (Solo Listar)</h4>
+                            <p>Archivos binarios (imágenes, PDFs, ejecutables) que deben aparecer en el reporte para constancia, pero sin intentar leer su contenido ilegible.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tool-group fade-in-up">
+                    <h3>Interfaz y Sistema</h3>
+                    <div class="tool-item">
+                        <img src="recursos/luna.png" class="tool-icon bg-dark" alt="Tema">
+                        <div>
+                            <h4>Tema</h4>
+                            <p>Alterna instantáneamente entre el Modo Claro y el Modo Oscuro para reducir la fatiga visual.</p>
+                        </div>
+                    </div>
+                    <div class="tool-item">
+                        <img src="recursos/traducir_claro.png" class="tool-icon bg-dark" alt="Idioma">
+                        <div>
+                            <h4>Idioma / Language</h4>
+                            <p>Traduce toda la interfaz entre Español e Inglés en tiempo real.</p>
+                        </div>
+                    </div>
+                    <div class="tool-item">
+                        <img src="recursos/perfil_claro.png" class="tool-icon bg-dark" alt="Perfil">
+                        <div>
+                            <h4>Gestor de Perfiles</h4>
+                            <p>Crea entornos de trabajo. Ejemplo: Un perfil "Python" que ignora <code>venv</code> y lee <code>.py</code>, y otro "Web" que lee <code>.js</code> y <code>.css</code>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tool-group fade-in-up">
+                    <h3>Ajustes Avanzados</h3>
+                    <div class="tool-item">
+                        <img src="recursos/ajustes_claro.png" class="tool-icon bg-dark" alt="Ajustes">
+                        <div>
+                            <h4>Ajustes</h4>
+                            <p>Cambia el formato de salida (<code>.txt</code> o <code>.md</code>) y crea accesos directos en el Escritorio o Menú Inicio.</p>
+                        </div>
+                    </div>
+                    <div class="tool-item">
+                        <img src="recursos/restaurar_claro.png" class="tool-icon bg-dark" alt="Restaurar">
+                        <div>
+                            <h4>Restaurar Fábrica</h4>
+                            <p>Si algo sale mal, este botón devuelve toda la configuración a su estado original.</p>
+                        </div>
+                    </div>
+                    <div class="tool-item">
+                        <img src="recursos/github_claro.png" class="tool-icon bg-dark" alt="Github">
+                        <div>
+                            <h4>Código Fuente</h4>
+                            <p>Abre el repositorio oficial para ver actualizaciones, reportar errores o auditar el código.</p>
+                        </div>
+                    </div>
+                    <div class="tool-item">
+                        <img src="recursos/info_claro.png" class="tool-icon bg-dark" alt="Info">
+                        <div>
+                            <h4>Información</h4>
+                            <p>Muestra la versión actual y una infografía resumen del uso de la aplicación.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+<section id="descargas" class="section highlight-bg">
+        <div class="container">
+            <h2 class="section-title">Descarga y Uso</h2>
+            <div class="download-container">
+                <div class="download-card">
+                    <div class="download-icon">
+                        <img src="recursos/lector.png" alt="Mascota Lectorcito">
+                    </div>
+                    <div class="download-details">
+                        <h3>Lectorcito Pro</h3>
+                        <p>No requiere instalación. Simplemente descarga el ejecutable, guárdalo donde quieras y haz doble clic.</p>
+                        <ul class="specs-list">
+                            <li>Sistema: Windows 10 / 11</li>
+                            <li>Arquitectura: 64-bits</li>
+                            <li>Tipo: Portable (.exe)</li>
+                        </ul>
+                        <div class="download-actions">
+                            <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest/download/LectorcitoPro.exe" class="btn btn-green">
+                                Descargar .EXE
+                            </a>
+                            <a href="https://github.com/RenzoFernando/LectorcitoPro" target="_blank" class="btn btn-outline">
+                                Ver Repositorio
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p><strong>Lectorcito Pro</strong> v7.2.3</p>
+            <p class="copyright">&copy; 2026 Renzo Fernando Mosquera Daza. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="recursos/script.js"></script>
+</body>
+</html>
