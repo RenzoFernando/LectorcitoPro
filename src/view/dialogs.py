@@ -7,11 +7,8 @@ from view.ui_constants import COLORS
 
 MESSAGE_AUTO_CLOSE_SECONDS = 5
 
-# --- Helpers de estilo ---
 
 def _get_color_tuple(key: str) -> tuple[str, str]:
-    """Obtiene una tupla (color_claro, color_oscuro) desde COLORS."""
-    # Mapeo de compatibilidad por si usamos claves viejas
     key_map = {
         "bg": "bg",
         "card": "surface",
@@ -19,16 +16,11 @@ def _get_color_tuple(key: str) -> tuple[str, str]:
         "inner_area": "surface_alt",
         "text": "text"
     }
-
-    # Si la key está en el mapa, usamos la nueva clave semántica
     actual_key = key_map.get(key, key)
-
     return (COLORS["light"][actual_key], COLORS["dark"][actual_key])
 
 
 def _style_button(btn: ctk.CTkButton, color_type="blue"):
-    # Usamos la estructura nueva de botones en COLORS["button"]
-
     base = COLORS["button"].get(color_type, COLORS["button"]["blue"])["bg"]
     hover = COLORS["button"].get(color_type, COLORS["button"]["blue"])["hover"]
 
@@ -42,8 +34,6 @@ def _style_button(btn: ctk.CTkButton, color_type="blue"):
     )
 
 
-# Clase base para todos los diálogos.
-# MODIFICADO: Ventanas independientes y centradas estrictamente en la App.
 class BaseDialog(ctk.CTkToplevel):
 
     def __init__(self, parent, title: str):
@@ -52,22 +42,20 @@ class BaseDialog(ctk.CTkToplevel):
         super().__init__(parent)
         self.parent = parent
 
-        # 1. Bloqueo visual de la ventana principal (Efecto Gris)
+        self.withdraw()
+        self.attributes("-alpha", 0.0)
+
         if hasattr(parent, "dim_ui_for_modal"):
             parent.dim_ui_for_modal()
 
-        # 2. INDEPENDENCIA TOTAL: Sin transient para manejo libre de ventanas.
-
         self.title(title)
         self.resizable(False, False)
-        self.attributes("-alpha", 0.0)
 
-        # Usamos la key 'bg' del tema
         self.configure(fg_color=_get_color_tuple("bg"))
 
         self._closing_grab_released = False
-
         self._escape_bindtag = f"__esc_close_{id(self)}"
+
         try:
             self.bind_class(self._escape_bindtag, "<Escape>", self._on_escape_key, add="+")
         except Exception:
@@ -75,29 +63,21 @@ class BaseDialog(ctk.CTkToplevel):
 
         self.bind("<Map>", self._install_escape_bindtags, add="+")
 
-        # --- CORRECCIÓN DE POSICIONAMIENTO AL RESTAURAR ---
-        # Detectamos cuando la ventana se muestra (Map) para forzar el centrado en la APP
-        self.bind("<Map>", self._on_map_event, add="+")
-
-        self.after(120, self._install_escape_bindtags)
-        self.after(350, self._install_escape_bindtags)
-
-        # Asignamos el icono explícitamente
-        def _set_icon():
-            try:
-                if hasattr(parent, '_icon_path') and parent._icon_path and os.path.exists(parent._icon_path):
-                    self.iconbitmap(parent._icon_path)
-            except Exception as e:
-                print(f"Error al establecer el icono de la sub-ventana: {e}")
-
-        self.after(200, _set_icon)
+        self.after(185, self._set_icon_safe)
+        self.after(300, self._prepare_geometry)
 
         self.result = None
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
-        self.after(100, self._center_and_fade_in)
+
+    def _set_icon_safe(self):
+        try:
+            if not self.winfo_exists(): return
+            if hasattr(self.parent, '_icon_path') and self.parent._icon_path and os.path.exists(self.parent._icon_path):
+                self.iconbitmap(self.parent._icon_path)
+        except Exception:
+            pass
 
     def _create_card_frame(self) -> ctk.CTkFrame:
-        # Usa 'card' que _get_color_tuple mapea a 'surface'
         card = ctk.CTkFrame(
             self,
             fg_color=_get_color_tuple("card"),
@@ -136,88 +116,58 @@ class BaseDialog(ctk.CTkToplevel):
 
         apply_tag(self)
 
-    # Evento al mostrar/restaurar ventana
-    def _on_map_event(self, event=None):
-        # Cuando la ventana se "mapea" (aparece o se restaura), forzamos el centrado
-        # con un pequeño delay para asegurar que las geometrías estén listas.
-        self.after(10, self._center_window)
+    def _prepare_geometry(self):
+        if not self.winfo_exists(): return
 
-    def _center_and_fade_in(self):
-        try:
-            self.grab_set()
-            self._center_window()
-
-            def _activate():
-                try:
-                    if not self.winfo_exists(): return
-                    try:
-                        self.deiconify()
-                    except Exception:
-                        pass
-                    try:
-                        self.lift()
-                    except Exception:
-                        pass
-                    try:
-                        self.focus_force();
-                        self.focus_set()
-                    except Exception:
-                        pass
-                    # Topmost momentáneo
-                    try:
-                        self.attributes("-topmost", True)
-                        self.after(50, lambda: self.winfo_exists() and self.attributes("-topmost", False))
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
-
-            _activate()
-            self.after(40, _activate)
-            self.after(140, _activate)
-            self._fade_in()
-        except Exception:
-            pass
-
-    def _center_window(self):
-        """Centra la ventana estrictamente sobre la ventana principal (parent)."""
+        self.deiconify()
+        self.attributes("-alpha", 0.0)
         self.update_idletasks()
+        self.after(200, self._try_center_window)
+
+    def _try_center_window(self):
+        if not self.winfo_exists(): return
+
         try:
-            if not self.master or not self.master.winfo_exists():
-                return
-
-            # Obtener geometría de la ventana principal (APP)
-            parent_x = self.master.winfo_x()
-            parent_y = self.master.winfo_y()
-            parent_w = self.master.winfo_width()
-            parent_h = self.master.winfo_height()
-
-            # Geometría de esta ventana (Subventana)
             w = self.winfo_width()
             h = self.winfo_height()
 
-            # Si las dimensiones aún no están listas (ej. 1x1), reintentar brevemente
             if w < 50 or h < 50:
-                self.after(10, self._center_window)
+                self.after(100, self._try_center_window)
                 return
 
-            # Cálculo del centro relativo
-            x = parent_x + (parent_w - w) // 2
-            y = parent_y + (parent_h - h) // 2
+            if self.master and self.master.winfo_exists():
+                parent_x = self.master.winfo_x()
+                parent_y = self.master.winfo_y()
+                parent_w = self.master.winfo_width()
+                parent_h = self.master.winfo_height()
 
-            # Aplicar geometría
-            self.geometry(f"+{x}+{y}")
+                x = parent_x + (parent_w - w) // 2
+                y = parent_y + (parent_h - h) // 2
 
-        except Exception as e:
-            print(f"Error al centrar ventana: {e}")
-            # NO usamos fallback a pantalla completa. Si falla, se queda donde el OS la ponga.
+                self.geometry(f"+{x}+{y}")
+
+            self.lift()
+            self.focus_force()
+            self.grab_set()
+            self._fade_in()
+
+        except Exception:
+            self.attributes("-alpha", 1.0)
 
     def _fade_in(self):
-        alpha = self.attributes("-alpha")
-        if alpha < 1:
-            alpha = min(alpha + 0.1, 1.0)
-            self.attributes("-alpha", alpha)
+        if not self.winfo_exists(): return
+
+        try:
+            alpha = self.attributes("-alpha")
+        except Exception:
+            alpha = 0.0
+
+        if alpha < 1.0:
+            new_alpha = min(alpha + 0.50, 1.0)
+            self.attributes("-alpha", new_alpha)
             self.after(15, self._fade_in)
+        else:
+            self.focus_set()
 
     def _close_with_fade_out(self, event=None):
         if not self._closing_grab_released:
@@ -227,14 +177,17 @@ class BaseDialog(ctk.CTkToplevel):
                 pass
             self._closing_grab_released = True
 
-        alpha = self.attributes("-alpha")
+        try:
+            alpha = self.attributes("-alpha")
+        except:
+            alpha = 1.0
+
         if alpha > 0:
-            alpha = max(alpha - 0.1, 0.0)
+            alpha = max(alpha - 0.20, 0.0)
             self.attributes("-alpha", alpha)
-            self.after(15, self._close_with_fade_out)
+            self.after(5, self._close_with_fade_out)
         else:
             self.destroy()
-            # IMPORTANTE: Restaurar la interacción de la ventana principal
             if hasattr(self.parent, "restore_ui_from_modal"):
                 self.parent.restore_ui_from_modal()
 
@@ -242,11 +195,10 @@ class BaseDialog(ctk.CTkToplevel):
         self._close_with_fade_out()
 
     def _on_cancel(self, event=None):
-        self.result = None;
+        self.result = None
         self._close_with_fade_out()
 
 
-# Diálogo simple para mostrar un mensaje con un botón de "OK".
 class MessageDialog(BaseDialog):
     def __init__(self, parent, title, message):
         super().__init__(parent, title)
@@ -254,7 +206,6 @@ class MessageDialog(BaseDialog):
         self._auto_close_after_id = None
         self._schedule_auto_close()
 
-        # Ajuste para que se vea compacto
         card = self._create_card_frame()
 
         ctk.CTkLabel(
@@ -266,7 +217,6 @@ class MessageDialog(BaseDialog):
             text_color=_get_color_tuple("text")
         ).pack(fill="x", padx=20, pady=(20, 20))
 
-        # TRADUCCION APLICADA
         btn_text = parent._tr("btn_ok") if hasattr(parent, "_tr") else "OK"
 
         ok_button = ctk.CTkButton(
@@ -318,7 +268,6 @@ class MessageDialog(BaseDialog):
         super()._on_ok(event)
 
 
-# Diálogo de confirmación con opciones "Sí" y "No".
 class ConfirmDialog(BaseDialog):
     def __init__(self, parent, title, message):
         super().__init__(parent, title)
@@ -338,7 +287,6 @@ class ConfirmDialog(BaseDialog):
         button_frame = ctk.CTkFrame(card, fg_color="transparent")
         button_frame.pack(pady=(0, 20))
 
-        # TRADUCCION APLICADA
         txt_yes = parent._tr("btn_yes") if hasattr(parent, "_tr") else "Sí"
         txt_no = parent._tr("btn_no") if hasattr(parent, "_tr") else "No"
 
@@ -361,7 +309,6 @@ class ConfirmDialog(BaseDialog):
         return dialog.result
 
 
-# Diálogo que presenta dos opciones personalizables.
 class ChoiceDialog(BaseDialog):
     def __init__(self, parent, title, message, option1_text, option2_text, option1_value, option2_value):
         super().__init__(parent, title)
@@ -377,12 +324,11 @@ class ChoiceDialog(BaseDialog):
             wraplength=340,
             font=("Segoe UI", 13),
             text_color=_get_color_tuple("text")
-        ).pack(fill="x", padx=20, pady=(25, 15))  # Menos padding inferior
+        ).pack(fill="x", padx=20, pady=(25, 15))
 
-        # Botones
         btn1 = ctk.CTkButton(card, text=option1_text, width=220, command=self._on_option1)
         _style_button(btn1, "blue")
-        btn1.pack(pady=(5, 8))  # Menos separación
+        btn1.pack(pady=(5, 8))
 
         btn2 = ctk.CTkButton(card, text=option2_text, width=220, command=self._on_option2)
         _style_button(btn2, "blue")
@@ -399,11 +345,9 @@ class ChoiceDialog(BaseDialog):
         return dialog.result
 
 
-# Diálogo para seleccionar, ordenar y eliminar múltiples rutas de carpetas.
 class SelectFoldersDialog(BaseDialog):
     def __init__(self, parent, title):
         super().__init__(parent, title)
-        # Ajuste de altura para que se vea más lleno
         self.geometry("550x420")
         self.selected_paths = []
         self._parent = parent
@@ -414,7 +358,6 @@ class SelectFoldersDialog(BaseDialog):
         card.grid_columnconfigure(0, weight=1)
         card.grid_rowconfigure(1, weight=1)
 
-        # -- Top --
         top_frame = ctk.CTkFrame(card, fg_color="transparent")
         top_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(15, 10))
 
@@ -423,7 +366,6 @@ class SelectFoldersDialog(BaseDialog):
         btn_add.configure(width=130)
         btn_add.pack(side="left")
 
-        # -- Middle --
         list_area_frame = ctk.CTkFrame(card, fg_color="transparent")
         list_area_frame.grid(row=1, column=0, sticky="nsew", padx=20)
         list_area_frame.grid_columnconfigure(0, weight=1)
@@ -439,7 +381,6 @@ class SelectFoldersDialog(BaseDialog):
         )
         self.scrollable_frame.grid(row=0, column=0, sticky="nsew")
 
-        # Botones laterales
         reorder_button_frame = ctk.CTkFrame(list_area_frame, fg_color="transparent")
         reorder_button_frame.grid(row=0, column=1, sticky="ns", padx=(10, 0))
 
@@ -460,7 +401,6 @@ class SelectFoldersDialog(BaseDialog):
         _style_icon_btn(btn_del, "red")
         btn_del.pack(pady=(15, 2))
 
-        # -- Bottom --
         bottom_button_frame = ctk.CTkFrame(card, fg_color="transparent")
         bottom_button_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=(15, 20))
 
@@ -549,7 +489,6 @@ class SelectFoldersDialog(BaseDialog):
         return dialog.result
 
 
-# Diálogo para mostrar una imagen infográfica con scroll.
 class InfographicDialog(BaseDialog):
     def __init__(self, parent, title: str, image_path: str):
         super().__init__(parent, title)
@@ -582,4 +521,3 @@ class InfographicDialog(BaseDialog):
         except Exception as e:
             parent.show_message("error_title", f"{parent._tr('msg_error_generic')}\n\n{e}")
             self.after(50, self.destroy)
-

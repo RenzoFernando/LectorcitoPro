@@ -23,6 +23,8 @@ class LectorcitoApp(ctk.CTk):
 
     def __init__(self, cfg: dict, controller):
         super().__init__()
+
+        self.withdraw()
         self.attributes("-alpha", 0.0)
 
         self.TRANSLATIONS = TRANSLATIONS
@@ -33,10 +35,14 @@ class LectorcitoApp(ctk.CTk):
 
         self.REPO_URL = REPO_URL
         self.tooltips: dict[str, CustomTooltip] = {}
-        self._is_modal_open = False  # Estado para controlar si hay un diálogo abierto
+        self._is_modal_open = False
 
         self.title("Lectorcito Pro")
-        self.geometry("600x500")
+
+        self._app_w = 600
+        self._app_h = 500
+
+        self.geometry(f"{self._app_w}x{self._app_h}")
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
 
@@ -45,30 +51,32 @@ class LectorcitoApp(ctk.CTk):
         self.icons = load_sidebar_icons()
         self.logo_image = load_logo(target_width=150)
 
-        self._is_centered = False
-        self.bind("<Configure>", self._on_configure_center)
         self._build_ui()
 
         self.update_ui_texts()
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
-    def _on_configure_center(self, event=None):
-        if not self._is_centered:
-            self._is_centered = True
-            self._center_on_screen()
-            self.after(10, self._fade_in)
+        self.after(50, self._precise_center_and_show)
 
-    def _center_on_screen(self):
+    def _precise_center_and_show(self):
         try:
             self.update_idletasks()
-            sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
-            ww, wh = self.winfo_width(), self.winfo_height()
-            x = (sw // 2) - (ww // 2)
-            y = (sh // 2) - (wh // 2)
-            self.geometry(f"+{x}+{y}")
-        except Exception as e:
-            print(f"Error al centrar ventana: {e}")
+
+            screen_width = self.winfo_screenwidth()
+            screen_height = self.winfo_screenheight()
+
+            x = int((screen_width - self._app_w) / 2)
+            y = int((screen_height - self._app_h) / 2)
+
+            self.geometry(f"{self._app_w}x{self._app_h}+{x}+{y}")
+
+            self.deiconify()
+            self._fade_in()
+
+        except Exception:
+            self.deiconify()
+            self.attributes("-alpha", 1.0)
 
     def _fade_in(self):
         alpha = self.attributes("-alpha")
@@ -104,14 +112,12 @@ class LectorcitoApp(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # Laterales: Subidos un poco con pady=(5, 30)
         left_container = ctk.CTkFrame(self, fg_color="transparent")
         left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(5, 30))
 
         right_container = ctk.CTkFrame(self, fg_color="transparent")
         right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(5, 30))
 
-        # Central
         center = ctk.CTkFrame(self, fg_color="transparent")
         center.grid(row=0, column=1, sticky="nsew", pady=(5, 5))
         center.grid_columnconfigure(0, weight=1)
@@ -129,9 +135,6 @@ class LectorcitoApp(ctk.CTk):
 
     def _create_header(self, parent):
         self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        # MODIFICADO: pady=(35, 2)
-        # 35 arriba: Baja el título/saludo considerablemente.
-        # 2 abajo: Reduce el espacio con el menú para que este pueda subir.
         self.header_frame.grid(row=0, column=0, sticky="ew", pady=(15, 20))
 
         self.lbl_title = ctk.CTkLabel(self.header_frame, text="", image=self.logo_image)
@@ -159,7 +162,6 @@ class LectorcitoApp(ctk.CTk):
 
         outside_bg = theme_keys["surface"]
 
-        # Configuraciones base de colores de botones (vibrantes)
         btn_blue = COLORS["button"]["blue"]
         btn_green = COLORS["button"]["green"]
         btn_red = COLORS["button"]["red"]
@@ -212,8 +214,6 @@ class LectorcitoApp(ctk.CTk):
 
     def _create_status_area(self, parent):
         self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        # MODIFICADO: pady=(0, 5)
-        # 0 arriba: "Sube" el módulo de carga pegándolo más al menú.
         self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=(5, 5))
         self.progress_frame.grid_columnconfigure(0, weight=1)
 
@@ -226,17 +226,15 @@ class LectorcitoApp(ctk.CTk):
         self.footer_frame = ctk.CTkFrame(self, height=35, corner_radius=0)
         self.footer_frame.pack_propagate(False)
 
-        # Footer anclado abajo
         self.footer_frame.place(relx=0.0, rely=1.0, anchor="sw", relwidth=1.0)
         self.footer_frame.lift()
 
         self.footer_line = ctk.CTkFrame(self.footer_frame, height=1, corner_radius=0)
         self.footer_line.pack(side="top", fill="x")
 
-        # TRADUCCION APLICADA (se asigna inicial, luego update_ui_texts lo sobrescribe)
         self.lbl_copyright = ctk.CTkLabel(
             self.footer_frame,
-            text="", # Se llena en update_ui_texts
+            text="",
             font=("Segoe UI", 9)
         )
         self.lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
@@ -264,7 +262,6 @@ class LectorcitoApp(ctk.CTk):
 
         self.status_panel.set_translator(lambda k: self._tr(k))
 
-        # Actualizar Copyright traducido
         self.lbl_copyright.configure(text=self._tr("footer_copyright", YEAR, AUTHOR))
 
         tooltip_map = {
@@ -297,20 +294,17 @@ class LectorcitoApp(ctk.CTk):
         self.right_sidebar.apply_theme(self.current_theme)
         self.status_panel.apply_theme(self.current_theme)
 
-        # Actualizar recuadro del menú principal
         try:
             self.main_menu_frame.configure(fg_color=theme_keys["surface"], border_color=theme_keys["border"])
         except Exception:
             pass
 
-        # Actualizar botones principales
         for btn in self.main_buttons.values():
             try:
                 btn.configure(outside_bg=theme_keys["surface"])
             except Exception:
                 pass
 
-        # FOOTER
         try:
             self.footer_frame.configure(fg_color=theme_keys["footer_bg"])
             self.footer_line.configure(fg_color=theme_keys["separator_line"])
@@ -332,7 +326,6 @@ class LectorcitoApp(ctk.CTk):
     def toggle_ui_for_processing(self, is_active: bool, mode: str = "determinate", text: str = None,
                                  final_status: str = None):
         if self._is_modal_open:
-            # Si hay un modal abierto, no tocamos los estados, el modal manda.
             return
 
         state = "disabled" if is_active else "normal"
@@ -341,7 +334,6 @@ class LectorcitoApp(ctk.CTk):
         for btn in self.sidebar_buttons.values():
             btn.configure(state=state)
 
-        # NEW: Disable left sidebar
         self.left_sidebar.configure(state=state)
 
         self.status_panel.set_active(is_active, mode=mode, text=text, final_status=final_status)
@@ -355,7 +347,6 @@ class LectorcitoApp(ctk.CTk):
         self.left_sidebar.configure(state="disabled")
 
     def restore_ui_from_modal(self):
-        """Restaura la UI principal cuando se cierra un diálogo."""
         self._is_modal_open = False
         if not self.controller.is_processing:
             for btn in self.main_buttons.values():
