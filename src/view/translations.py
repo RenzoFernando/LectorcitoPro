@@ -71,7 +71,6 @@ TRANSLATIONS = {
         "msg_select_dest": "Por favor, primero configure una carpeta de destino.",
         "msg_no_files_found": "No se encontraron archivos válidos para procesar.",
         "msg_no_report_yet": "Aún no se ha generado ningún reporte.",
-        "msg_infographic_error": "No se pudo cargar la infografía.\nVerifique que 'Infografía_LectorcitoPro.png' exista en la carpeta 'recursos'.",
         "msg_error_generic": "Ocurrió un error inesperado durante la operación.",
         "msg_coming_soon": "Próximamente...",
 
@@ -142,7 +141,7 @@ TRANSLATIONS = {
         "tooltip_restaurar": "Restaurar todas las configuraciones a su estado inicial.",
         "tooltip_github": "Abrir el repositorio del proyecto en GitHub.",
         "tooltip_perfil": "Gestionar perfiles de configuración (ej: Java, Python).",
-        "tooltip_info": "Mostrar el manual de usuario y la información de la aplicación.",
+        "tooltip_info": "Abrir el manual de usuario y documentación online.",
         "tooltip_ajustes": "Configuración general, formato de reportes y accesos directos."
     },
 
@@ -211,7 +210,6 @@ TRANSLATIONS = {
         "msg_select_dest": "Please set a destination folder first.",
         "msg_no_files_found": "No valid files were found to process.",
         "msg_no_report_yet": "No report has been generated yet.",
-        "msg_infographic_error": "Could not load the infographic.\nPlease ensure 'Infografía_LectorcitoPro.png' exists in the 'recursos' folder.",
         "msg_error_generic": "An unexpected error occurred during the operation.",
         "msg_coming_soon": "Coming soon...",
 
@@ -282,7 +280,7 @@ TRANSLATIONS = {
         "tooltip_restaurar": "Restore all settings to their default state.",
         "tooltip_github": "Open the project repository on GitHub.",
         "tooltip_perfil": "Manage configuration profiles (e.g., Java, Python).",
-        "tooltip_info": "Show the user manual and application information.",
+        "tooltip_info": "Open the user manual and online documentation.",
         "tooltip_ajustes": "General settings, report format, and shortcuts."
     }
 }

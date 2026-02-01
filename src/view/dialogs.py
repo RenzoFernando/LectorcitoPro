@@ -1,7 +1,5 @@
 import customtkinter as ctk
 import os
-from tkinter import filedialog
-from PIL import Image
 from view.tooltip import CustomTooltip
 from view.ui_constants import COLORS
 from view.ui_assets import get_app_icon_path
@@ -115,10 +113,10 @@ class BaseDialog(ctk.CTkToplevel):
                 return
             if self._escape_bindtag not in tags:
                 tags.insert(0, self._escape_bindtag)
-                try:
-                    widget.bindtags(tuple(tags))
-                except Exception:
-                    pass
+            try:
+                widget.bindtags(tuple(tags))
+            except Exception:
+                pass
             try:
                 for child in widget.winfo_children(): apply_tag(child)
             except Exception:
@@ -357,37 +355,3 @@ class ChoiceDialog(BaseDialog):
         dialog = cls(parent, title, message, option1_text, option2_text, option1_value, option2_value)
         parent.wait_window(dialog)
         return dialog.result
-
-
-class InfographicDialog(BaseDialog):
-    def __init__(self, parent, title: str, image_path: str):
-        super().__init__(parent, title)
-
-        try:
-            self.geometry("620x500")
-
-            card = self._create_card_frame()
-
-            scroll_frame = ctk.CTkScrollableFrame(card, label_text="", fg_color="transparent")
-            scroll_frame.pack(expand=True, fill="both", padx=10, pady=10)
-
-            pil_image_original = Image.open(image_path)
-            original_width, original_height = pil_image_original.size
-            target_width = 525
-            ratio = target_width / original_width
-            target_height = int(original_height * ratio)
-
-            pil_image_resized = pil_image_original.resize((target_width, target_height), Image.Resampling.LANCZOS)
-
-            self.infographic_image = ctk.CTkImage(
-                light_image=pil_image_resized,
-                dark_image=pil_image_resized,
-                size=(target_width, target_height)
-            )
-
-            image_label = ctk.CTkLabel(scroll_frame, image=self.infographic_image, text="")
-            image_label.pack(expand=True)
-
-        except Exception as e:
-            parent.show_message("error_title", f"{parent._tr('msg_error_generic')}\n\n{e}")
-            self.after(50, self.destroy)

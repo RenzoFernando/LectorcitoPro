@@ -4,9 +4,10 @@ import customtkinter as ctk
 import datetime
 import os
 import random
+import webbrowser
 
 from view.translations import TRANSLATIONS
-from view.dialogs import MessageDialog, InfographicDialog
+from view.dialogs import MessageDialog
 from view.tooltip import CustomTooltip
 
 from view.ui_constants import (
@@ -16,7 +17,6 @@ from view.ui_constants import (
 from view.ui_assets import load_sidebar_icons, load_logo, safe_set_window_icon
 from view.sidebars import LeftSidebar, RightSidebar, PillTextButton
 from view.status_panel import StatusPanel
-from utils import resource_path
 
 
 # =============================================================================
@@ -358,6 +358,7 @@ class LectorcitoApp(ctk.CTk):
             self.apply_theme()
             self.attributes("-alpha", 1.0)
 
+
     # =========================================================================
     # ESTADO Y CONTROL
     # =========================================================================
@@ -405,8 +406,4 @@ class LectorcitoApp(ctk.CTk):
         MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
 
     def show_app_info(self):
-        image_path = resource_path("Infografía_LectorcitoPro.png")
-        if os.path.exists(image_path):
-            InfographicDialog(self, title=self._tr("manual_title"), image_path=image_path)
-        else:
-            self.show_message("error_title", "msg_infographic_error")
+        webbrowser.open("https://renzofernando.github.io/LectorcitoPro/")
