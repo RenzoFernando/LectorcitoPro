@@ -87,3 +87,33 @@
 8.  Optimizar la interfaz para un diseño responsivo que se adapte a diferentes resoluciones de pantalla.
 9.  Rediseñar los diálogos de configuración ("Ver" / "No Ver") para un estilo más moderno y compacto.
 10. Integrar un manual de usuario visual (infografía) accesible desde la aplicación.
+
+---
+
+---
+
+## Versión 6: Rediseño Visual y Optimización de Interfaz
+1.  Mejorada integralmente la interfaz de la barra de carga, con un diseño visual integrado y feedback preciso.
+2.  Ajustado el tamaño, disposición y orden lógico de los botones principales para mejorar la ergonomía.
+3.  Perfeccionada la paleta de colores general, optimizando contrastes y coherencia en temas Claro y Oscuro.
+4.  Realizada una mejora visual completa en todos los menús, barras laterales y contenedores de la aplicación.
+5.  Acomodados los mensajes emergentes (pop-ups) y estandarizadas sus opciones de cerrado con animaciones fade-out.
+6.  Optimizado el comportamiento de las subventanas y ventanas modales para un mejor manejo del foco y la superposición.
+7.  Eliminadas opciones antiguas o inutilizables, limpiando la interfaz de elementos redundantes.
+8.  Implementadas transiciones visuales suaves en la aparición y desaparición de elementos de la UI.
+9.  Actualizados los iconos y recursos gráficos para mantener consistencia con el nuevo estilo moderno.
+10. Ajustados los layouts internos para asegurar una alineación y distribución perfecta de todos los componentes.
+
+---
+
+## Versión 7: Funcionalidades Avanzadas y Ecosistema
+1.  Implementado un nuevo botón de "Recursos Multimedia" que permite listar archivos binarios sin procesar su contenido.
+2.  Mejorada la lógica interna de creación de documentos y optimizado el orden secuencial de lectura de archivos.
+3.  Añadido el módulo de "Gestión de Perfiles" con capacidades de guardado y carga de configuraciones personalizadas.
+4.  Incorporada la funcionalidad de "Autodetección" inteligente de extensiones para facilitar la configuración de filtros.
+5.  Habilitada la opción para generar los reportes finales en formato Markdown (`.md`) además de texto plano.
+6.  Sustituida la infografía interna por un enlace directo a la nueva página web de documentación oficial.
+7.  Integrados botones en la sección de Ajustes para crear accesos directos (Escritorio, Inicio, Barra de Tareas).
+8.  Implementado un sistema de validación para evitar conflictos lógicos entre etiquetas de inclusión y exclusión.
+9.  Optimizado el sistema de Tooltips para ofrecer descripciones contextuales en los nuevos elementos de la interfaz.
+10. Refactorizado el sistema de persistencia para soportar la estructura compleja de los nuevos perfiles y ajustes.
