@@ -294,9 +294,14 @@ def _try_programmatic_pin(link_path, taskbar=True):
 
 
 def _show_msg_safe(parent, title_key, msg_key, *args):
-    if hasattr(parent, "_tr"):
-        title = parent._tr(title_key)
-        msg = parent._tr(msg_key, *args)
+    tr_func = getattr(parent, "_tr", None)
+    if not tr_func and hasattr(parent, "parent_view"):
+        tr_func = getattr(parent.parent_view, "_tr", None)
+    if not tr_func and hasattr(parent, "master") and hasattr(parent.master, "_tr"):
+        tr_func = parent.master._tr
+    if tr_func:
+        title = tr_func(title_key)
+        msg = tr_func(msg_key, *args)
         MessageDialog(parent, title, msg)
     else:
         MessageDialog(parent, title_key, msg_key)

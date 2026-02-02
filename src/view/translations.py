@@ -111,6 +111,7 @@ TRANSLATIONS = {
         "btn_shortcut_start": "Añadir al Menú de Programas",
         "btn_shortcut_taskbar": "Crear acceso (Manual: Barra de Tareas)",
         "btn_shortcut_pin_start": "Crear acceso (Manual: Anclar a Inicio)",
+
         "msg_shortcut_desktop_ok": "¡Acceso directo creado en el Escritorio correctamente!",
         "msg_shortcut_start_ok": "¡Añadido a la lista de Programas!\nBúscalo en 'Todas las aplicaciones' del menú Inicio.",
         "msg_shortcut_taskbar_ok": "¡Archivo creado!\nSe abrió la carpeta. Arrástralo a la Barra de Tareas.",
@@ -155,9 +156,12 @@ TRANSLATIONS = {
         "error_title": "Error",
 
         # --- GREETINGS ---
-        "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?", "Have a productive morning!"],
-        "greet_a": ["Good afternoon!", "Hope your day is going great.", "Let's keep pushing that code!", "The afternoon is for creating."],
-        "greet_n": ["Good evening!", "One last look before logging off.", "May the code be with you.", "Time to compile some dreams."],
+        "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?",
+                    "Have a productive morning!"],
+        "greet_a": ["Good afternoon!", "Hope your day is going great.", "Let's keep pushing that code!",
+                    "The afternoon is for creating."],
+        "greet_n": ["Good evening!", "One last look before logging off.", "May the code be with you.",
+                    "Time to compile some dreams."],
 
         # --- MAIN BUTTONS ---
         "btn_sel_lecturas": "Select Readings Destination",
@@ -250,6 +254,7 @@ TRANSLATIONS = {
         "btn_shortcut_start": "Add to Programs Menu",
         "btn_shortcut_taskbar": "Create Link (Manual: Taskbar)",
         "btn_shortcut_pin_start": "Create Link (Manual: Pin to Start)",
+
         "msg_shortcut_desktop_ok": "Desktop shortcut created successfully!",
         "msg_shortcut_start_ok": "Added to Windows Programs list!",
         "msg_shortcut_taskbar_ok": "File created!\nFolder opened. Drag it to the Taskbar.",
