@@ -18,7 +18,13 @@ def resource_path(relative_path: str) -> str:
         # PyInstaller crea una carpeta temporal en _MEIPASS
         base_path = sys._MEIPASS
     except AttributeError:
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        # Nuitka o Modo Desarrollo
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+        # Si estamos en 'src', los recursos suelen estar un nivel arriba
+        # Nuitka mantiene la estructura interna 'src' al compilar
+        if os.path.basename(base_path) == 'src':
+            base_path = os.path.abspath(os.path.join(base_path, ".."))
 
     return os.path.join(base_path, 'recursos', relative_path)
 

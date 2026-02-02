@@ -8,9 +8,9 @@ packaging
 pefile
 pillow
 psutil
-pyinstaller
-pyinstaller-hooks-contrib
 pywin32
 pywin32-ctypes
 setuptools
 tkfilebrowser
+nuitka
+zstandard

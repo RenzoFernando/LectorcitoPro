@@ -1,6 +1,17 @@
-
 @echo off
 setlocal EnableExtensions
+
+REM ==============================================================================
+REM  SCRIPT DE CONFIGURACION DE ENTORNO (SETUP)
+REM  -----------------------------------------------------------------------------
+REM  PROPOSITO: Crear el entorno virtual e instalar dependencias.
+REM
+REM  SOLUCION DE PROBLEMAS COMUNES:
+REM  1. Si dice "Python no encontrado": Instala Python 3.11 desde python.org
+REM     y marca la casilla "Add to PATH".
+REM  2. Si falla instalando librerias: Verifica tu conexion a internet.
+REM     Este script ya incluye un timeout extendido (100s) para conexiones lentas.
+REM ==============================================================================
 
 set "VENV_DIR=.venv"
 set "REQ=requirements.txt"
@@ -8,24 +19,39 @@ set "PY_CMD="
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 set "PIPLOG=%TEMP%\setup_amp_pip.log"
 
-echo [0/5] Searching for Python...
+echo [0/5] Buscando Python compatible (3.11 o 3.12)...
+REM Nuitka + MinGW64 aun no soportan bien Python 3.13 ni 3.14.
+REM Por eso forzamos la busqueda de versiones estables.
+
+REM --- PRIORIDAD: Buscar Python 3.11 o 3.12 para Nuitka ---
+call :trypy py -3.11
+if defined PY_CMD goto py_ok
+
+call :trypy py -3.12
+if defined PY_CMD goto py_ok
+
+REM --- FALLBACK: Intentar lo que haya (pero avisar si es muy nuevo) ---
 call :trypy py -3
-call :trypy python3
-call :trypy python
+if not defined PY_CMD call :trypy python
 
 if defined PY_CMD goto py_ok
-echo ERROR: No Python executable found. Please install Python and ensure it's in your PATH.
+echo.
+echo ERROR: No se encontro una version de Python compatible.
+echo Por favor instala Python 3.11 desde python.org
+echo.
 pause
 exit /b 1
 
 :py_ok
-echo Using: %PY_CMD%
+echo Usando Python: %PY_CMD%
 
 echo [1/5] Creating virtual environment in `%VENV_DIR%`...
-if exist "%VENV_PY%" (
-    echo Virtual environment already exists. Re-creating for a clean install.
+REM Borramos el entorno anterior si existe para evitar mezclar versiones
+if exist "%VENV_DIR%" (
+    echo El entorno virtual ya existe. Eliminando para crear uno limpio con la nueva version...
     rmdir /S /Q "%VENV_DIR%"
 )
+
 %PY_CMD% -m venv "%VENV_DIR%"
 if errorlevel 1 goto venv_fail
 
@@ -40,18 +66,13 @@ if not exist "%REQ%" (
     pause
     exit /b 1
 )
-"%VENV_PY%" -m pip install -r "%REQ%"
+REM Aumentamos el timeout a 100 segundos para evitar errores de red con Nuitka
+"%VENV_PY%" -m pip install -r "%REQ%" --default-timeout=100
 if errorlevel 1 goto install_fail
 
 echo [4/5] Setup complete.
 echo.
-echo [5/5] To activate the virtual environment, run one of the following commands:
-echo.
-echo   In PowerShell:
-echo   .\%VENV_DIR%\Scripts\Activate.ps1
-echo.
-echo   In Command Prompt (CMD):
-echo   %VENV_DIR%\Scripts\activate.bat
+echo [5/5] Entorno listo. Ahora ejecuta 'build.bat'.
 echo.
 pause
 exit /b 0
@@ -72,8 +93,5 @@ echo ERROR: Failed to install requirements from `%REQ%`.
 echo This is likely due to a Python version incompatibility with your packages.
 echo Your current Python is:
 "%VENV_PY%" --version
-echo Please check the package requirements, especially for `pyinstaller`.
 pause
 exit /b 1
-
-:: .\setup_amp.bat

@@ -35,6 +35,7 @@ env/
 # ── System files ────────────────────────────────────────
 .DS_Store
 Thumbs.db
+nuitka-crash-report.xml
 
 # ── Logs ────────────────────────────────────────────────
 *.log
@@ -48,6 +49,7 @@ Thumbs.db
 # ── Carpeta de reportes ─────────────────────────────────
 Lecturas/
 descargas/
+recursos_certificado/
 
 # ── Otros archivos temporales ───────────────────────────
 *.tmp
