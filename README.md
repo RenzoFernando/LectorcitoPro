@@ -1,90 +1,107 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/RenzoFernando/LectorcitoPro/main/recursos/lector.png" alt="Logo de Lectorcito Pro" width="150">
   <h1>Lectorcito Pro</h1>
-  <p>
-    <strong>Versión Actual: 5.11.0</strong><br>
-    Una herramienta de escritorio profesional para analizar y consolidar proyectos de código fuente en reportes unificados.
-  </p>
   <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest">
-    <img src="https://img.shields.io/github/v/release/RenzoFernando/LectorcitoPro?style=for-the-badge&label=Descargar%20%C3%9Altima%20Versi%C3%B3n" alt="Descargar Última Versión">
+    <img src="https://img.shields.io/github/v/release/RenzoFernando/LectorcitoPro?style=for-the-badge&label=Descargar%20Ultima%20Version&color=blue" alt="Descargar Última Versión">
   </a>
+  <p>
+    Herramienta de escritorio profesional para auditoría de código, documentación técnica y consolidación de contextos para Inteligencia Artificial.
+  </p>
 </div>
 
 ---
 
+<br>
+
 ## Descripción
 
-**Lectorcito Pro** es una aplicación de escritorio para Windows, desarrollada en Python, que permite a los usuarios analizar de forma recursiva cualquier directorio de proyecto. La herramienta escanea las carpetas y archivos, y consolida todo el contenido de texto y código fuente en un único reporte `.txt` bien formateado.
+**Lectorcito Pro** es una aplicación de escritorio nativa para Windows, desarrollada en Python bajo una arquitectura MVC (Modelo-Vista-Controlador). Su función principal es el análisis recursivo de directorios de proyectos de software para consolidar su estructura y código fuente en un único reporte legible.
 
-Esta utilidad es ideal para generar vistas completas de un proyecto, ya sea para auditorías de código, creación de documentación técnica o para preparar el contexto necesario para análisis con herramientas de Inteligencia Artificial.
+Esta utilidad es fundamental para desarrolladores que necesitan:
+* Generar contextos completos de un proyecto para alimentar LLMs (Modelos de Lenguaje Grande) como GPT-4, Claude o Gemini.
+* Realizar auditorías de código rápidas sin navegar por múltiples subcarpetas.
+* Crear documentación técnica instantánea o snapshots del estado actual del desarrollo.
+
+La aplicación destaca por su capacidad de filtrado granular, gestión de perfiles de trabajo y una interfaz moderna de alto rendimiento.
 
 ## Tabla de Contenidos
 
-1.  [Uso de la Aplicación](#uso)
-2.  [Características Principales](#caracteristicas)
-3.  [Estructura del Proyecto](#estructura)
-4.  [Versiones Disponibles](#versiones)
-5.  [Sistema de Configuración](#configuracion)
-6.  [Guía para Desarrolladores](#desarrolladores)
-7.  [Licencia](#licencia)
+1.  [Acceso y Descarga](#acceso)
+2.  [Características Técnicas](#caracteristicas)
+3.  [Manual de Uso](#uso)
+4.  [Estructura del Proyecto](#estructura)
+5.  [Guía para Desarrolladores](#desarrolladores)
+6.  [Licencia](#licencia)
 
 ---
 
-## <a name="uso"></a>Uso de la Aplicación
+## <a name="acceso"></a>Acceso y Descarga
 
-El uso de **Lectorcito Pro** está diseñado para ser directo y no requiere instalación.
+Lectorcito Pro se distribuye como una aplicación portable (`.exe`) compilada nativamente, por lo que no requiere instalación ni dependencias externas en el equipo del usuario final.
 
-1.  **Acceder al Ejecutable:**
-    Navegue a la carpeta `descargas/` que se encuentra en el repositorio.
+Puede descargar la última versión estable desde los siguientes canales oficiales:
 
-2.  **Ejecutar la Aplicación:**
-    Haga doble clic en el archivo `LectorcitoPro.exe`. La aplicación se iniciará, mostrando la interfaz principal.
-
-3.  **Generar un Reporte:**
-    * **Generar Lectura Completa:** Es el botón principal. Al presionarlo, podrá seleccionar una o múltiples carpetas para analizar. La aplicación procesará los archivos y generará el reporte `.txt`.
-    * **Crear Estructura de Árbol:** Genera un archivo de texto que muestra únicamente la estructura de carpetas y archivos del proyecto seleccionado.
-
-4.  **Configurar la Aplicación:**
-    Utilice los iconos de la barra lateral derecha para personalizar el comportamiento de la aplicación. Puede configurar:
-    * **Filtros de "Ver" y "No Ver":** Para incluir o excluir carpetas y tipos de archivo.
-    * **Tema:** Alternar entre los modos, claro y oscuro.
-    * **Idioma:** Cambiar entre Español e Inglés.
-    * **Restaurar:** Volver a la configuración de fábrica.
-
-Una vez generado un reporte, este se guardará en una carpeta llamada `Lecturas`, creada automáticamente por la aplicación.
+* **Sitio Web Oficial:** [https://renzofernando.github.io/LectorcitoPro/](https://renzofernando.github.io/LectorcitoPro/)
+* **GitHub Releases:** [https://github.com/RenzoFernando/LectorcitoPro/releases/latest](https://github.com/RenzoFernando/LectorcitoPro/releases/latest)
 
 ---
 
-## <a name="caracteristicas"></a>Características Principales
+## <a name="caracteristicas"></a>Características Técnicas
 
-* **Análisis Recursivo de Proyectos:** Navega por la estructura completa de un directorio para identificar y procesar archivos relevantes.
-* **Generación de Reportes Consolidados:** Une el contenido de múltiples archivos en un único `.txt` formateado, preservando la estructura y el nombre de cada archivo y carpeta.
-* **Interfaz Gráfica Intuitiva:** Desarrollada con CustomTkinter, ofrece una experiencia de usuario moderna y personalizable con temas claro y oscuro.
-* **Alta Personalización de Filtros:** Permite al usuario definir con precisión:
-    * **Carpetas a incluir:** Para destacar directorios importantes (ej. `src`).
-    * **Extensiones a leer:** Para especificar qué tipo de archivos procesar (ej. `.py`, `.html`, `.css`).
-    * **Carpetas a excluir:** Para ignorar directorios como `node_modules`, `.venv` o `__pycache__`.
-    * **Archivos a excluir:** Para omitir archivos específicos por su nombre (ej. `.env`, `package-lock.json`).
-* **Soporte Multi-idioma:** Interfaz disponible en Español e Inglés.
-* **Procesamiento Asíncrono:** Las tareas de análisis se ejecutan en hilos separados para mantener la interfaz receptiva, con opción de cancelación.
-* **Feedback Visual Avanzado:** Barra de progreso animada, GIF de estado y notificaciones emergentes para informar sobre el estado de las operaciones.
-* **Generación de Árbol de Directorios:** Funcionalidad para crear un reporte de texto que visualiza la estructura de carpetas del proyecto.
-* **Persistencia de Configuración:** Guarda automáticamente las preferencias del usuario para una experiencia consistente entre sesiones.
+* **Arquitectura MVC:** Separación estricta entre la lógica de negocio, la interfaz de usuario y el control de flujo, garantizando estabilidad y escalabilidad.
+* **Motor de Análisis Recursivo:** Escaneo profundo de directorios con capacidad de omisión inteligente basada en filtros preconfigurados.
+* **Gestión de Perfiles:** Permite guardar y alternar entre diferentes configuraciones de entorno (ej. Perfil "Python Back-end", Perfil "React Front-end").
+* **Filtrado Granular:**
+    * **Inclusión (Qué Ver):** Definición explícita de extensiones y carpetas críticas.
+    * **Exclusión (Qué No Ver):** Bloqueo de directorios pesados (node_modules, venv) y archivos sensibles.
+    * **Modo Multimedia:** Listado de archivos binarios o de medios sin procesar su contenido (reducción de ruido en el reporte).
+* **Generación de Árboles:** Creación de diagramas de jerarquía de carpetas independientes al contenido.
+* **Interfaz Moderna (CustomTkinter):** Soporte nativo para modo oscuro/claro, escalado de DPI y diseño responsivo.
+* **Multilenguaje:** Cambio en tiempo real entre Español e Inglés.
+* **Procesamiento Asíncrono:** Ejecución en hilos separados para evitar el congelamiento de la interfaz durante análisis pesados, con opción de cancelación segura.
+
+---
+
+## <a name="uso"></a>Manual de Uso
+
+La interfaz se divide en tres secciones principales: Panel Central (Acciones), Barra Lateral Izquierda (Info) y Barra Lateral Derecha (Herramientas).
+
+### 1. Acciones Principales
+
+* **Generar Lectura Completa:** Abre un selector de directorios. La aplicación analizará la carpeta seleccionada aplicando los filtros activos y generará un archivo consolidado (ej. `Reporte_NombreProyecto_v1.txt`).
+* **Crear Estructura de Árbol:** Genera un archivo de texto que visualiza únicamente la jerarquía de carpetas y archivos, útil para entender la arquitectura sin leer el código.
+* **Seleccionar Destino:** Por defecto, los reportes se guardan en una carpeta interna. Esta opción permite definir una ruta personalizada externa para la salida de archivos.
+
+### 2. Configuración y Filtros (Barra Lateral)
+
+* **Qué Ver (Inclusión):** Configure aquí las extensiones de archivo que desea leer (ej: `.py`, `.js`, `.md`) y las carpetas que desea resaltar. Incluye una función de "Autodetectar" que escanea un directorio y sugiere extensiones.
+* **Qué No Ver (Exclusión):** Defina carpetas a ignorar recursivamente (ej: `.git`, `__pycache__`) y archivos específicos a omitir.
+* **Etiqueta (Multimedia):** Extensiones que aparecerán listadas en el reporte para constancia de su existencia, pero cuyo contenido binario no será impreso.
+* **Gestor de Perfiles:** Guarde su configuración actual de filtros bajo un nombre específico para reutilizarla posteriormente en proyectos de distinta naturaleza tecnológica.
+
+### 3. Ajustes Generales
+
+Desde el menú de ajustes se puede configurar:
+* **Formato de Salida:** Elegir entre `.txt` (texto plano) o `.md` (Markdown).
+* **Integración con el Sistema:** Crear accesos directos en el Escritorio, Menú de Inicio o Barra de Tareas.
 
 ---
 
 ## <a name="estructura"></a>Estructura del Proyecto
-```
+
+```text
+
 LectorcitoPro/
-├── GuíaCertificados.md
 ├── Historial de Versiones.md
 ├── README.md
-├── descargas
-│   ├── Lectorcito.py
-│   └── LectorcitoPro.exe
+├── build.bat
+├── compilacion.md
+├── firmar_aplicacion.ps1
+├── index.html
+├── pyproject.toml
 ├── recursos
-├── recursos_externos
 ├── requirements.txt
+├── setup_amp.bat
 └── src
     ├── config.py
     ├── controller
@@ -96,75 +113,74 @@ LectorcitoPro/
     ├── utils.py
     └── view
         ├── dialogs.py
+        ├── gradient_progress.py
+        ├── profiles_dialog.py
+        ├── settings_dialog.py
+        ├── sidebars.py
+        ├── status_panel.py
         ├── tags_dialog.py
         ├── tooltip.py
         ├── translations.py
-        └── ui.py
+        ├── ui.py
+        ├── ui_assets.py
+        └── ui_constants.py
+
 ```
-
----
-
-## <a name="versiones"></a>Versiones Disponibles
-
-La carpeta `descargas/` contiene dos versiones de la aplicación para distintos casos de uso:
-
-* **Versión Pro (`LectorcitoPro.exe`):**
-    * **Uso Recomendado:** Para la mayoría de los usuarios.
-    * **Descripción:** Es un ejecutable que no requiere instalación. Provee una interfaz gráfica completa desde donde se pueden configurar todas las opciones de manera visual, como los filtros de inclusión/exclusión, el idioma y el tema.
-
-* **Versión Básica (`Lectorcito.py`):**
-    * **Uso:** Para desarrolladores o para ejecuciones rápidas desde la terminal.
-    * **Descripción:** Es un script de Python que se ejecuta en la consola. Requiere que los filtros (extensiones y carpetas excluidas) se modifiquen directamente en el código fuente del archivo.
-
----
-
-## <a name="configuracion"></a>Sistema de Configuración
-
-La aplicación guarda todas las preferencias del usuario en un archivo `config.json`. Este archivo se ubica automáticamente en el directorio estándar de configuración de aplicaciones del sistema operativo (gestionado por `appdirs`), garantizando que no se creen archivos innecesarios en la carpeta del programa.
-
-Para restaurar la configuración original, se puede usar el botón "Restaurar Ajustes" en la barra lateral o eliminar manualmente dicho archivo de configuración.
 
 ---
 
 ## <a name="desarrolladores"></a>Guía para Desarrolladores
 
-Instrucciones para compilar desde el código fuente
+Si desea compilar el proyecto desde el código fuente o contribuir al desarrollo, siga estos pasos.
 
-  ### Arquitectura del Software
-  El proyecto sigue el patrón de diseño **Modelo-Vista-Controlador (MVC)** para garantizar una separación clara de responsabilidades, facilitar la mantenibilidad y promover la escalabilidad.
+### Requisitos del Entorno
 
-  * **Modelo (`src/model`):** Contiene la lógica de negocio, incluyendo el análisis de archivos y el procesamiento de directorios.
-  * **Vista (`src/view`):** Compuesta por los elementos de la interfaz de usuario.
-  * **Controlador (`src/controller`):** Actúa como intermediario entre el Modelo y la Vista.
+* **Lenguaje:** Python 3.11 (Recomendado para compatibilidad con Nuitka).
+* **Gestión de Versiones:** Git.
+* **Sistema Operativo:** Windows 10/11 (SDKs nativos).
 
-  ### Puesta en Marcha del Entorno
-  1.  **Requisitos:** Python 3.7+ y `git`.
-  2.  **Clonar el Repositorio:**
-      ```bash
-      git clone [https://github.com/RenzoFernando/LectorcitoPro.git](https://github.com/RenzoFernando/LectorcitoPro.git)
-      cd LectorcitoPro
-      ```
-  3.  **Configurar el Entorno Virtual y Dependencias:** Ejecute el script por lotes que automatiza el proceso:
-      ```batch
-      setup_amp.bat
-      ```
-  4.  **Ejecutar la Aplicación:**
-      ```bash
-      python src/main.py
-      ```
+### Configuración y Compilación
 
-  ### Compilación
-  Para generar el archivo `.exe`, ejecute el script de compilación:
-  ```batch
-  build.bat
-  ```
-  Este se encargará de todo el proceso con PyInstaller y dejará el ejecutable final en la carpeta `descargas/`.
+El proyecto incluye scripts automatizados en la raíz para facilitar el despliegue del entorno de desarrollo.
+
+1. **Clonar el Repositorio:**
+```bash
+git clone https://github.com/RenzoFernando/LectorcitoPro.git
+cd LectorcitoPro
+
+```
 
 
+2. **Preparar Entorno Virtual:**
+Ejecute el script `setup_amp.bat`. Este script creará el entorno virtual (`.venv`), actualizará `pip` e instalará todas las dependencias listadas en `requirements.txt`.
+```batch
+.\setup_amp.bat
+
+```
+
+
+3. **Ejecución en Desarrollo:**
+Para correr la aplicación sin compilar:
+```bash
+.venv\Scripts\python.exe src/main.py
+
+```
+
+
+4. **Compilación a Ejecutable (.exe):**
+El proyecto utiliza **Nuitka** para compilar el código Python a C++ y posteriormente a código máquina, garantizando alto rendimiento y ofuscación. Ejecute el script de construcción:
+```batch
+.\build.bat
+
+```
+
+
+El ejecutable resultante (`LectorcitoPro.exe`) se ubicará en la carpeta `descargas/`.
 
 ---
 
 ## <a name="licencia"></a>Licencia
 
-Este proyecto se distribuye bajo los términos de la **Licencia MIT**.  
-Copyright © 2025 - Renzo Fernando Mosquera Daza.
+Este proyecto se distribuye bajo los términos de la **Licencia MIT**.
+Copyright © 2026 - Renzo Fernando Mosquera Daza - All Rights Reserved.
+
