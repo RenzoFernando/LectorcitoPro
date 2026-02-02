@@ -175,37 +175,56 @@ def show_etiqueta_config_dialog(controller):
 
 def show_settings_dialog(controller):
     current_ext = controller.config.get("report_extension", ".txt")
+    current_exe = controller.config.get("custom_exe_path", "")
 
-    def on_save(new_ext):
-        _update_report_extension(controller, new_ext)
+    def on_save(new_ext, new_exe_path):
+        _update_settings_values(controller, new_ext, new_exe_path)
 
-    def on_shortcut(mode, parent_window=None):
-        _create_system_shortcut(controller, mode, parent_window)
+    def on_shortcut(mode, exe_path_input, parent_window=None):
+        _create_system_shortcut(controller, mode, exe_path_input, parent_window)
 
     SettingsDialog.ask(
         parent=controller.view,
         current_extension=current_ext,
+        current_exe_path=current_exe,
         on_save_callback=on_save,
         on_shortcut_callback=on_shortcut
     )
 
 
-def _update_report_extension(controller, new_ext):
+def _update_settings_values(controller, new_ext, new_exe_path):
+    changed = False
     if new_ext in [".txt", ".md"]:
         controller.config["report_extension"] = new_ext
+        changed = True
+    clean_path = new_exe_path.strip().replace('"', '')
+    if clean_path is not None:
+        controller.config["custom_exe_path"] = clean_path
+        changed = True
+
+    if changed:
         save_preferences_silent(controller)
 
 
-def _create_system_shortcut(controller, mode, parent_window=None):
+def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None):
     msg_parent = parent_window if parent_window else controller.view
+    target_path = ""
+    if user_exe_path and str(user_exe_path).strip():
+        target_path = str(user_exe_path).strip().replace('"', '')
+        controller.config["custom_exe_path"] = target_path
+        save_preferences_silent(controller)
+    else:
+        target_path = controller.config.get("custom_exe_path", "").strip().replace('"', '')
 
-    try:
-        if getattr(sys, 'frozen', False):
-            target_path = sys.executable
-        else:
+    if not target_path or not os.path.exists(target_path) or not target_path.lower().endswith(".exe"):
+        if not getattr(sys, 'frozen', False):
             target_path = sys.executable
             print(controller.view._tr("shortcut_script_warning"))
+        else:
+            msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "error_title", "msg_path_invalid"))
+            return
 
+    try:
         work_dir = os.path.dirname(target_path)
         app_name = "LectorcitoPro"
 
@@ -218,7 +237,8 @@ def _create_system_shortcut(controller, mode, parent_window=None):
         shell = win32com.client.Dispatch("WScript.Shell")
         link_path = ""
         msg_key = ""
-        open_explorer_at_end = False
+        force_open_explorer = False
+        rename_to_instruction = False
 
         if mode == "desktop":
             desktop_dir = shell.SpecialFolders("Desktop")
@@ -240,29 +260,46 @@ def _create_system_shortcut(controller, mode, parent_window=None):
             docs_dir = shell.SpecialFolders("MyDocuments")
             link_path = os.path.join(docs_dir, f"{app_name}.lnk")
             msg_key = "msg_shortcut_taskbar_ok" if mode == "taskbar" else "msg_shortcut_pin_start_ok"
-            open_explorer_at_end = True
 
         shortcut = shell.CreateShortCut(link_path)
         shortcut.TargetPath = target_path
         shortcut.WorkingDirectory = work_dir
         if os.path.exists(icon_path):
-            shortcut.IconLocation = icon_path
+            shortcut.IconLocation = f"{icon_path},0"
         shortcut.WindowStyle = 1
         shortcut.Description = controller.view._tr("shortcut_desc")
         shortcut.Save()
 
         if mode in ["taskbar", "start_pin"]:
-            if not _try_programmatic_pin(link_path, taskbar=(mode == "taskbar")):
-                open_explorer_at_end = True
+            success_pin = _try_programmatic_pin(link_path, taskbar=(mode == "taskbar"))
 
-        if open_explorer_at_end:
+            if success_pin:
+                force_open_explorer = False
+            else:
+                force_open_explorer = True
+                rename_to_instruction = True
+                msg_key = "msg_shortcut_manual_taskbar" if mode == "taskbar" else "msg_shortcut_manual_start"
+
+        if rename_to_instruction:
+            try:
+                folder = os.path.dirname(link_path)
+                instruction_name = controller.view._tr("lnk_name_taskbar" if mode == "taskbar" else "lnk_name_start")
+                safe_name = "".join(x for x in instruction_name if x.isalnum() or x in " _-")
+                new_path = os.path.join(folder, f"{safe_name}.lnk")
+
+                if os.path.exists(new_path):
+                    os.remove(new_path)
+
+                os.rename(link_path, new_path)
+                link_path = new_path
+            except Exception as e:
+                print(f"Error renombrando LNK: {e}")
+        if force_open_explorer:
             try:
                 subprocess.run(f'explorer /select,"{link_path}"', shell=True)
             except Exception:
                 pass
-
         msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "info_title", msg_key))
-
     except Exception as e:
         msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "error_title", "msg_shortcut_error", str(e)))
 

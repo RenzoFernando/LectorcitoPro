@@ -103,20 +103,30 @@ TRANSLATIONS = {
         "lbl_default_name": "Predeterminado",
         "lbl_active_suffix": " (Activo)",
 
-        # --- AJUSTES ---
+        # --- SETTINGS ---
         "dlg_settings_title": "Configuración General",
         "lbl_report_format": "Formato de archivo:",
+        "lbl_exe_path": "Ruta de la aplicación (LectorcitoPro.exe):",
+        "lbl_exe_example": "Ejemplo: C:\\Users\\TuUsuario\\Downloads\\LectorcitoPro.exe",
+        "ph_exe_path": "Pegue la ruta aquí...",
         "lbl_system_shortcuts": "Accesos directos e integración:",
         "btn_shortcut_desktop": "Crear acceso directo en Escritorio",
         "btn_shortcut_start": "Añadir al Menú de Programas",
-        "btn_shortcut_taskbar": "Crear acceso (Manual: Barra de Tareas)",
-        "btn_shortcut_pin_start": "Crear acceso (Manual: Anclar a Inicio)",
+        "btn_shortcut_taskbar": "Anclar a Barra de Tareas",
+        "btn_shortcut_pin_start": "Anclar a Inicio",
 
         "msg_shortcut_desktop_ok": "¡Acceso directo creado en el Escritorio correctamente!",
         "msg_shortcut_start_ok": "¡Añadido a la lista de Programas!\nBúscalo en 'Todas las aplicaciones' del menú Inicio.",
-        "msg_shortcut_taskbar_ok": "¡Archivo creado!\nSe abrió la carpeta. Arrástralo a la Barra de Tareas.",
-        "msg_shortcut_pin_start_ok": "¡Archivo listo!\nSe abrió la carpeta. Click derecho > 'Anclar a Inicio'.",
+        "msg_shortcut_taskbar_ok": "¡Se intentó anclar a la Barra de Tareas!",
+        "msg_shortcut_pin_start_ok": "¡Se intentó anclar a Inicio!",
+
+        "msg_shortcut_manual_taskbar": "No se pudo anclar autom.\nSe abrió la carpeta: Arrastre el archivo a la barra.",
+        "msg_shortcut_manual_start": "No se pudo anclar autom.\nSe abrió la carpeta: Click derecho > Anclar a inicio.",
+        "lnk_name_taskbar": "ARRASTRAME_A_BARRA_DE_TAREAS",
+        "lnk_name_start": "CLICK_DERECHO_ANCLAR_A_INICIO",
+
         "msg_shortcut_error": "No se pudo realizar la acción:\n{}",
+        "msg_path_invalid": "La ruta proporcionada no existe o no es un archivo .exe válido.\nPor favor verifique que no tenga comillas.",
         "shortcut_desc": "Lectorcito Pro - Análisis de Código",
         "shortcut_script_warning": "AVISO: En modo script, el acceso directo apuntará al intérprete Python.",
 
@@ -249,17 +259,27 @@ TRANSLATIONS = {
         # --- SETTINGS ---
         "dlg_settings_title": "General Settings",
         "lbl_report_format": "Report File Format:",
+        "lbl_exe_path": "Application Path (LectorcitoPro.exe):",
+        "lbl_exe_example": "Ex: C:\\Users\\User\\Downloads\\LectorcitoPro.exe",
+        "ph_exe_path": "Paste path here...",
         "lbl_system_shortcuts": "System Integration:",
         "btn_shortcut_desktop": "Create Desktop Shortcut",
         "btn_shortcut_start": "Add to Programs Menu",
-        "btn_shortcut_taskbar": "Create Link (Manual: Taskbar)",
-        "btn_shortcut_pin_start": "Create Link (Manual: Pin to Start)",
+        "btn_shortcut_taskbar": "Pin to Taskbar",
+        "btn_shortcut_pin_start": "Pin to Start",
 
         "msg_shortcut_desktop_ok": "Desktop shortcut created successfully!",
         "msg_shortcut_start_ok": "Added to Windows Programs list!",
-        "msg_shortcut_taskbar_ok": "File created!\nFolder opened. Drag it to the Taskbar.",
-        "msg_shortcut_pin_start_ok": "File ready!\nFolder opened. Right click > 'Pin to Start'.",
+        "msg_shortcut_taskbar_ok": "Attempted to pin to Taskbar!",
+        "msg_shortcut_pin_start_ok": "Attempted to pin to Start!",
+
+        "msg_shortcut_manual_taskbar": "Auto-pin failed.\nFolder opened: Drag the file to Taskbar.",
+        "msg_shortcut_manual_start": "Auto-pin failed.\nFolder opened: Right click > Pin to Start.",
+        "lnk_name_taskbar": "DRAG_ME_TO_TASKBAR",
+        "lnk_name_start": "RIGHT_CLICK_PIN_TO_START",
+
         "msg_shortcut_error": "Could not perform action:\n{}",
+        "msg_path_invalid": "The provided path does not exist or is not a valid .exe file.\nPlease check (no quotes).",
         "shortcut_desc": "Lectorcito Pro - Code Analysis",
         "shortcut_script_warning": "WARNING: In script mode, the shortcut will point to the Python interpreter.",
 

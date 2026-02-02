@@ -32,6 +32,7 @@ def to_tags(items: list[str]) -> list[dict]:
 DEFAULT_CONFIG_VALUES = {
     "use_default_path": True,
     "custom_lecturas_path": "",
+    "custom_exe_path": "",
     "lecturas_path": DEFAULT_LECTURAS_PATH,
     "last_read_folder": "",
     "theme": "Light",
@@ -55,6 +56,7 @@ DEFAULT_CONFIG_VALUES = {
 BLANK_PROFILE_CONFIG = {
     "use_default_path": True,
     "custom_lecturas_path": "",
+    "custom_exe_path": "",
     "lecturas_path": DEFAULT_LECTURAS_PATH,
     "last_read_folder": "",
     "theme": "Light",
@@ -105,14 +107,14 @@ def load_config() -> dict:
             with open(CONFIG_FILE_PATH, 'r', encoding="utf-8") as f:
                 loaded_data = json.load(f)
 
-            if "profiles" in loaded_data:
-                base_structure = loaded_data
-            else:
-                migrated_data = _migrate_old_keys(loaded_data)
-                full_default = DEFAULT_CONFIG_VALUES.copy()
-                full_default.update(migrated_data)
-                base_structure["profiles"]["default"] = full_default
-                base_structure["active_profile_id"] = "default"
+                if "profiles" in loaded_data:
+                    base_structure = loaded_data
+                else:
+                    migrated_data = _migrate_old_keys(loaded_data)
+                    full_default = DEFAULT_CONFIG_VALUES.copy()
+                    full_default.update(migrated_data)
+                    base_structure["profiles"]["default"] = full_default
+                    base_structure["active_profile_id"] = "default"
 
         except (json.JSONDecodeError, TypeError):
             print("Error leyendo config, usando defaults.")
@@ -133,7 +135,6 @@ def load_config() -> dict:
         config_completa = BLANK_PROFILE_CONFIG.copy()
         config_completa.update(active_data)
 
-    # Inyeccion de metadatos ocultos para reconstruccion posterior
     config_completa["_profiles_meta"] = base_structure["profiles"]
     config_completa["_active_profile_id"] = active_id
 

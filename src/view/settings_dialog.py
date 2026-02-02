@@ -7,7 +7,8 @@ from view.dialogs import BaseDialog, _style_button, _get_color_tuple
 # =============================================================================
 
 class SettingsDialog(BaseDialog):
-    def __init__(self, parent, current_extension: str, on_save_callback=None, on_shortcut_callback=None):
+    def __init__(self, parent, current_extension: str, current_exe_path: str, on_save_callback=None,
+                 on_shortcut_callback=None):
         title = parent._tr("dlg_settings_title") if hasattr(parent, "_tr") else "Ajustes"
         super().__init__(parent, title)
 
@@ -16,13 +17,13 @@ class SettingsDialog(BaseDialog):
 
         self.parent_view = parent
         self.selected_extension = current_extension
+        self.current_exe_path = current_exe_path or ""
         self.on_save_callback = on_save_callback
         self.on_shortcut_callback = on_shortcut_callback
         self.result = None
 
-        self.geometry("400x370")
+        self.geometry("450x500")
 
-        # Inicia la construccion secuencial para no congelar la UI
         self.after(650, self._step_1_build_frame)
 
     def _step_1_build_frame(self):
@@ -37,7 +38,6 @@ class SettingsDialog(BaseDialog):
             text_color=_get_color_tuple("text")
         ).pack(pady=(20, 5), padx=20, anchor="w")
 
-        # Usamos OptionMenu para mejor estetica
         self.fmt_var = ctk.StringVar(value=self.selected_extension)
         self.opt_format = ctk.CTkOptionMenu(
             self.main_frame,
@@ -51,11 +51,35 @@ class SettingsDialog(BaseDialog):
             button_color=_get_color_tuple("card_border"),
             text_color=_get_color_tuple("text")
         )
-        self.opt_format.pack(padx=20, pady=(0, 20), anchor="w")
+        self.opt_format.pack(padx=20, pady=(0, 10), anchor="w")
+
+        self.after(20, self._step_2b_add_path_section)
+
+    def _step_2b_add_path_section(self):
+        ctk.CTkLabel(
+            self.main_frame,
+            text=self.parent_view._tr("lbl_exe_path"),
+            font=("Segoe UI", 12, "bold"),
+            text_color=_get_color_tuple("text")
+        ).pack(pady=(10, 2), padx=20, anchor="w")
+
+        ctk.CTkLabel(
+            self.main_frame,
+            text=self.parent_view._tr("lbl_exe_example"),
+            font=("Segoe UI", 10, "normal"),
+            text_color=_get_color_tuple("text_secondary")
+        ).pack(pady=(0, 5), padx=20, anchor="w")
+
+        self.entry_exe = ctk.CTkEntry(
+            self.main_frame,
+            placeholder_text=self.parent_view._tr("ph_exe_path")
+        )
+        self.entry_exe.pack(padx=20, pady=(0, 15), fill="x")
+        self.entry_exe.insert(0, self.current_exe_path)
 
         ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line")).pack(fill="x", padx=20,
                                                                                                   pady=5)
-        self.after(50, self._step_3_add_shortcuts_header)
+        self.after(20, self._step_3_add_shortcuts_header)
 
     def _step_3_add_shortcuts_header(self):
         ctk.CTkLabel(
@@ -149,19 +173,22 @@ class SettingsDialog(BaseDialog):
 
     def _on_format_change(self, value):
         self.selected_extension = value
-        if self.on_save_callback:
-            self.on_save_callback(value)
 
     def _trigger_shortcut(self, shortcut_type):
+        current_path_input = self.entry_exe.get().strip().replace('"', '')
         if self.on_shortcut_callback:
-            self.on_shortcut_callback(shortcut_type, parent_window=self)
+            self.on_shortcut_callback(shortcut_type, current_path_input, parent_window=self)
 
     def _on_ok(self):
-        self.result = self.selected_extension
+        final_ext = self.fmt_var.get()
+        final_path = self.entry_exe.get().strip().replace('"', '')
+        self.result = (final_ext, final_path)
+        if self.on_save_callback:
+            self.on_save_callback(final_ext, final_path)
         self._close_with_fade_out()
 
     @classmethod
-    def ask(cls, parent, current_extension, on_save_callback, on_shortcut_callback):
-        dialog = cls(parent, current_extension, on_save_callback, on_shortcut_callback)
+    def ask(cls, parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback):
+        dialog = cls(parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback)
         parent.wait_window(dialog)
         return dialog.result
