@@ -39,7 +39,7 @@ DEFAULT_CONFIG_VALUES = {
     "language": "es",
     "report_extension": ".txt",
     "etiquetas_carpetas_importantes": to_tags(["src"]),
-    "etiquetas_extensiones_incluidas": to_tags([".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json"]),
+    "etiquetas_extensiones_incluidas": to_tags([".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json", ".sql"]),
     "etiquetas_carpetas_excluidas": to_tags(["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]),
     "etiquetas_archivos_excluidos": to_tags(["Pipfile.lock", "package.json", "package-lock.json"]),
     "media_extensions": [

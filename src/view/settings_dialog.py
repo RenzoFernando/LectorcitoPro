@@ -24,7 +24,7 @@ class SettingsDialog(BaseDialog):
 
         self.geometry("450x500")
 
-        self.after(650, self._step_1_build_frame)
+        self.after(750, self._step_1_build_frame)
 
     def _step_1_build_frame(self):
         self.main_frame = self._create_card_frame()
@@ -163,7 +163,7 @@ class SettingsDialog(BaseDialog):
         if alpha < 1.0:
             alpha += 0.1
             self.attributes("-alpha", alpha)
-            self.after(20, self._animate_fade_in)
+            self.after(45, self._animate_fade_in)
         else:
             self.attributes("-alpha", 1.0)
             try:

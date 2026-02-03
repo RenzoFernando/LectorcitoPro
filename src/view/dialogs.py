@@ -70,7 +70,7 @@ class BaseDialog(ctk.CTkToplevel):
         self.bind("<Map>", self._install_escape_bindtags, add="+")
 
         self.after(185, self._set_icon_safe)
-        self.after(300, self._prepare_geometry)
+        self.after(500, self._prepare_geometry)
 
         self.result = None
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
@@ -171,9 +171,9 @@ class BaseDialog(ctk.CTkToplevel):
             alpha = 0.0
 
         if alpha < 1.0:
-            new_alpha = min(alpha + 0.50, 1.0)
+            new_alpha = min(alpha + 0.85, 1.0)
             self.attributes("-alpha", new_alpha)
-            self.after(15, self._fade_in)
+            self.after(100, self._fade_in)
         else:
             self.focus_set()
 

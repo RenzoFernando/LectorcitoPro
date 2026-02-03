@@ -12,7 +12,6 @@ class ProfilesDialog(BaseDialog):
         title = parent._tr("dlg_profiles_title") if hasattr(parent, "_tr") else "Perfiles"
         super().__init__(parent, title)
 
-        # Ocultamos y quitamos opacidad para evitar parpadeos visuales al calcular geometria
         self.withdraw()
         self.attributes("-alpha", 0.0)
 
@@ -32,8 +31,7 @@ class ProfilesDialog(BaseDialog):
         self._build_ui()
         self._redraw_list()
 
-        # Damos tiempo al sistema para "respirar" antes de calcular la geometria final
-        self.after(300, self._step_calculate_geometry)
+        self.after(500, self._step_calculate_geometry)
 
     def _build_ui(self):
         self.geometry("450x500")
@@ -77,7 +75,6 @@ class ProfilesDialog(BaseDialog):
         self.entry_new.bind("<Return>", lambda e: self._add_profile())
 
     def _step_calculate_geometry(self):
-        # Calcula el centro exacto sin mostrar la ventana aun
         try:
             self.update_idletasks()
 
@@ -98,7 +95,6 @@ class ProfilesDialog(BaseDialog):
             self.attributes("-alpha", 1.0)
 
     def _step_show_window(self):
-        # Hace visible la ventana suavemente y activa la modalidad
         self.deiconify()
         self.attributes("-alpha", 1.0)
         self.lift()
@@ -115,7 +111,6 @@ class ProfilesDialog(BaseDialog):
         for pid in keys:
             self._create_profile_item(pid)
 
-        # Limite de perfiles para evitar desorden visual
         if len(self.profiles) >= 5:
             self.entry_new.configure(state="disabled",
                                      placeholder_text=self.parent_view._tr("msg_max_profiles_reached"))

@@ -28,7 +28,6 @@ class LectorcitoApp(ctk.CTk):
     def __init__(self, cfg: dict, controller):
         super().__init__()
 
-        # Ocultamos ventana inicialmente para evitar parpadeos durante la carga
         self.withdraw()
         self.attributes("-alpha", 0.0)
 
@@ -42,7 +41,6 @@ class LectorcitoApp(ctk.CTk):
         self.tooltips: dict[str, CustomTooltip] = {}
         self._is_modal_open = False
 
-        # --- Configuracion de Ventana ---
         self.title("Lectorcito Pro")
         self._app_w = 600
         self._app_h = 500
@@ -52,22 +50,18 @@ class LectorcitoApp(ctk.CTk):
 
         safe_set_window_icon(self)
 
-        # --- Carga de Recursos ---
         self.icons = load_sidebar_icons()
         self.logo_image = load_logo(target_width=150)
 
-        # --- Construccion UI ---
         self._build_ui()
         self.update_ui_texts()
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
-        # Retraso intencional para asegurar carga completa de recursos antes de mostrar
-        self.after(1000, self._precise_center_and_show)
+        self.after(2500, self._precise_center_and_show)
 
     def _precise_center_and_show(self):
         try:
-            # Necesario para obtener las dimensiones reales tras el renderizado
             self.update_idletasks()
 
             screen_width = self.winfo_screenwidth()
@@ -89,11 +83,10 @@ class LectorcitoApp(ctk.CTk):
     def _fade_in(self):
         alpha = self.attributes("-alpha")
         if alpha < 1:
-            self.attributes("-alpha", min(alpha + 0.08, 1.0))
-            self.after(15, self._fade_in)
+            self.attributes("-alpha", min(alpha + 0.075, 1.0))
+            self.after(10, self._fade_in)
 
     def _close_with_fade_out(self):
-        # Limpieza explicita para evitar referencias colgadas
         try:
             for tp in self.tooltips.values():
                 tp.cleanup()
@@ -125,7 +118,6 @@ class LectorcitoApp(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # Contenedores principales
         left_container = ctk.CTkFrame(self, fg_color="transparent")
         left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(0, 14))
 
@@ -256,7 +248,6 @@ class LectorcitoApp(ctk.CTk):
     # =========================================================================
 
     def update_ui_texts(self):
-        # Saludo dinamico segun la hora
         hour = datetime.datetime.now().hour
         greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
         try:
@@ -265,7 +256,6 @@ class LectorcitoApp(ctk.CTk):
             user = "User"
         self.lbl_greet.configure(text=f"{self._tr(greet_key)} {user}{self._tr('welcome')}")
 
-        # Mapeo de botones principales
         key_map = {
             "selpath": "btn_sel_lecturas",
             "choose": "btn_choose_folder",
@@ -282,7 +272,6 @@ class LectorcitoApp(ctk.CTk):
         self.status_panel.set_translator(lambda k: self._tr(k))
         self.lbl_copyright.configure(text=self._tr("footer_copyright", YEAR, AUTHOR))
 
-        # Tooltips de barra lateral
         tooltip_map = {
             "ver": "tooltip_ver",
             "nover": "tooltip_nover",
@@ -353,7 +342,6 @@ class LectorcitoApp(ctk.CTk):
                 self.apply_theme()
                 self._fade_in()
         except Exception:
-            # Fallback seguro en caso de error UI
             self.current_theme = self._pending_new_theme
             self.apply_theme()
             self.attributes("-alpha", 1.0)
