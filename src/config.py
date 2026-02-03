@@ -1,5 +1,6 @@
 import os
 import json
+import copy
 from appdirs import user_config_dir
 
 # =============================================================================
@@ -43,12 +44,12 @@ DEFAULT_CONFIG_VALUES = {
     "etiquetas_carpetas_excluidas": to_tags(["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]),
     "etiquetas_archivos_excluidos": to_tags(["Pipfile.lock", "package.json", "package-lock.json"]),
     "media_extensions": [
-        '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.ico', '.webp',
-        '.mp4', '.mkv', '.avi', '.mov', '.webm',
-        '.mp3', '.wav', '.flac', '.ogg',
-        '.zip', '.rar', '.7z', '.tar', '.gz',
+        '.png', '.jpg', '.gif', '.svg', '.ico',
+        '.mp4', '.mkv', '.avi',
+        '.mp3', '.wav',
+        '.zip', '.rar', '.7z',
         '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-        '.exe', '.dll', '.bin', '.iso', '.so', '.dylib', ".cer", ".pfx"
+        '.exe', '.bin', '.iso', ".pfx"
     ],
     "etiquetas_multimedia_config": []
 }
@@ -91,14 +92,14 @@ def _migrate_old_keys(data: dict) -> dict:
 
 
 def get_blank_profile() -> dict:
-    return BLANK_PROFILE_CONFIG.copy()
+    return copy.deepcopy(BLANK_PROFILE_CONFIG)
 
 
 def load_config() -> dict:
     base_structure = {
         "active_profile_id": "default",
         "profiles": {
-            "default": DEFAULT_CONFIG_VALUES.copy()
+            "default": copy.deepcopy(DEFAULT_CONFIG_VALUES)
         }
     }
 
@@ -111,7 +112,7 @@ def load_config() -> dict:
                     base_structure = loaded_data
                 else:
                     migrated_data = _migrate_old_keys(loaded_data)
-                    full_default = DEFAULT_CONFIG_VALUES.copy()
+                    full_default = copy.deepcopy(DEFAULT_CONFIG_VALUES)
                     full_default.update(migrated_data)
                     base_structure["profiles"]["default"] = full_default
                     base_structure["active_profile_id"] = "default"
@@ -124,15 +125,15 @@ def load_config() -> dict:
         active_id = "default"
 
     if "default" not in base_structure["profiles"]:
-        base_structure["profiles"]["default"] = DEFAULT_CONFIG_VALUES.copy()
+        base_structure["profiles"]["default"] = copy.deepcopy(DEFAULT_CONFIG_VALUES)
 
     active_data = base_structure["profiles"][active_id]
 
     if active_id == "default":
-        config_completa = DEFAULT_CONFIG_VALUES.copy()
+        config_completa = copy.deepcopy(DEFAULT_CONFIG_VALUES)
         config_completa.update(active_data)
     else:
-        config_completa = BLANK_PROFILE_CONFIG.copy()
+        config_completa = copy.deepcopy(BLANK_PROFILE_CONFIG)
         config_completa.update(active_data)
 
     config_completa["_profiles_meta"] = base_structure["profiles"]
@@ -143,7 +144,7 @@ def load_config() -> dict:
 
 def save_config(config: dict):
     try:
-        profiles = config.get("_profiles_meta", {"default": DEFAULT_CONFIG_VALUES.copy()})
+        profiles = config.get("_profiles_meta", {"default": copy.deepcopy(DEFAULT_CONFIG_VALUES)})
         active_id = config.get("_active_profile_id", "default")
 
         current_profile_data = config.copy()

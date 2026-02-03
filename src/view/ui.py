@@ -58,7 +58,7 @@ class LectorcitoApp(ctk.CTk):
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
-        self.after(2500, self._precise_center_and_show)
+        self.after(2000, self._precise_center_and_show)
 
     def _precise_center_and_show(self):
         try:
@@ -83,8 +83,8 @@ class LectorcitoApp(ctk.CTk):
     def _fade_in(self):
         alpha = self.attributes("-alpha")
         if alpha < 1:
-            self.attributes("-alpha", min(alpha + 0.075, 1.0))
-            self.after(10, self._fade_in)
+            self.attributes("-alpha", min(alpha + 0.05, 1.0))
+            self.after(25, self._fade_in)
 
     def _close_with_fade_out(self):
         try:

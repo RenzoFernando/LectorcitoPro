@@ -171,9 +171,9 @@ class BaseDialog(ctk.CTkToplevel):
             alpha = 0.0
 
         if alpha < 1.0:
-            new_alpha = min(alpha + 0.85, 1.0)
+            new_alpha = min(alpha + 0.05, 1.0)
             self.attributes("-alpha", new_alpha)
-            self.after(100, self._fade_in)
+            self.after(25, self._fade_in)
         else:
             self.focus_set()
 
