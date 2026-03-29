@@ -106,8 +106,8 @@ TRANSLATIONS = {
         # --- SETTINGS ---
         "dlg_settings_title": "Configuración General",
         "lbl_report_format": "Formato de archivo:",
-        "lbl_exe_path": "Ruta de la aplicación (LectorcitoPro.exe):",
-        "lbl_exe_example": "Ejemplo: C:\\Users\\TuUsuario\\Downloads\\LectorcitoPro.exe",
+        "lbl_exe_path": "Ruta de la aplicación ({}):",
+        "lbl_exe_example": "Ejemplo: C:\\Users\\TuUsuario\\Downloads\\{}",
         "ph_exe_path": "Pegue la ruta aquí...",
         "lbl_system_shortcuts": "Accesos directos e integración:",
         "btn_shortcut_desktop": "Crear acceso directo en Escritorio",
@@ -127,7 +127,7 @@ TRANSLATIONS = {
 
         "msg_shortcut_error": "No se pudo realizar la acción:\n{}",
         "msg_path_invalid": "La ruta proporcionada no existe o no es un archivo .exe válido.\nPor favor verifique que no tenga comillas.",
-        "shortcut_desc": "Lectorcito Pro - Análisis de Código",
+        "shortcut_desc": "{} - Análisis de Código",
         "shortcut_script_warning": "AVISO: En modo script, el acceso directo apuntará al intérprete Python.",
 
         # --- CONTENIDO REPORTE ---
@@ -259,8 +259,8 @@ TRANSLATIONS = {
         # --- SETTINGS ---
         "dlg_settings_title": "General Settings",
         "lbl_report_format": "Report File Format:",
-        "lbl_exe_path": "Application Path (LectorcitoPro.exe):",
-        "lbl_exe_example": "Ex: C:\\Users\\User\\Downloads\\LectorcitoPro.exe",
+        "lbl_exe_path": "Application Path ({}):",
+        "lbl_exe_example": "Ex: C:\\Users\\User\\Downloads\\{}",
         "ph_exe_path": "Paste path here...",
         "lbl_system_shortcuts": "System Integration:",
         "btn_shortcut_desktop": "Create Desktop Shortcut",
@@ -280,7 +280,7 @@ TRANSLATIONS = {
 
         "msg_shortcut_error": "Could not perform action:\n{}",
         "msg_path_invalid": "The provided path does not exist or is not a valid .exe file.\nPlease check (no quotes).",
-        "shortcut_desc": "Lectorcito Pro - Code Analysis",
+        "shortcut_desc": "{} - Code Analysis",
         "shortcut_script_warning": "WARNING: In script mode, the shortcut will point to the Python interpreter.",
 
         # --- REPORT CONTENT ---

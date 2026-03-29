@@ -2,13 +2,15 @@ import os
 import json
 import copy
 from appdirs import user_config_dir
+from app_meta import APP_NAME_INTERNAL, APP_VENDOR_NAME
+from file_rules import normalize_file_rule_list, normalize_file_tag_list
 
 # =============================================================================
 # CONFIGURACION DEL SISTEMA
 # =============================================================================
 
-APP_NAME = "LectorcitoPro"
-APP_AUTHOR = "APPS_RenzoFernando"
+APP_NAME = APP_NAME_INTERNAL
+APP_AUTHOR = APP_VENDOR_NAME
 CFG_NAME = "config.json"
 LOG_NAME = "error.log"
 
@@ -24,6 +26,33 @@ os.makedirs(DEFAULT_LECTURAS_PATH, exist_ok=True)
 
 def to_tags(items: list[str]) -> list[dict]:
     return [{"nombre": item, "estado": "activo"} for item in items]
+
+
+def _normalize_profile_file_rules(profile: dict) -> dict:
+    normalized_profile = copy.deepcopy(profile)
+    normalized_profile["etiquetas_extensiones_incluidas"] = normalize_file_tag_list(
+        normalized_profile.get("etiquetas_extensiones_incluidas", [])
+    )
+    normalized_profile["etiquetas_archivos_excluidos"] = normalize_file_tag_list(
+        normalized_profile.get("etiquetas_archivos_excluidos", [])
+    )
+    normalized_profile["etiquetas_multimedia_config"] = normalize_file_tag_list(
+        normalized_profile.get("etiquetas_multimedia_config", [])
+    )
+    normalized_profile["media_extensions"] = normalize_file_rule_list(
+        normalized_profile.get("media_extensions", [])
+    )
+    return normalized_profile
+
+
+def _normalize_profiles_meta(profiles: dict) -> dict:
+    normalized_profiles = {}
+    for profile_id, profile_data in profiles.items():
+        if isinstance(profile_data, dict):
+            normalized_profiles[profile_id] = _normalize_profile_file_rules(profile_data)
+        else:
+            normalized_profiles[profile_id] = profile_data
+    return normalized_profiles
 
 
 # =============================================================================
@@ -70,6 +99,9 @@ BLANK_PROFILE_CONFIG = {
     "media_extensions": [],
     "etiquetas_multimedia_config": []
 }
+
+DEFAULT_CONFIG_VALUES = _normalize_profile_file_rules(DEFAULT_CONFIG_VALUES)
+BLANK_PROFILE_CONFIG = _normalize_profile_file_rules(BLANK_PROFILE_CONFIG)
 
 
 # =============================================================================
@@ -127,6 +159,7 @@ def load_config() -> dict:
     if "default" not in base_structure["profiles"]:
         base_structure["profiles"]["default"] = copy.deepcopy(DEFAULT_CONFIG_VALUES)
 
+    base_structure["profiles"] = _normalize_profiles_meta(base_structure["profiles"])
     active_data = base_structure["profiles"][active_id]
 
     if active_id == "default":
@@ -136,6 +169,7 @@ def load_config() -> dict:
         config_completa = copy.deepcopy(BLANK_PROFILE_CONFIG)
         config_completa.update(active_data)
 
+    config_completa = _normalize_profile_file_rules(config_completa)
     config_completa["_profiles_meta"] = base_structure["profiles"]
     config_completa["_active_profile_id"] = active_id
 
@@ -145,12 +179,14 @@ def load_config() -> dict:
 def save_config(config: dict):
     try:
         profiles = config.get("_profiles_meta", {"default": copy.deepcopy(DEFAULT_CONFIG_VALUES)})
+        profiles = _normalize_profiles_meta(profiles)
         active_id = config.get("_active_profile_id", "default")
 
         current_profile_data = config.copy()
         if "_profiles_meta" in current_profile_data: del current_profile_data["_profiles_meta"]
         if "_active_profile_id" in current_profile_data: del current_profile_data["_active_profile_id"]
 
+        current_profile_data = _normalize_profile_file_rules(current_profile_data)
         profiles[active_id] = current_profile_data
 
         final_json = {

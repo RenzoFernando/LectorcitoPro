@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lectorcito-pro"
-version = "6.0.0"
+dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
   "appdirs",
@@ -16,6 +16,9 @@ dependencies = [
   "psutil",
   "tkfilebrowser",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "app_meta.APP_VERSION"}
 
 [tool.setuptools]
 package-dir = {"" = "src"}

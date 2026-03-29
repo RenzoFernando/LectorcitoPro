@@ -2,6 +2,7 @@ import customtkinter as ctk
 import copy
 import os
 from tkinter import filedialog
+from file_rules import file_rules_conflict, matches_file_rule, normalize_file_rule, normalize_file_tag_list
 from view.dialogs import BaseDialog, _get_color_tuple, _style_button
 from view.ui_constants import COLORS
 
@@ -25,14 +26,13 @@ class TagsConfigDialog(BaseDialog):
         self.single_mode = (folders_prompt is None)
         self.allow_autodetect = allow_autodetect
 
-        # Guardamos listas de exclusion para la autodeteccion inteligente
         self.excluded_folders = excluded_folders if excluded_folders else []
-        self.excluded_files = excluded_files if excluded_files else []
-        self.media_extensions = media_extensions if media_extensions else []
-        self.forbidden_items = forbidden_items if forbidden_items else set()
+        self.excluded_files = normalize_file_tag_list(excluded_files if excluded_files else [])
+        self.media_extensions = [normalize_file_rule(ext) for ext in media_extensions] if media_extensions else []
+        self.forbidden_items = {normalize_file_rule(item) for item in forbidden_items} if forbidden_items else set()
 
         self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
-        self.files_list = copy.deepcopy(initial_files)
+        self.files_list = normalize_file_tag_list(initial_files)
         self._parent = parent
 
         blue_btn = COLORS['button']['blue']
@@ -58,7 +58,6 @@ class TagsConfigDialog(BaseDialog):
             self.main_frame.grid_rowconfigure(1, weight=1)
             self.main_frame.grid_rowconfigure(4, weight=1)
 
-        # Seccion de acciones
         separator = ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line"))
         separator.grid(row=6, column=0, sticky="ew", padx=0, pady=(10, 0))
 
@@ -131,30 +130,31 @@ class TagsConfigDialog(BaseDialog):
 
         added_count = 0
 
-        # Preparacion de sets para busqueda eficiente
         excl_folders_set = {t["nombre"] for t in self.excluded_folders if t["estado"] == "activo"}
-        excl_files_set = {t["nombre"] for t in self.excluded_files if t["estado"] == "activo"}
-        media_set = {ext.lower() for ext in self.media_extensions}
-        current_exts = {t["nombre"].lower() for t in self.files_list}
+        excl_files_rules = [t["nombre"] for t in self.excluded_files if t["estado"] == "activo"]
+        media_rules = list(self.media_extensions)
+        current_file_rules = [t["nombre"] for t in self.files_list]
 
         try:
             for root, dirs, files in os.walk(path):
-                # Filtramos directorios in-place para evitar recurrir en carpetas excluidas
                 dirs[:] = [d for d in dirs if d not in excl_folders_set]
 
                 for filename in files:
-                    if filename in excl_files_set:
+                    if matches_file_rule(filename, excl_files_rules):
                         continue
 
                     _, ext = os.path.splitext(filename)
-                    ext = ext.lower()
+                    ext = normalize_file_rule(ext)
 
-                    if not ext: continue
-                    if ext in media_set: continue
-                    if ext in current_exts: continue
+                    if not ext:
+                        continue
+                    if matches_file_rule(filename, media_rules):
+                        continue
+                    if matches_file_rule(filename, current_file_rules):
+                        continue
 
                     self.files_list.append({"nombre": ext, "estado": "activo"})
-                    current_exts.add(ext)
+                    current_file_rules.append(ext)
                     added_count += 1
 
             self.redraw_all_tags()
@@ -227,17 +227,16 @@ class TagsConfigDialog(BaseDialog):
         if not raw_val:
             return
 
-        if not is_folder and not raw_val.startswith("."):
-            tag_to_check = f".{raw_val}"
-        else:
-            tag_to_check = raw_val
+        tag_to_check = raw_val if is_folder else normalize_file_rule(raw_val)
 
-        if any(t["nombre"] == tag_to_check for t in tag_list):
+        if any(
+            file_rules_conflict(t["nombre"], tag_to_check) if not is_folder else t["nombre"] == tag_to_check
+            for t in tag_list
+        ):
             entry.delete(0, "end")
             return
 
-        # Validacion de conflictos de prioridad
-        if tag_to_check in self.forbidden_items:
+        if not is_folder and any(file_rules_conflict(item, tag_to_check) for item in self.forbidden_items):
             self._parent.show_message("error_title", "msg_tag_conflict", tag_to_check)
             entry.delete(0, "end")
             return
@@ -258,6 +257,7 @@ class TagsConfigDialog(BaseDialog):
             self.redraw_all_tags()
 
     def _on_ok(self, event=None):
+        self.files_list = normalize_file_tag_list(self.files_list)
         if self.single_mode:
             self.result = (None, self.files_list)
         else:

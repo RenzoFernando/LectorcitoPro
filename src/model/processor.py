@@ -1,6 +1,7 @@
 import os
 import threading
 from time import sleep
+from file_rules import matches_file_rule
 from view.translations import TRANSLATIONS
 
 
@@ -30,13 +31,12 @@ def _count_files_to_process(folder: str, config: dict) -> int:
 
     try:
         for root, dirs, files in os.walk(folder, topdown=True):
-            # Edicion in-place para evitar recorrer carpetas excluidas
             dirs[:] = [d for d in dirs if d not in folders_to_exclude]
 
             for filename in files:
-                if filename in files_to_exclude:
+                if matches_file_rule(filename, files_to_exclude):
                     continue
-                if any(filename.lower().endswith(ext) for ext in extensions_to_check):
+                if matches_file_rule(filename, extensions_to_check):
                     file_count += 1
     except OSError as e:
         print(f"Error contando archivos: {e}")
@@ -94,9 +94,10 @@ def generate_report(
 
                 files_in_dir = []
                 for filename in files:
-                    if filename in excluded_files: continue
-                    is_text = any(filename.lower().endswith(ext) for ext in text_ext)
-                    is_media = any(filename.lower().endswith(ext) for ext in media_ext)
+                    if matches_file_rule(filename, excluded_files):
+                        continue
+                    is_text = matches_file_rule(filename, text_ext)
+                    is_media = matches_file_rule(filename, media_ext)
 
                     if is_text or is_media:
                         files_in_dir.append((filename, is_text, is_media))
@@ -202,7 +203,7 @@ def _build_tree_recursive(current_path, prefix, outfile, config):
             if elem not in excluded_folders:
                 filtered_elements.append(elem)
         else:
-            if elem not in excluded_files and any(elem.lower().endswith(ext) for ext in valid_ext):
+            if not matches_file_rule(elem, excluded_files) and matches_file_rule(elem, valid_ext):
                 filtered_elements.append(elem)
     elements = filtered_elements
 

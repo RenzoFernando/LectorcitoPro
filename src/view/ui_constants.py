@@ -1,13 +1,13 @@
-import datetime
+from app_meta import APP_VERSION, APP_AUTHOR, APP_REPOSITORY_URL, get_current_year
 
 # =============================================================================
 # CONSTANTES DE INTERFAZ
 # =============================================================================
 
-VERSION = "7.2.3"
-YEAR = datetime.datetime.now().year
-AUTHOR = "Renzo Fernando Mosquera Daza"
-REPO_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"
+VERSION = APP_VERSION
+YEAR = get_current_year()
+AUTHOR = APP_AUTHOR
+REPO_URL = APP_REPOSITORY_URL
 
 # Definicion de paletas de colores para temas Claro/Oscuro
 COLORS = {

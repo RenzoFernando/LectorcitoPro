@@ -8,6 +8,8 @@ from tkinter import filedialog
 import win32com.client
 
 import config
+from app_meta import APP_DISPLAY_NAME, APP_NAME_INTERNAL
+from file_rules import canonical_file_rule, normalize_file_rule_list, normalize_file_tag_list
 from view.dialogs import ConfirmDialog, ChoiceDialog, MessageDialog
 from view.tags_dialog import TagsConfigDialog
 from view.profiles_dialog import ProfilesDialog
@@ -102,12 +104,8 @@ def show_view_config_dialog(controller):
 
     if result is not None:
         new_folders, new_files = result
-        for tag in new_files:
-            if not tag["nombre"].startswith("."):
-                tag["nombre"] = f".{tag['nombre']}"
-
         controller.config["etiquetas_carpetas_importantes"] = new_folders
-        controller.config["etiquetas_extensiones_incluidas"] = new_files
+        controller.config["etiquetas_extensiones_incluidas"] = normalize_file_tag_list(new_files)
         save_preferences_silent(controller)
 
 
@@ -127,7 +125,7 @@ def show_no_view_config_dialog(controller):
     if result is not None:
         new_folders, new_files = result
         controller.config["etiquetas_carpetas_excluidas"] = new_folders
-        controller.config["etiquetas_archivos_excluidos"] = new_files
+        controller.config["etiquetas_archivos_excluidos"] = normalize_file_tag_list(new_files)
         save_preferences_silent(controller)
 
 
@@ -140,8 +138,8 @@ def show_etiqueta_config_dialog(controller):
     else:
         current_files = tags_stored
 
-    view_exts = {t['nombre'] for t in controller.config.get("etiquetas_extensiones_incluidas", [])}
-    no_view_items = {t['nombre'] for t in controller.config.get("etiquetas_archivos_excluidos", [])}
+    view_exts = {canonical_file_rule(t["nombre"]) for t in controller.config.get("etiquetas_extensiones_incluidas", [])}
+    no_view_items = {canonical_file_rule(t["nombre"]) for t in controller.config.get("etiquetas_archivos_excluidos", [])}
     forbidden_set = view_exts.union(no_view_items)
 
     result = TagsConfigDialog.get_input(
@@ -156,15 +154,11 @@ def show_etiqueta_config_dialog(controller):
 
     if result is not None:
         _, new_files = result
+        normalized_files = normalize_file_tag_list(new_files)
+        controller.config["etiquetas_multimedia_config"] = normalized_files
 
-        for tag in new_files:
-            if not tag["nombre"].startswith("."):
-                tag["nombre"] = f".{tag['nombre']}"
-
-        controller.config["etiquetas_multimedia_config"] = new_files
-
-        active_media_exts = [t["nombre"] for t in new_files if t["estado"] == "activo"]
-        controller.config["media_extensions"] = active_media_exts
+        active_media_exts = [t["nombre"] for t in normalized_files if t["estado"] == "activo"]
+        controller.config["media_extensions"] = normalize_file_rule_list(active_media_exts)
 
         save_preferences_silent(controller)
 
@@ -226,7 +220,7 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
 
     try:
         work_dir = os.path.dirname(target_path)
-        app_name = "LectorcitoPro"
+        app_name = APP_NAME_INTERNAL
 
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         if not getattr(sys, 'frozen', False):
@@ -267,7 +261,7 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
         if os.path.exists(icon_path):
             shortcut.IconLocation = f"{icon_path},0"
         shortcut.WindowStyle = 1
-        shortcut.Description = controller.view._tr("shortcut_desc")
+        shortcut.Description = controller.view._tr("shortcut_desc", APP_DISPLAY_NAME)
         shortcut.Save()
 
         if mode in ["taskbar", "start_pin"]:

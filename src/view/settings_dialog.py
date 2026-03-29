@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from app_meta import APP_EXECUTABLE_NAME
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple
 
 

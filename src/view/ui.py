@@ -6,6 +6,7 @@ import os
 import random
 import webbrowser
 
+from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
 from view.translations import TRANSLATIONS
 from view.dialogs import MessageDialog
 from view.tooltip import CustomTooltip

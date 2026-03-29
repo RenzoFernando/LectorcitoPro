@@ -6,6 +6,7 @@ from tkinter import messagebox
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from controller.controller import LectorcitoController
+from app_meta import APP_DISPLAY_NAME
 import utils
 
 
@@ -33,7 +34,7 @@ def main():
         try:
             root = tk.Tk()
             root.withdraw()
-            messagebox.showerror("Error Crítico Lectorcito Pro", error_msg)
+            messagebox.showerror(f"Error Crítico {APP_DISPLAY_NAME}", error_msg)
             root.destroy()
         except:
             print(error_msg)
