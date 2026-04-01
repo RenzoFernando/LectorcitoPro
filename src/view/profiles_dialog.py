@@ -1,4 +1,3 @@
-
 import customtkinter as ctk
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple, ConfirmDialog
 from view.ui_constants import COLORS
@@ -9,12 +8,13 @@ from view.ui_constants import COLORS
 # =============================================================================
 
 class ProfilesDialog(BaseDialog):
-    def __init__(self, parent, profiles_meta: dict, active_id: str, on_save_callback=None):
+    def __init__(self, parent, profiles_meta: dict | None = None, active_id: str = "default", on_save_callback=None,
+                 persistent: bool = False, defer_show: bool = False):
         title = parent._tr("dlg_profiles_title") if hasattr(parent, "_tr") else "Perfiles"
-        super().__init__(parent, title)
+        super().__init__(parent, title, persistent=persistent, defer_show=defer_show)
 
-        self.profiles = profiles_meta.copy()
-        self.active_id = active_id
+        self.profiles = {}
+        self.active_id = "default"
         self.result = None
         self.parent_view = parent
         self.on_save_callback = on_save_callback
@@ -27,20 +27,21 @@ class ProfilesDialog(BaseDialog):
         }
 
         self._build_ui()
-        self._redraw_list()
+        self.load_state(profiles_meta if profiles_meta is not None else {"default": {}}, active_id, on_save_callback)
 
     def _build_ui(self):
         self.geometry("450x500")
 
         self.main_frame = self._create_card_frame()
 
-        ctk.CTkLabel(
+        self.lbl_select_profile = ctk.CTkLabel(
             self.main_frame,
             text=self.parent_view._tr("lbl_select_profile") if hasattr(self.parent_view,
                                                                        "_tr") else "Seleccione un Perfil",
             font=("Segoe UI", 14, "bold"),
             text_color=self.colors["text"]
-        ).pack(pady=(20, 10))
+        )
+        self.lbl_select_profile.pack(pady=(20, 10))
 
         self.scroll_frame = ctk.CTkScrollableFrame(
             self.main_frame,
@@ -70,6 +71,27 @@ class ProfilesDialog(BaseDialog):
 
         self.entry_new.bind("<Return>", lambda e: self._add_profile())
 
+    def refresh_texts(self):
+        try:
+            self.title(self.parent_view._tr("dlg_profiles_title"))
+        except Exception:
+            pass
+        self.lbl_select_profile.configure(
+            text=self.parent_view._tr("lbl_select_profile") if hasattr(self.parent_view, "_tr") else "Seleccione un Perfil"
+        )
+        self._redraw_list()
+
+    def load_state(self, profiles_meta: dict, active_id: str, on_save_callback=None):
+        self.profiles = profiles_meta.copy() if profiles_meta else {"default": {}}
+        self.active_id = active_id if active_id in self.profiles else "default"
+        self.on_save_callback = on_save_callback
+        self.result = None
+        self.refresh_texts()
+        try:
+            self.entry_new.delete(0, "end")
+        except Exception:
+            pass
+
     def _redraw_list(self):
         for w in self.scroll_frame.winfo_children():
             w.destroy()
@@ -87,12 +109,6 @@ class ProfilesDialog(BaseDialog):
         else:
             self.entry_new.configure(state="normal", placeholder_text=self.parent_view._tr("ph_new_profile"))
             self.btn_add.configure(state="normal")
-
-        if len(self.profiles) < 5:
-            try:
-                self.entry_new.focus_set()
-            except Exception:
-                pass
 
     def _create_profile_item(self, pid):
         is_active = (pid == self.active_id)
@@ -172,6 +188,13 @@ class ProfilesDialog(BaseDialog):
             self._redraw_list()
             self._on_ok()
 
+    def present(self):
+        super().present()
+        try:
+            self.entry_new.focus_set()
+        except Exception:
+            pass
+
     def _on_ok(self, event=None):
         self.result = (self.active_id, self.profiles)
         self._close_with_fade_out()
@@ -197,5 +220,3 @@ class ProfilesDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
-
-

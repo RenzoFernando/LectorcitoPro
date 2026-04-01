@@ -1,4 +1,5 @@
 
+
 import os
 import sys
 import shutil
@@ -91,8 +92,8 @@ def show_view_config_dialog(controller):
     excl_files = controller.config.get("etiquetas_archivos_excluidos", [])
     media_exts = controller.config.get("media_extensions", [])
 
-    result = TagsConfigDialog.get_input(
-        parent=controller.view,
+    dialog = controller.view.get_view_dialog()
+    dialog.load_state(
         title=controller.view._tr("dlg_ver_title"),
         folders_prompt=controller.view._tr("dlg_ver_folder_prompt"),
         initial_folders=current_folders,
@@ -103,6 +104,8 @@ def show_view_config_dialog(controller):
         excluded_files=excl_files,
         media_extensions=media_exts
     )
+    dialog.present()
+    result = dialog.wait_result()
 
     if result is not None:
         new_folders, new_files = result
@@ -115,14 +118,16 @@ def show_no_view_config_dialog(controller):
     current_folders = controller.config.get("etiquetas_carpetas_excluidas", [])
     current_files = controller.config.get("etiquetas_archivos_excluidos", [])
 
-    result = TagsConfigDialog.get_input(
-        parent=controller.view,
+    dialog = controller.view.get_no_view_dialog()
+    dialog.load_state(
         title=controller.view._tr("dlg_nover_title"),
         folders_prompt=controller.view._tr("dlg_nover_folder_prompt"),
         initial_folders=current_folders,
         files_prompt=controller.view._tr("dlg_nover_file_prompt"),
         initial_files=current_files
     )
+    dialog.present()
+    result = dialog.wait_result()
 
     if result is not None:
         new_folders, new_files = result
@@ -144,8 +149,8 @@ def show_etiqueta_config_dialog(controller):
     no_view_items = {canonical_file_rule(t["nombre"]) for t in controller.config.get("etiquetas_archivos_excluidos", [])}
     forbidden_set = view_exts.union(no_view_items)
 
-    result = TagsConfigDialog.get_input(
-        parent=controller.view,
+    dialog = controller.view.get_media_dialog()
+    dialog.load_state(
         title=controller.view._tr("dlg_etiqueta_title"),
         folders_prompt=None,
         initial_folders=None,
@@ -153,6 +158,8 @@ def show_etiqueta_config_dialog(controller):
         initial_files=current_files,
         forbidden_items=forbidden_set
     )
+    dialog.present()
+    result = dialog.wait_result()
 
     if result is not None:
         _, new_files = result
@@ -179,13 +186,15 @@ def show_settings_dialog(controller):
     def on_shortcut(mode, exe_path_input, parent_window=None):
         _create_system_shortcut(controller, mode, exe_path_input, parent_window)
 
-    SettingsDialog.ask(
-        parent=controller.view,
+    dialog = controller.view.get_settings_dialog()
+    dialog.load_state(
         current_extension=current_ext,
         current_exe_path=current_exe,
         on_save_callback=on_save,
         on_shortcut_callback=on_shortcut
     )
+    dialog.present()
+    dialog.wait_result()
 
 
 def _update_settings_values(controller, new_ext, new_exe_path):
@@ -352,7 +361,7 @@ def _show_msg_safe(parent, title_key, msg_key, *args):
 # =============================================================================
 
 def manage_profiles(controller):
-    controller.view.after(300, lambda: _open_profiles_dialog_safe(controller))
+    _open_profiles_dialog_safe(controller)
 
 
 def _save_meta_immediate(controller, profiles_snapshot):
@@ -371,12 +380,14 @@ def _open_profiles_dialog_safe(controller):
     if not profiles:
         profiles = {"default": config.DEFAULT_CONFIG_VALUES.copy()}
 
-    result = ProfilesDialog.ask(
-        controller.view,
-        profiles,
-        active_id,
+    dialog = controller.view.get_profiles_dialog()
+    dialog.load_state(
+        profiles_meta=profiles,
+        active_id=active_id,
         on_save_callback=lambda p: _save_meta_immediate(controller, p)
     )
+    dialog.present()
+    result = dialog.wait_result()
 
     if result:
         new_active_id, new_profiles_meta = result
@@ -483,7 +494,3 @@ def toggle_language(controller):
     controller.config["language"] = controller.view.lang
     controller.view.update_ui_texts()
     save_preferences_silent(controller)
-
-
-
-

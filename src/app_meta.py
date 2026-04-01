@@ -1,6 +1,6 @@
 APP_NAME_INTERNAL = "LectorcitoPro"
 APP_DISPLAY_NAME = "Lectorcito Pro"
-APP_VERSION = "8.0.1"
+APP_VERSION = "8.0.3"
 APP_AUTHOR = "Renzo Fernando Mosquera Daza"
 APP_VENDOR_NAME = "APPS_RenzoFernando"
 APP_REPOSITORY_URL = "https://github.com/RenzoFernando/LectorcitoPro.git"

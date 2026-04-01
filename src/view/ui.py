@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import customtkinter as ctk
@@ -21,6 +20,9 @@ from view.ui_constants import (
 from view.ui_assets import load_sidebar_icons, load_logo, safe_set_window_icon
 from view.sidebars import LeftSidebar, RightSidebar, PillTextButton
 from view.status_panel import StatusPanel
+from view.profiles_dialog import ProfilesDialog
+from view.settings_dialog import SettingsDialog
+from view.tags_dialog import TagsConfigDialog
 
 
 # =============================================================================
@@ -45,6 +47,7 @@ class LectorcitoApp(ctk.CTk):
         self.tooltips: dict[str, CustomTooltip] = {}
         self._is_modal_open = False
         self._modal_fail_safe_after_id = None
+        self._dialog_cache = {}
 
         self.title("Lectorcito Pro")
         self._app_w = 600
@@ -64,6 +67,7 @@ class LectorcitoApp(ctk.CTk):
         self.toggle_ui_for_processing(is_active=False)
 
         self.after(MAIN_WINDOW_SHOW_DELAY_MS, self._precise_center_and_show)
+        self.after(MAIN_WINDOW_SHOW_DELAY_MS + 260, self._preload_persistent_dialogs)
 
     def get_real_window_rect(self):
         return _get_widget_window_rect(self)
@@ -116,6 +120,15 @@ class LectorcitoApp(ctk.CTk):
             pass
         try:
             self.status_panel.cleanup()
+        except Exception:
+            pass
+        try:
+            for dialog in self._dialog_cache.values():
+                try:
+                    if dialog.winfo_exists():
+                        dialog.destroy()
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -315,6 +328,16 @@ class LectorcitoApp(ctk.CTk):
                 else:
                     self.tooltips[key] = CustomTooltip(btn, text=txt)
 
+        try:
+            for dialog in self._dialog_cache.values():
+                try:
+                    if dialog.winfo_exists() and hasattr(dialog, "refresh_texts"):
+                        dialog.refresh_texts()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
     def apply_theme(self):
         is_light = self.current_theme == "Light"
         ctk.set_appearance_mode(self.current_theme)
@@ -368,6 +391,117 @@ class LectorcitoApp(ctk.CTk):
             self.apply_theme()
             self.attributes("-alpha", 1.0)
 
+    def _create_view_dialog(self):
+        return TagsConfigDialog(
+            parent=self,
+            title=self._tr("dlg_ver_title"),
+            folders_prompt=self._tr("dlg_ver_folder_prompt"),
+            initial_folders=self.controller.config.get("etiquetas_carpetas_importantes", []),
+            files_prompt=self._tr("dlg_ver_file_prompt"),
+            initial_files=self.controller.config.get("etiquetas_extensiones_incluidas", []),
+            allow_autodetect=True,
+            excluded_folders=self.controller.config.get("etiquetas_carpetas_excluidas", []),
+            excluded_files=self.controller.config.get("etiquetas_archivos_excluidos", []),
+            media_extensions=self.controller.config.get("media_extensions", []),
+            persistent=True,
+            defer_show=True
+        )
+
+    def _create_no_view_dialog(self):
+        return TagsConfigDialog(
+            parent=self,
+            title=self._tr("dlg_nover_title"),
+            folders_prompt=self._tr("dlg_nover_folder_prompt"),
+            initial_folders=self.controller.config.get("etiquetas_carpetas_excluidas", []),
+            files_prompt=self._tr("dlg_nover_file_prompt"),
+            initial_files=self.controller.config.get("etiquetas_archivos_excluidos", []),
+            persistent=True,
+            defer_show=True
+        )
+
+    def _create_media_dialog(self):
+        tags_stored = self.controller.config.get("etiquetas_multimedia_config", [])
+        if not tags_stored:
+            raw_exts = self.controller.config.get("media_extensions", [])
+            current_files = [{"nombre": x, "estado": "activo"} for x in raw_exts]
+        else:
+            current_files = tags_stored
+        view_exts = {t["nombre"] for t in self.controller.config.get("etiquetas_extensiones_incluidas", [])}
+        no_view_items = {t["nombre"] for t in self.controller.config.get("etiquetas_archivos_excluidos", [])}
+        return TagsConfigDialog(
+            parent=self,
+            title=self._tr("dlg_etiqueta_title"),
+            folders_prompt=None,
+            initial_folders=None,
+            files_prompt=self._tr("dlg_etiqueta_file_prompt"),
+            initial_files=current_files,
+            forbidden_items=view_exts.union(no_view_items),
+            persistent=True,
+            defer_show=True
+        )
+
+    def _create_profiles_dialog(self):
+        profiles = self.controller.config.get("_profiles_meta", {})
+        active_id = self.controller.config.get("_active_profile_id", "default")
+        if not profiles:
+            profiles = {"default": self.controller.config.copy()}
+        return ProfilesDialog(
+            parent=self,
+            profiles_meta=profiles,
+            active_id=active_id,
+            persistent=True,
+            defer_show=True
+        )
+
+    def _create_settings_dialog(self):
+        return SettingsDialog(
+            parent=self,
+            current_extension=self.controller.config.get("report_extension", ".txt"),
+            current_exe_path=self.controller.config.get("custom_exe_path", ""),
+            persistent=True,
+            defer_show=True
+        )
+
+    def _get_or_create_dialog(self, key, factory):
+        dialog = self._dialog_cache.get(key)
+        if dialog is None:
+            dialog = factory()
+            self._dialog_cache[key] = dialog
+        else:
+            try:
+                if not dialog.winfo_exists():
+                    dialog = factory()
+                    self._dialog_cache[key] = dialog
+            except Exception:
+                dialog = factory()
+                self._dialog_cache[key] = dialog
+        return dialog
+
+    def _preload_persistent_dialogs(self):
+        try:
+            self.get_view_dialog()
+            self.get_no_view_dialog()
+            self.get_media_dialog()
+            self.get_profiles_dialog()
+            self.get_settings_dialog()
+        except Exception:
+            pass
+
+    def get_view_dialog(self):
+        return self._get_or_create_dialog("view", self._create_view_dialog)
+
+    def get_no_view_dialog(self):
+        return self._get_or_create_dialog("no_view", self._create_no_view_dialog)
+
+    def get_media_dialog(self):
+        return self._get_or_create_dialog("media", self._create_media_dialog)
+
+    def get_profiles_dialog(self):
+        return self._get_or_create_dialog("profiles", self._create_profiles_dialog)
+
+    def get_settings_dialog(self):
+        return self._get_or_create_dialog("settings", self._create_settings_dialog)
+
 
     # =========================================================================
     # ESTADO Y CONTROL
@@ -393,8 +527,13 @@ class LectorcitoApp(ctk.CTk):
         try:
             for child in self.winfo_children():
                 try:
-                    if getattr(child, "_is_base_dialog", False) and child.winfo_exists():
-                        return True
+                    if not getattr(child, "_is_base_dialog", False):
+                        continue
+                    if not child.winfo_exists():
+                        continue
+                    if str(child.state()) == "withdrawn":
+                        continue
+                    return True
                 except Exception:
                     pass
         except Exception:
@@ -463,6 +602,3 @@ class LectorcitoApp(ctk.CTk):
 
     def show_app_info(self):
         webbrowser.open("https://renzofernando.github.io/LectorcitoPro/")
-
-
-

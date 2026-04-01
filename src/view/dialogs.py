@@ -1,4 +1,3 @@
-
 import customtkinter as ctk
 import os
 from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
@@ -110,18 +109,21 @@ def _get_centered_position(target_rect, win_w: int, win_h: int):
 
 class BaseDialog(ctk.CTkToplevel):
 
-    def __init__(self, parent, title: str):
+    def __init__(self, parent, title: str, persistent: bool = False, defer_show: bool = False):
         CustomTooltip.hide_global()
 
         super().__init__(parent)
         self.parent = parent
         self._is_base_dialog = True
+        self._persistent_mode = bool(persistent)
+        self._defer_show = bool(defer_show)
+        self._done_var = ctk.BooleanVar(master=parent, value=False)
 
         try:
             self.withdraw()
             self.attributes("-alpha", 0.0)
 
-            if hasattr(parent, "dim_ui_for_modal"):
+            if not self._defer_show and hasattr(parent, "dim_ui_for_modal"):
                 parent.dim_ui_for_modal()
 
             try:
@@ -145,7 +147,8 @@ class BaseDialog(ctk.CTkToplevel):
             self.bind("<Map>", self._install_escape_bindtags, add="+")
 
             self.after(DIALOG_ICON_DELAY_MS, self._set_icon_safe)
-            self.after(DIALOG_PREPARE_DELAY_MS, self._prepare_geometry)
+            if not self._defer_show:
+                self.after(DIALOG_PREPARE_DELAY_MS, self._prepare_geometry)
 
             self.result = None
             self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
@@ -206,6 +209,43 @@ class BaseDialog(ctk.CTkToplevel):
                 pass
 
         apply_tag(self)
+
+    def present(self):
+        if not self.winfo_exists():
+            return
+        self._closing_grab_released = False
+        self.result = None
+        try:
+            self._done_var.set(False)
+        except Exception:
+            pass
+        CustomTooltip.hide_global()
+        if hasattr(self.parent, "dim_ui_for_modal"):
+            self.parent.dim_ui_for_modal()
+        self._prepare_geometry()
+
+    def wait_result(self):
+        try:
+            self.parent.wait_variable(self._done_var)
+        except Exception:
+            pass
+        return self.result
+
+    def _finalize_close(self):
+        try:
+            self._done_var.set(True)
+        except Exception:
+            pass
+        if self._persistent_mode:
+            try:
+                self.withdraw()
+                self.attributes("-alpha", 0.0)
+            except Exception:
+                pass
+        else:
+            self.destroy()
+        if hasattr(self.parent, "restore_ui_from_modal"):
+            self.parent.restore_ui_from_modal()
 
     def _prepare_geometry(self):
         if not self.winfo_exists(): return
@@ -301,9 +341,7 @@ class BaseDialog(ctk.CTkToplevel):
             self.attributes("-alpha", alpha)
             self.after(DIALOG_FADE_OUT_INTERVAL_MS, self._close_with_fade_out)
         else:
-            self.destroy()
-            if hasattr(self.parent, "restore_ui_from_modal"):
-                self.parent.restore_ui_from_modal()
+            self._finalize_close()
 
     def _on_ok(self, event=None):
         self._close_with_fade_out()
@@ -485,6 +523,3 @@ class ChoiceDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
-
-
-

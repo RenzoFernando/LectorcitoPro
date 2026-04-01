@@ -1,4 +1,3 @@
-
 import customtkinter as ctk
 import copy
 import os
@@ -7,10 +6,9 @@ from file_rules import file_rules_conflict, matches_file_rule, normalize_file_ru
 from view.dialogs import BaseDialog, _get_color_tuple, _style_button
 from view.ui_constants import COLORS
 
-
 # =============================================================================
 # DIALOGO DE CONFIGURACION DE ETIQUETAS
-# =============================================================================
+# ============================================================================= 
 
 class TagsConfigDialog(BaseDialog):
 
@@ -21,8 +19,10 @@ class TagsConfigDialog(BaseDialog):
                  excluded_folders: list = None,
                  excluded_files: list = None,
                  media_extensions: list = None,
-                 forbidden_items: set = None):
-        super().__init__(parent, title)
+                 forbidden_items: set = None,
+                 persistent: bool = False,
+                 defer_show: bool = False):
+        super().__init__(parent, title, persistent=persistent, defer_show=defer_show)
 
         self.single_mode = (folders_prompt is None)
         self.allow_autodetect = allow_autodetect
@@ -32,9 +32,13 @@ class TagsConfigDialog(BaseDialog):
         self.media_extensions = [normalize_file_rule(ext) for ext in media_extensions] if media_extensions else []
         self.forbidden_items = {normalize_file_rule(item) for item in forbidden_items} if forbidden_items else set()
 
+        self.folders_prompt = folders_prompt
+        self.files_prompt = files_prompt
         self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
         self.files_list = normalize_file_tag_list(initial_files)
         self._parent = parent
+        self._layout_retry_after_id = None
+        self._layout_retry_count = 0
 
         blue_btn = COLORS['button']['blue']
         self.tag_colors = {
@@ -50,6 +54,12 @@ class TagsConfigDialog(BaseDialog):
 
         text_color = _get_color_tuple("text")
 
+        self.lbl_folders_prompt = None
+        self.lbl_files_prompt = None
+        self.folders_entry = None
+        self.files_entry = None
+        self.btn_auto = None
+
         if self.single_mode:
             self._create_tag_section(0, files_prompt, "files", text_color)
             self.main_frame.grid_rowconfigure(1, weight=1)
@@ -63,30 +73,146 @@ class TagsConfigDialog(BaseDialog):
         separator.grid(row=6, column=0, sticky="ew", padx=0, pady=(10, 0))
 
         button_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        button_frame.grid(row=7, column=0, pady=(15, 15), sticky="ew")
+        button_frame.grid(row=7, column=0, pady=(15, 10), sticky="ew")
         button_frame.grid_columnconfigure((0, 1), weight=1)
 
-        txt_save = parent._tr("btn_save_changes") if hasattr(parent, "_tr") else "Guardar Cambios"
-        txt_cancel = parent._tr("btn_cancel_simple") if hasattr(parent, "_tr") else "Cancelar"
+        txt_ok = self._parent._tr("btn_ok") if hasattr(self._parent, "_tr") else "Aceptar"
+        txt_cancel = self._parent._tr("btn_cancel_simple") if hasattr(self._parent, "_tr") else "Cancelar"
 
-        ok_button = ctk.CTkButton(button_frame, text=txt_save, command=self._on_ok)
-        _style_button(ok_button, "green")
-        ok_button.configure(width=140)
-        ok_button.grid(row=0, column=0, padx=10, sticky="e")
+        self.ok_button = ctk.CTkButton(button_frame, text=txt_ok, command=self._on_ok)
+        _style_button(self.ok_button, "green")
+        self.ok_button.configure(width=100)
+        self.ok_button.grid(row=0, column=0, padx=10, sticky="e")
 
-        cancel_button = ctk.CTkButton(button_frame, text=txt_cancel, command=self._on_cancel)
-        _style_button(cancel_button, "red")
-        cancel_button.configure(width=100)
-        cancel_button.grid(row=0, column=1, padx=10, sticky="w")
+        self.cancel_button = ctk.CTkButton(button_frame, text=txt_cancel, command=self._on_cancel)
+        _style_button(self.cancel_button, "red")
+        self.cancel_button.configure(width=100)
+        self.cancel_button.grid(row=0, column=1, padx=10, sticky="w")
 
         self.update_idletasks()
-        self.after(500, self.redraw_all_tags)
+        self._schedule_layout_refresh(reset=True)
+
+    def refresh_texts(self):
+        try:
+            self.title(self.current_title)
+        except Exception:
+            pass
+        ph_text = self._parent._tr("placeholder_tags") if hasattr(self._parent, "_tr") else "Escribir..."
+        if self.lbl_folders_prompt is not None:
+            self.lbl_folders_prompt.configure(text=self.folders_prompt)
+        if self.lbl_files_prompt is not None:
+            self.lbl_files_prompt.configure(text=self.files_prompt)
+        if self.folders_entry is not None:
+            self.folders_entry.configure(placeholder_text=ph_text)
+        if self.files_entry is not None:
+            self.files_entry.configure(placeholder_text=ph_text)
+        if self.btn_auto is not None:
+            self.btn_auto.configure(text=self._parent._tr("btn_autodetect") if hasattr(self._parent, "_tr") else "Autodetectar")
+        self.ok_button.configure(text=self._parent._tr("btn_ok") if hasattr(self._parent, "_tr") else "Aceptar")
+        self.cancel_button.configure(text=self._parent._tr("btn_cancel_simple") if hasattr(self._parent, "_tr") else "Cancelar")
+
+    def load_state(self, title, folders_prompt, initial_folders, files_prompt, initial_files,
+                   allow_autodetect=False, excluded_folders=None, excluded_files=None, media_extensions=None,
+                   forbidden_items=None):
+        self.current_title = title
+        self.folders_prompt = folders_prompt
+        self.files_prompt = files_prompt
+        self.allow_autodetect = allow_autodetect
+        self.excluded_folders = excluded_folders if excluded_folders else []
+        self.excluded_files = normalize_file_tag_list(excluded_files if excluded_files else [])
+        self.media_extensions = [normalize_file_rule(ext) for ext in media_extensions] if media_extensions else []
+        self.forbidden_items = {normalize_file_rule(item) for item in forbidden_items} if forbidden_items else set()
+        self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
+        self.files_list = normalize_file_tag_list(initial_files)
+        self.result = None
+        if self.folders_entry is not None:
+            self.folders_entry.delete(0, "end")
+        if self.files_entry is not None:
+            self.files_entry.delete(0, "end")
+        self.refresh_texts()
+        self._schedule_layout_refresh(reset=True)
+
+    def present(self):
+        super().present()
+        self._schedule_layout_refresh(reset=True)
+        try:
+            if self.files_entry is not None:
+                self.files_entry.focus_set()
+            elif self.folders_entry is not None:
+                self.folders_entry.focus_set()
+        except Exception:
+            pass
+
+    def _cancel_layout_refresh(self):
+        if self._layout_retry_after_id is not None:
+            try:
+                self.after_cancel(self._layout_retry_after_id)
+            except Exception:
+                pass
+            self._layout_retry_after_id = None
+
+    def _schedule_layout_refresh(self, reset=False, delay=0):
+        if reset:
+            self._layout_retry_count = 0
+        self._cancel_layout_refresh()
+        try:
+            self._layout_retry_after_id = self.after(delay, self._refresh_layout_when_ready)
+        except Exception:
+            self._layout_retry_after_id = None
+
+    def _get_container_width(self, frame):
+        widths = []
+        try:
+            widths.append(int(frame.winfo_width()) - 30)
+        except Exception:
+            pass
+        try:
+            widths.append(int(frame.winfo_reqwidth()) - 30)
+        except Exception:
+            pass
+        try:
+            widths.append(int(self.main_frame.winfo_width()) - 60)
+        except Exception:
+            pass
+        try:
+            widths.append(int(self.winfo_width()) - 80)
+        except Exception:
+            pass
+        widths = [w for w in widths if w > 0]
+        return max(widths) if widths else 0
+
+    def _refresh_layout_when_ready(self):
+        self._layout_retry_after_id = None
+        if not self.winfo_exists():
+            return
+        try:
+            self.update_idletasks()
+        except Exception:
+            pass
+        widths = []
+        if not self.single_mode:
+            widths.append(self._get_container_width(self.folders_scroll_frame))
+        widths.append(self._get_container_width(self.files_scroll_frame))
+        ready = bool(widths) and min(widths) >= 220
+        if not ready and self._layout_retry_count < 8:
+            self._layout_retry_count += 1
+            self._schedule_layout_refresh(delay=40)
+            return
+        self.redraw_all_tags()
+        if self._layout_retry_count < 2:
+            self._layout_retry_count += 1
+            self._schedule_layout_refresh(delay=40)
 
     def _create_tag_section(self, section_index, prompt, section_id, text_color):
         base_row = section_index * 3
-        ctk.CTkLabel(self.main_frame, text=prompt, font=("Segoe UI", 12, "bold"), text_color=text_color).grid(
+        label = ctk.CTkLabel(self.main_frame, text=prompt, font=("Segoe UI", 12, "bold"), text_color=text_color)
+        label.grid(
             row=base_row, column=0,
             sticky="w", pady=(10, 2), padx=20)
+        if section_id == "folders":
+            self.lbl_folders_prompt = label
+        else:
+            self.lbl_files_prompt = label
 
         scroll_frame = ctk.CTkScrollableFrame(
             self.main_frame,
@@ -107,9 +233,11 @@ class TagsConfigDialog(BaseDialog):
 
         if section_id == "folders":
             self.folders_scroll_frame = scroll_frame
+            self.folders_entry = entry
             entry.bind("<Return>", lambda event: self._add_tag(entry, self.folders_list, is_folder=True))
         else:
             self.files_scroll_frame = scroll_frame
+            self.files_entry = entry
             entry.bind("<Return>", lambda event: self._add_tag(entry, self.files_list, is_folder=False))
 
             if self.allow_autodetect:
@@ -123,6 +251,7 @@ class TagsConfigDialog(BaseDialog):
                 )
                 _style_button(btn_auto, "blue")
                 btn_auto.pack(side="left", padx=(8, 0))
+                self.btn_auto = btn_auto
 
     def _on_autodetect(self):
         path = filedialog.askdirectory(title=self._parent._tr("btn_autodetect"))
@@ -181,7 +310,9 @@ class TagsConfigDialog(BaseDialog):
         if not frame.winfo_exists(): return
         frame.update_idletasks()
 
-        container_width = frame.winfo_width() - 30
+        container_width = self._get_container_width(frame)
+        if container_width < 220:
+            return
 
         row_container = ctk.CTkFrame(frame, fg_color="transparent")
         row_container.pack(fill="x", anchor="nw")
@@ -290,5 +421,3 @@ class TagsConfigDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
-
-
