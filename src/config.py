@@ -73,7 +73,7 @@ DEFAULT_CONFIG_VALUES = {
     "etiquetas_carpetas_excluidas": to_tags(["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]),
     "etiquetas_archivos_excluidos": to_tags(["Pipfile.lock", "package.json", "package-lock.json"]),
     "media_extensions": [
-        '.png', '.jpg', '.gif', '.svg', '.ico',
+        '.png', '.jpg', '.gif', '.ico',
         '.mp4', '.mkv', '.avi',
         '.mp3', '.wav',
         '.zip', '.rar', '.7z',

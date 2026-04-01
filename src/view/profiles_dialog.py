@@ -12,9 +12,6 @@ class ProfilesDialog(BaseDialog):
         title = parent._tr("dlg_profiles_title") if hasattr(parent, "_tr") else "Perfiles"
         super().__init__(parent, title)
 
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-
         self.profiles = profiles_meta.copy()
         self.active_id = active_id
         self.result = None
@@ -30,8 +27,6 @@ class ProfilesDialog(BaseDialog):
 
         self._build_ui()
         self._redraw_list()
-
-        self.after(500, self._step_calculate_geometry)
 
     def _build_ui(self):
         self.geometry("450x500")
@@ -73,33 +68,6 @@ class ProfilesDialog(BaseDialog):
         self.btn_add.pack(side="right")
 
         self.entry_new.bind("<Return>", lambda e: self._add_profile())
-
-    def _step_calculate_geometry(self):
-        try:
-            self.update_idletasks()
-
-            screen_w = self.winfo_screenwidth()
-            screen_h = self.winfo_screenheight()
-            win_w = 450
-            win_h = 500
-
-            x = (screen_w // 2) - (win_w // 2)
-            y = (screen_h // 2) - (win_h // 2)
-
-            self.geometry(f"{win_w}x{win_h}+{x}+{y}")
-
-            self.after(100, self._step_show_window)
-        except Exception:
-            self.geometry("450x500")
-            self.deiconify()
-            self.attributes("-alpha", 1.0)
-
-    def _step_show_window(self):
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.focus_force()
-        self.grab_set()
 
     def _redraw_list(self):
         for w in self.scroll_frame.winfo_children():

@@ -14,6 +14,7 @@ from view.dialogs import ConfirmDialog, ChoiceDialog, MessageDialog
 from view.tags_dialog import TagsConfigDialog
 from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
+from view.ui_constants import PROFILE_SWITCH_FADE_DELAY_MS, RESTORE_FADE_DELAY_MS
 
 
 # =============================================================================
@@ -376,7 +377,7 @@ def _open_profiles_dialog_safe(controller):
 
 def _switch_profile_sequence(controller, new_active_id, new_profiles_meta):
     controller.view.attributes("-alpha", 0.0)
-    controller.view.after(600, lambda: _load_profile_data(controller, new_active_id, new_profiles_meta))
+    controller.view.after(PROFILE_SWITCH_FADE_DELAY_MS, lambda: _load_profile_data(controller, new_active_id, new_profiles_meta))
 
 
 def _load_profile_data(controller, new_active_id, new_profiles_meta):
@@ -423,7 +424,7 @@ def restore_default_settings(controller):
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
                          controller.view._tr("confirm_restore_prompt")):
         controller.view.attributes("-alpha", 0.0)
-        controller.view.after(800, lambda: _execute_restore(controller))
+        controller.view.after(RESTORE_FADE_DELAY_MS, lambda: _execute_restore(controller))
 
 
 def _execute_restore(controller):
@@ -474,3 +475,5 @@ def toggle_language(controller):
     controller.config["language"] = controller.view.lang
     controller.view.update_ui_texts()
     save_preferences_silent(controller)
+
+

@@ -13,9 +13,6 @@ class SettingsDialog(BaseDialog):
         title = parent._tr("dlg_settings_title") if hasattr(parent, "_tr") else "Ajustes"
         super().__init__(parent, title)
 
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-
         self.parent_view = parent
         self.selected_extension = current_extension
         self.current_exe_path = current_exe_path or ""
@@ -25,13 +22,8 @@ class SettingsDialog(BaseDialog):
 
         self.geometry("450x500")
 
-        self.after(750, self._step_1_build_frame)
-
-    def _step_1_build_frame(self):
         self.main_frame = self._create_card_frame()
-        self.after(10, self._step_2_add_format_section)
 
-    def _step_2_add_format_section(self):
         ctk.CTkLabel(
             self.main_frame,
             text=self.parent_view._tr("lbl_report_format"),
@@ -54,19 +46,16 @@ class SettingsDialog(BaseDialog):
         )
         self.opt_format.pack(padx=20, pady=(0, 10), anchor="w")
 
-        self.after(20, self._step_2b_add_path_section)
-
-    def _step_2b_add_path_section(self):
         ctk.CTkLabel(
             self.main_frame,
-            text=self.parent_view._tr("lbl_exe_path"),
+            text=self.parent_view._tr("lbl_exe_path", APP_EXECUTABLE_NAME),
             font=("Segoe UI", 12, "bold"),
             text_color=_get_color_tuple("text")
         ).pack(pady=(10, 2), padx=20, anchor="w")
 
         ctk.CTkLabel(
             self.main_frame,
-            text=self.parent_view._tr("lbl_exe_example"),
+            text=self.parent_view._tr("lbl_exe_example", APP_EXECUTABLE_NAME),
             font=("Segoe UI", 10, "normal"),
             text_color=_get_color_tuple("text_secondary")
         ).pack(pady=(0, 5), padx=20, anchor="w")
@@ -80,9 +69,7 @@ class SettingsDialog(BaseDialog):
 
         ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line")).pack(fill="x", padx=20,
                                                                                                   pady=5)
-        self.after(20, self._step_3_add_shortcuts_header)
 
-    def _step_3_add_shortcuts_header(self):
         ctk.CTkLabel(
             self.main_frame,
             text=self.parent_view._tr("lbl_system_shortcuts"),
@@ -90,9 +77,6 @@ class SettingsDialog(BaseDialog):
             text_color=_get_color_tuple("text")
         ).pack(pady=(15, 10), padx=20, anchor="w")
 
-        self.after(50, self._step_4_add_button_desktop)
-
-    def _step_4_add_button_desktop(self):
         self.btn_desktop = ctk.CTkButton(
             self.main_frame,
             text=self.parent_view._tr("btn_shortcut_desktop"),
@@ -101,9 +85,6 @@ class SettingsDialog(BaseDialog):
         _style_button(self.btn_desktop, "blue")
         self.btn_desktop.pack(padx=20, pady=4, fill="x")
 
-        self.after(50, self._step_5_add_button_start)
-
-    def _step_5_add_button_start(self):
         self.btn_start = ctk.CTkButton(
             self.main_frame,
             text=self.parent_view._tr("btn_shortcut_start"),
@@ -112,9 +93,6 @@ class SettingsDialog(BaseDialog):
         _style_button(self.btn_start, "blue")
         self.btn_start.pack(padx=20, pady=4, fill="x")
 
-        self.after(50, self._step_6_add_button_taskbar)
-
-    def _step_6_add_button_taskbar(self):
         self.btn_taskbar = ctk.CTkButton(
             self.main_frame,
             text=self.parent_view._tr("btn_shortcut_taskbar"),
@@ -123,9 +101,6 @@ class SettingsDialog(BaseDialog):
         _style_button(self.btn_taskbar, "blue")
         self.btn_taskbar.pack(padx=20, pady=4, fill="x")
 
-        self.after(50, self._step_7_add_button_pin_start)
-
-    def _step_7_add_button_pin_start(self):
         self.btn_pin_start = ctk.CTkButton(
             self.main_frame,
             text=self.parent_view._tr("btn_shortcut_pin_start"),
@@ -134,9 +109,6 @@ class SettingsDialog(BaseDialog):
         _style_button(self.btn_pin_start, "blue")
         self.btn_pin_start.pack(padx=20, pady=4, fill="x")
 
-        self.after(50, self._step_8_finalize)
-
-    def _step_8_finalize(self):
         # Espaciador flexible
         ctk.CTkFrame(self.main_frame, fg_color="transparent").pack(expand=True, fill="both")
 
@@ -147,30 +119,6 @@ class SettingsDialog(BaseDialog):
         )
         _style_button(self.btn_close, "green")
         self.btn_close.pack(pady=20)
-
-        self.deiconify()
-        self._animate_fade_in()
-
-        # Aseguramos el foco y el bloqueo modal
-        self.lift()
-        self.focus_force()
-        try:
-            self.grab_set()
-        except Exception:
-            pass
-
-    def _animate_fade_in(self):
-        alpha = self.attributes("-alpha")
-        if alpha < 1.0:
-            alpha += 0.1
-            self.attributes("-alpha", alpha)
-            self.after(45, self._animate_fade_in)
-        else:
-            self.attributes("-alpha", 1.0)
-            try:
-                self.grab_set()
-            except Exception:
-                pass
 
     def _on_format_change(self, value):
         self.selected_extension = value

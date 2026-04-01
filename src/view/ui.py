@@ -8,12 +8,14 @@ import webbrowser
 
 from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
 from view.translations import TRANSLATIONS
-from view.dialogs import MessageDialog
+from view.dialogs import MessageDialog, _get_widget_window_rect, _get_widget_workarea, _get_centered_position
 from view.tooltip import CustomTooltip
 
 from view.ui_constants import (
     VERSION, YEAR, AUTHOR, REPO_URL,
-    COLORS, BTN_W_MAIN, BTN_H_MAIN
+    COLORS, BTN_W_MAIN, BTN_H_MAIN,
+    MAIN_WINDOW_SHOW_DELAY_MS, MAIN_WINDOW_CENTER_RETRY_DELAY_MS, MAIN_WINDOW_CENTER_MAX_ATTEMPTS,
+    MAIN_WINDOW_FADE_IN_STEP, MAIN_WINDOW_FADE_IN_INTERVAL_MS, MAIN_WINDOW_FADE_OUT_STEP, MAIN_WINDOW_FADE_OUT_INTERVAL_MS
 )
 from view.ui_assets import load_sidebar_icons, load_logo, safe_set_window_icon
 from view.sidebars import LeftSidebar, RightSidebar, PillTextButton
@@ -59,33 +61,50 @@ class LectorcitoApp(ctk.CTk):
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
 
-        self.after(2000, self._precise_center_and_show)
+        self.after(MAIN_WINDOW_SHOW_DELAY_MS, self._precise_center_and_show)
+
+    def get_real_window_rect(self):
+        return _get_widget_window_rect(self)
 
     def _precise_center_and_show(self):
         try:
             self.update_idletasks()
-
-            screen_width = self.winfo_screenwidth()
-            screen_height = self.winfo_screenheight()
-
-            x = int((screen_width - self._app_w) / 2)
-            y = int((screen_height - self._app_h) / 2)
-
+            self._startup_target_rect = _get_widget_workarea(self)
+            x, y = _get_centered_position(self._startup_target_rect, self._app_w, self._app_h)
             self.geometry(f"{self._app_w}x{self._app_h}+{x}+{y}")
 
             self.attributes("-alpha", 0.0)
             self.deiconify()
-            self._fade_in()
+            self.after(MAIN_WINDOW_CENTER_RETRY_DELAY_MS, lambda: self._stabilize_initial_position(1))
 
         except Exception:
             self.deiconify()
             self.attributes("-alpha", 1.0)
 
+    def _stabilize_initial_position(self, attempt=1):
+        try:
+            target_rect = getattr(self, "_startup_target_rect", _get_widget_workarea(self))
+            target_cx = int((target_rect[0] + target_rect[2]) / 2)
+            target_cy = int((target_rect[1] + target_rect[3]) / 2)
+            actual_rect = self.get_real_window_rect()
+            actual_cx = int((actual_rect[0] + actual_rect[2]) / 2)
+            actual_cy = int((actual_rect[1] + actual_rect[3]) / 2)
+            dx = target_cx - actual_cx
+            dy = target_cy - actual_cy
+
+            if (abs(dx) > 1 or abs(dy) > 1) and attempt < MAIN_WINDOW_CENTER_MAX_ATTEMPTS:
+                self.geometry(f"{self._app_w}x{self._app_h}+{int(self.winfo_x()) + dx}+{int(self.winfo_y()) + dy}")
+                self.after(MAIN_WINDOW_CENTER_RETRY_DELAY_MS, lambda: self._stabilize_initial_position(attempt + 1))
+                return
+        except Exception:
+            pass
+        self._fade_in()
+
     def _fade_in(self):
         alpha = self.attributes("-alpha")
         if alpha < 1:
-            self.attributes("-alpha", min(alpha + 0.05, 1.0))
-            self.after(25, self._fade_in)
+            self.attributes("-alpha", min(alpha + MAIN_WINDOW_FADE_IN_STEP, 1.0))
+            self.after(MAIN_WINDOW_FADE_IN_INTERVAL_MS, self._fade_in)
 
     def _close_with_fade_out(self):
         try:
@@ -100,8 +119,8 @@ class LectorcitoApp(ctk.CTk):
 
         alpha = self.attributes("-alpha")
         if alpha > 0:
-            self.attributes("-alpha", max(alpha - 0.08, 0.0))
-            self.after(15, self._close_with_fade_out)
+            self.attributes("-alpha", max(alpha - MAIN_WINDOW_FADE_OUT_STEP, 0.0))
+            self.after(MAIN_WINDOW_FADE_OUT_INTERVAL_MS, self._close_with_fade_out)
         else:
             self.destroy()
 
@@ -396,3 +415,4 @@ class LectorcitoApp(ctk.CTk):
 
     def show_app_info(self):
         webbrowser.open("https://renzofernando.github.io/LectorcitoPro/")
+

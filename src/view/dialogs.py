@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import os
-from view.tooltip import CustomTooltip
-from view.ui_constants import COLORS
+from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
+from view.ui_constants import COLORS, DIALOG_ICON_DELAY_MS, DIALOG_PREPARE_DELAY_MS, DIALOG_CENTER_RETRY_DELAY_MS, DIALOG_CENTER_MAX_ATTEMPTS, DIALOG_FADE_IN_STEP, DIALOG_FADE_IN_INTERVAL_MS, DIALOG_FADE_OUT_STEP, DIALOG_FADE_OUT_INTERVAL_MS
 from view.ui_assets import get_app_icon_path
 
 MESSAGE_AUTO_CLOSE_SECONDS = 10
@@ -36,6 +36,65 @@ def _style_button(btn: ctk.CTkButton, color_type="blue"):
     )
 
 
+def _get_widget_window_rect(widget):
+    try:
+        if not widget or not widget.winfo_exists():
+            raise RuntimeError
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            hwnd = int(widget.winfo_id())
+
+            class RECT(ctypes.Structure):
+                _fields_ = [
+                    ("left", wintypes.LONG),
+                    ("top", wintypes.LONG),
+                    ("right", wintypes.LONG),
+                    ("bottom", wintypes.LONG),
+                ]
+
+            rect = RECT()
+            if ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                return int(rect.left), int(rect.top), int(rect.right), int(rect.bottom)
+        except Exception:
+            pass
+
+        widget.update_idletasks()
+        x = int(widget.winfo_x())
+        y = int(widget.winfo_y())
+        w = int(widget.winfo_width())
+        h = int(widget.winfo_height())
+        return x, y, x + w, y + h
+    except Exception:
+        return 0, 0, 0, 0
+
+
+def _get_widget_workarea(widget):
+    try:
+        if widget and widget.winfo_exists():
+            rect = _get_widget_window_rect(widget)
+            if rect != (0, 0, 0, 0):
+                cx = int((rect[0] + rect[2]) / 2)
+                cy = int((rect[1] + rect[3]) / 2)
+            else:
+                cx = int(widget.winfo_pointerx())
+                cy = int(widget.winfo_pointery())
+            return _get_monitor_workarea_for_point(cx, cy, widget)
+    except Exception:
+        pass
+    return 0, 0, 1920, 1080
+
+
+def _get_centered_position(target_rect, win_w: int, win_h: int):
+    left, top, right, bottom = target_rect
+    area_w = max(1, int(right - left))
+    area_h = max(1, int(bottom - top))
+    x = int(left + (area_w - int(win_w)) / 2)
+    y = int(top + (area_h - int(win_h)) / 2)
+    return x, y
+
+
 # =============================================================================
 # CLASE BASE PARA DIALOGOS
 # =============================================================================
@@ -54,6 +113,11 @@ class BaseDialog(ctk.CTkToplevel):
         if hasattr(parent, "dim_ui_for_modal"):
             parent.dim_ui_for_modal()
 
+        try:
+            self.transient(parent)
+        except Exception:
+            pass
+
         self.title(title)
         self.resizable(False, False)
 
@@ -69,8 +133,8 @@ class BaseDialog(ctk.CTkToplevel):
 
         self.bind("<Map>", self._install_escape_bindtags, add="+")
 
-        self.after(185, self._set_icon_safe)
-        self.after(500, self._prepare_geometry)
+        self.after(DIALOG_ICON_DELAY_MS, self._set_icon_safe)
+        self.after(DIALOG_PREPARE_DELAY_MS, self._prepare_geometry)
 
         self.result = None
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
@@ -130,30 +194,53 @@ class BaseDialog(ctk.CTkToplevel):
         self.deiconify()
         self.attributes("-alpha", 0.0)
         self.update_idletasks()
-        self.after(200, self._try_center_window)
+        self.after(DIALOG_CENTER_RETRY_DELAY_MS, lambda: self._try_center_window(0))
 
-    def _try_center_window(self):
+    def _get_target_rect(self):
+        try:
+            if self.master and self.master.winfo_exists():
+                if hasattr(self.master, "get_real_window_rect"):
+                    rect = self.master.get_real_window_rect()
+                else:
+                    rect = _get_widget_window_rect(self.master)
+                if rect != (0, 0, 0, 0):
+                    return rect
+        except Exception:
+            pass
+        return _get_widget_workarea(self)
+
+    def _try_center_window(self, attempt=0):
         if not self.winfo_exists(): return
 
         try:
             self.update_idletasks()
-            w = self.winfo_width()
-            h = self.winfo_height()
+            w = max(int(self.winfo_width()), int(self.winfo_reqwidth()))
+            h = max(int(self.winfo_height()), int(self.winfo_reqheight()))
 
             if w < 50 or h < 50:
-                self.after(100, self._try_center_window)
+                self.after(DIALOG_CENTER_RETRY_DELAY_MS, lambda: self._try_center_window(attempt))
                 return
 
-            if self.master and self.master.winfo_exists():
-                parent_x = self.master.winfo_x()
-                parent_y = self.master.winfo_y()
-                parent_w = self.master.winfo_width()
-                parent_h = self.master.winfo_height()
+            target_rect = self._get_target_rect()
+            target_cx = int((target_rect[0] + target_rect[2]) / 2)
+            target_cy = int((target_rect[1] + target_rect[3]) / 2)
 
-                x = parent_x + (parent_w - w) // 2
-                y = parent_y + (parent_h - h) // 2
-
+            if attempt == 0:
+                x, y = _get_centered_position(target_rect, w, h)
                 self.geometry(f"+{x}+{y}")
+                self.after(DIALOG_CENTER_RETRY_DELAY_MS, lambda: self._try_center_window(1))
+                return
+
+            actual_rect = _get_widget_window_rect(self)
+            actual_cx = int((actual_rect[0] + actual_rect[2]) / 2)
+            actual_cy = int((actual_rect[1] + actual_rect[3]) / 2)
+            dx = target_cx - actual_cx
+            dy = target_cy - actual_cy
+
+            if (abs(dx) > 1 or abs(dy) > 1) and attempt < DIALOG_CENTER_MAX_ATTEMPTS:
+                self.geometry(f"+{int(self.winfo_x()) + dx}+{int(self.winfo_y()) + dy}")
+                self.after(DIALOG_CENTER_RETRY_DELAY_MS, lambda: self._try_center_window(attempt + 1))
+                return
 
             self.lift()
             self.focus_force()
@@ -171,9 +258,9 @@ class BaseDialog(ctk.CTkToplevel):
             alpha = 0.0
 
         if alpha < 1.0:
-            new_alpha = min(alpha + 0.05, 1.0)
+            new_alpha = min(alpha + DIALOG_FADE_IN_STEP, 1.0)
             self.attributes("-alpha", new_alpha)
-            self.after(25, self._fade_in)
+            self.after(DIALOG_FADE_IN_INTERVAL_MS, self._fade_in)
         else:
             self.focus_set()
 
@@ -191,9 +278,9 @@ class BaseDialog(ctk.CTkToplevel):
             alpha = 1.0
 
         if alpha > 0:
-            alpha = max(alpha - 0.20, 0.0)
+            alpha = max(alpha - DIALOG_FADE_OUT_STEP, 0.0)
             self.attributes("-alpha", alpha)
-            self.after(5, self._close_with_fade_out)
+            self.after(DIALOG_FADE_OUT_INTERVAL_MS, self._close_with_fade_out)
         else:
             self.destroy()
             if hasattr(self.parent, "restore_ui_from_modal"):
@@ -355,3 +442,4 @@ class ChoiceDialog(BaseDialog):
         dialog = cls(parent, title, message, option1_text, option2_text, option1_value, option2_value)
         parent.wait_window(dialog)
         return dialog.result
+
