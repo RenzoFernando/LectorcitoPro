@@ -1,3 +1,4 @@
+
 import customtkinter as ctk
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple, ConfirmDialog
 from view.ui_constants import COLORS
@@ -177,6 +178,24 @@ class ProfilesDialog(BaseDialog):
 
     @classmethod
     def ask(cls, parent, profiles_meta, active_id, on_save_callback=None):
-        dialog = cls(parent, profiles_meta, active_id, on_save_callback)
-        parent.wait_window(dialog)
-        return dialog.result
+        dialog = None
+        try:
+            dialog = cls(parent, profiles_meta, active_id, on_save_callback)
+            parent.wait_window(dialog)
+            return dialog.result
+        except Exception:
+            try:
+                if hasattr(parent, "restore_ui_from_modal"):
+                    parent.restore_ui_from_modal()
+            except Exception:
+                pass
+            return None
+        finally:
+            if dialog is not None:
+                try:
+                    if dialog.winfo_exists():
+                        dialog.destroy()
+                except Exception:
+                    pass
+
+

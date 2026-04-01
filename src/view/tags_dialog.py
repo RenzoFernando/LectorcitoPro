@@ -1,3 +1,4 @@
+
 import customtkinter as ctk
 import copy
 import os
@@ -268,8 +269,26 @@ class TagsConfigDialog(BaseDialog):
     def get_input(cls, parent, title, folders_prompt, initial_folders, files_prompt, initial_files,
                   allow_autodetect=False, excluded_folders=None, excluded_files=None, media_extensions=None,
                   forbidden_items=None):
-        dialog = cls(parent, title, folders_prompt, initial_folders, files_prompt, initial_files,
-                     allow_autodetect, excluded_folders, excluded_files, media_extensions,
-                     forbidden_items)
-        parent.wait_window(dialog)
-        return dialog.result
+        dialog = None
+        try:
+            dialog = cls(parent, title, folders_prompt, initial_folders, files_prompt, initial_files,
+                         allow_autodetect, excluded_folders, excluded_files, media_extensions,
+                         forbidden_items)
+            parent.wait_window(dialog)
+            return dialog.result
+        except Exception:
+            try:
+                if hasattr(parent, "restore_ui_from_modal"):
+                    parent.restore_ui_from_modal()
+            except Exception:
+                pass
+            return None
+        finally:
+            if dialog is not None:
+                try:
+                    if dialog.winfo_exists():
+                        dialog.destroy()
+                except Exception:
+                    pass
+
+

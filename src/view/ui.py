@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import customtkinter as ctk
@@ -43,6 +44,7 @@ class LectorcitoApp(ctk.CTk):
         self.REPO_URL = REPO_URL
         self.tooltips: dict[str, CustomTooltip] = {}
         self._is_modal_open = False
+        self._modal_fail_safe_after_id = None
 
         self.title("Lectorcito Pro")
         self._app_w = 600
@@ -371,6 +373,43 @@ class LectorcitoApp(ctk.CTk):
     # ESTADO Y CONTROL
     # =========================================================================
 
+
+    def _cancel_modal_fail_safe(self):
+        if self._modal_fail_safe_after_id:
+            try:
+                self.after_cancel(self._modal_fail_safe_after_id)
+            except Exception:
+                pass
+        self._modal_fail_safe_after_id = None
+
+    def _schedule_modal_fail_safe(self):
+        self._cancel_modal_fail_safe()
+        try:
+            self._modal_fail_safe_after_id = self.after(900, self._modal_fail_safe_check)
+        except Exception:
+            self._modal_fail_safe_after_id = None
+
+    def _has_live_modal_dialog(self) -> bool:
+        try:
+            for child in self.winfo_children():
+                try:
+                    if getattr(child, "_is_base_dialog", False) and child.winfo_exists():
+                        return True
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return False
+
+    def _modal_fail_safe_check(self):
+        self._modal_fail_safe_after_id = None
+        if not self._is_modal_open:
+            return
+        if self._has_live_modal_dialog():
+            self._schedule_modal_fail_safe()
+            return
+        self.restore_ui_from_modal()
+
     def get_min_visible_completion_delay_ms(self) -> int:
         return self.status_panel.get_min_visible_completion_delay_ms()
 
@@ -379,6 +418,7 @@ class LectorcitoApp(ctk.CTk):
 
     def toggle_ui_for_processing(self, is_active: bool, mode: str = "determinate", text: str = None,
                                  final_status: str = None):
+        CustomTooltip.hide_global()
         if self._is_modal_open:
             return
 
@@ -392,14 +432,18 @@ class LectorcitoApp(ctk.CTk):
         self.status_panel.set_active(is_active, mode=mode, text=text, final_status=final_status)
 
     def dim_ui_for_modal(self):
+        CustomTooltip.hide_global()
         self._is_modal_open = True
         for btn in self.main_buttons.values():
             btn.configure(state="disabled")
         for btn in self.sidebar_buttons.values():
             btn.configure(state="disabled")
         self.left_sidebar.configure(state="disabled")
+        self._schedule_modal_fail_safe()
 
     def restore_ui_from_modal(self):
+        CustomTooltip.hide_global()
+        self._cancel_modal_fail_safe()
         self._is_modal_open = False
         if not self.controller.is_processing:
             for btn in self.main_buttons.values():
@@ -411,8 +455,14 @@ class LectorcitoApp(ctk.CTk):
             pass
 
     def show_message(self, title_key: str, message_key: str, *args):
-        MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
+        CustomTooltip.hide_global()
+        try:
+            MessageDialog(self, self._tr(title_key), self._tr(message_key, *args))
+        except Exception:
+            self.restore_ui_from_modal()
 
     def show_app_info(self):
         webbrowser.open("https://renzofernando.github.io/LectorcitoPro/")
+
+
 

@@ -1,3 +1,4 @@
+
 import sys
 import customtkinter as ctk
 from tkinter import TclError
@@ -94,6 +95,7 @@ class _SharedTooltipWindow:
 
     def __init__(self, root_window):
         self._root = root_window
+        self._owner_widget = None
 
         self._window = ctk.CTkToplevel(root_window)
         self._window.wm_overrideredirect(True)
@@ -126,6 +128,14 @@ class _SharedTooltipWindow:
             justify="left",
         )
         self._label.pack(padx=12, pady=8)
+
+        try:
+            self._root.bind("<FocusOut>", self._on_root_invalidate, add="+")
+            self._root.bind("<Unmap>", self._on_root_invalidate, add="+")
+            self._root.bind("<Destroy>", self._on_root_destroy, add="+")
+            self._root.bind("<ButtonPress>", self._on_root_invalidate, add="+")
+        except Exception:
+            pass
 
     def _safe_exists(self, widget) -> bool:
         try:
@@ -162,6 +172,7 @@ class _SharedTooltipWindow:
         if not widget or not self._safe_exists(widget):
             return
 
+        self._owner_widget = widget
         self._apply_theme()
 
         try:
@@ -193,6 +204,7 @@ class _SharedTooltipWindow:
         self._fade_in_step()
 
     def hide(self):
+        self._owner_widget = None
         if not self._safe_exists(self._window):
             self._visible = False
             return
@@ -210,6 +222,7 @@ class _SharedTooltipWindow:
     def hide_immediate(self):
         self._cancel_fade()
         self._visible = False
+        self._owner_widget = None
         if self._safe_exists(self._window):
             try:
                 self._window.withdraw()
@@ -219,6 +232,24 @@ class _SharedTooltipWindow:
 
     def is_visible(self) -> bool:
         return self._visible and self._safe_exists(self._window)
+
+    def destroy(self):
+        self._cancel_fade()
+        self._visible = False
+        self._owner_widget = None
+        if self._safe_exists(self._window):
+            try:
+                self._window.destroy()
+            except Exception:
+                pass
+
+    def _on_root_invalidate(self, event=None):
+        self.hide_immediate()
+
+    def _on_root_destroy(self, event=None):
+        self.destroy()
+        if _SharedTooltipWindow._instance is self:
+            _SharedTooltipWindow._instance = None
 
     def _fade_in_step(self):
         if not self._safe_exists(self._window) or not self._visible:
@@ -434,6 +465,14 @@ class CustomTooltip:
             if win:
                 win.hide_immediate()
             cls._active_tooltip = None
+            return
+
+        shared = _SharedTooltipWindow._instance
+        if shared:
+            try:
+                shared.hide_immediate()
+            except Exception:
+                pass
 
     def _cancel_scheduled_show(self):
         if self._after_id and self._safe_widget():
@@ -532,3 +571,4 @@ class CustomTooltip:
             return x0 <= px <= x1 and y0 <= py <= y1
         except Exception:
             return False
+

@@ -1,3 +1,4 @@
+
 import customtkinter as ctk
 from app_meta import APP_EXECUTABLE_NAME
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple
@@ -138,6 +139,24 @@ class SettingsDialog(BaseDialog):
 
     @classmethod
     def ask(cls, parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback):
-        dialog = cls(parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback)
-        parent.wait_window(dialog)
-        return dialog.result
+        dialog = None
+        try:
+            dialog = cls(parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback)
+            parent.wait_window(dialog)
+            return dialog.result
+        except Exception:
+            try:
+                if hasattr(parent, "restore_ui_from_modal"):
+                    parent.restore_ui_from_modal()
+            except Exception:
+                pass
+            return None
+        finally:
+            if dialog is not None:
+                try:
+                    if dialog.winfo_exists():
+                        dialog.destroy()
+                except Exception:
+                    pass
+
+

@@ -1,3 +1,4 @@
+
 import customtkinter as ctk
 import os
 from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
@@ -5,6 +6,14 @@ from view.ui_constants import COLORS, DIALOG_ICON_DELAY_MS, DIALOG_PREPARE_DELAY
 from view.ui_assets import get_app_icon_path
 
 MESSAGE_AUTO_CLOSE_SECONDS = 10
+
+
+def _restore_parent_modal_state(parent):
+    try:
+        if parent and hasattr(parent, "restore_ui_from_modal"):
+            parent.restore_ui_from_modal()
+    except Exception:
+        pass
 
 # =============================================================================
 # UTILIDADES DE ESTILO
@@ -106,38 +115,48 @@ class BaseDialog(ctk.CTkToplevel):
 
         super().__init__(parent)
         self.parent = parent
-
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-
-        if hasattr(parent, "dim_ui_for_modal"):
-            parent.dim_ui_for_modal()
+        self._is_base_dialog = True
 
         try:
-            self.transient(parent)
+            self.withdraw()
+            self.attributes("-alpha", 0.0)
+
+            if hasattr(parent, "dim_ui_for_modal"):
+                parent.dim_ui_for_modal()
+
+            try:
+                self.transient(parent)
+            except Exception:
+                pass
+
+            self.title(title)
+            self.resizable(False, False)
+
+            self.configure(fg_color=_get_color_tuple("bg"))
+
+            self._closing_grab_released = False
+            self._escape_bindtag = f"__esc_close_{id(self)}"
+
+            try:
+                self.bind_class(self._escape_bindtag, "<Escape>", self._on_escape_key, add="+")
+            except Exception:
+                self.bind("<Escape>", self._on_escape_key, add="+")
+
+            self.bind("<Map>", self._install_escape_bindtags, add="+")
+
+            self.after(DIALOG_ICON_DELAY_MS, self._set_icon_safe)
+            self.after(DIALOG_PREPARE_DELAY_MS, self._prepare_geometry)
+
+            self.result = None
+            self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
         except Exception:
-            pass
-
-        self.title(title)
-        self.resizable(False, False)
-
-        self.configure(fg_color=_get_color_tuple("bg"))
-
-        self._closing_grab_released = False
-        self._escape_bindtag = f"__esc_close_{id(self)}"
-
-        try:
-            self.bind_class(self._escape_bindtag, "<Escape>", self._on_escape_key, add="+")
-        except Exception:
-            self.bind("<Escape>", self._on_escape_key, add="+")
-
-        self.bind("<Map>", self._install_escape_bindtags, add="+")
-
-        self.after(DIALOG_ICON_DELAY_MS, self._set_icon_safe)
-        self.after(DIALOG_PREPARE_DELAY_MS, self._prepare_geometry)
-
-        self.result = None
-        self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
+            _restore_parent_modal_state(parent)
+            try:
+                if self.winfo_exists():
+                    self.destroy()
+            except Exception:
+                pass
+            raise
 
     def _set_icon_safe(self):
         try:
@@ -403,9 +422,21 @@ class ConfirmDialog(BaseDialog):
 
     @classmethod
     def ask(cls, parent, title, message):
-        dialog = cls(parent, title, message)
-        parent.wait_window(dialog)
-        return dialog.result
+        dialog = None
+        try:
+            dialog = cls(parent, title, message)
+            parent.wait_window(dialog)
+            return dialog.result
+        except Exception:
+            _restore_parent_modal_state(parent)
+            return False
+        finally:
+            if dialog is not None:
+                try:
+                    if dialog.winfo_exists():
+                        dialog.destroy()
+                except Exception:
+                    pass
 
 
 class ChoiceDialog(BaseDialog):
@@ -439,7 +470,21 @@ class ChoiceDialog(BaseDialog):
 
     @classmethod
     def ask(cls, parent, title, message, option1_text, option2_text, option1_value, option2_value):
-        dialog = cls(parent, title, message, option1_text, option2_text, option1_value, option2_value)
-        parent.wait_window(dialog)
-        return dialog.result
+        dialog = None
+        try:
+            dialog = cls(parent, title, message, option1_text, option2_text, option1_value, option2_value)
+            parent.wait_window(dialog)
+            return dialog.result
+        except Exception:
+            _restore_parent_modal_state(parent)
+            return None
+        finally:
+            if dialog is not None:
+                try:
+                    if dialog.winfo_exists():
+                        dialog.destroy()
+                except Exception:
+                    pass
+
+
 

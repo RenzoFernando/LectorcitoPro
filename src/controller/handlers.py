@@ -1,3 +1,4 @@
+
 import os
 import sys
 import shutil
@@ -331,12 +332,19 @@ def _show_msg_safe(parent, title_key, msg_key, *args):
         tr_func = getattr(parent.parent_view, "_tr", None)
     if not tr_func and hasattr(parent, "master") and hasattr(parent.master, "_tr"):
         tr_func = parent.master._tr
-    if tr_func:
-        title = tr_func(title_key)
-        msg = tr_func(msg_key, *args)
-        MessageDialog(parent, title, msg)
-    else:
-        MessageDialog(parent, title_key, msg_key)
+    try:
+        if tr_func:
+            title = tr_func(title_key)
+            msg = tr_func(msg_key, *args)
+            MessageDialog(parent, title, msg)
+        else:
+            MessageDialog(parent, title_key, msg_key)
+    except Exception:
+        try:
+            if hasattr(parent, "restore_ui_from_modal"):
+                parent.restore_ui_from_modal()
+        except Exception:
+            pass
 
 
 # =============================================================================
@@ -475,5 +483,7 @@ def toggle_language(controller):
     controller.config["language"] = controller.view.lang
     controller.view.update_ui_texts()
     save_preferences_silent(controller)
+
+
 
 

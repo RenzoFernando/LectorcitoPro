@@ -1,7 +1,9 @@
+
 import customtkinter as ctk
 from tkinter import Canvas
 from PIL import Image, ImageDraw, ImageTk
 from view.ui_constants import COLORS, SIDEBAR_WIDTH, BTN_H_ICON
+from view.tooltip import CustomTooltip
 
 
 # =============================================================================
@@ -290,6 +292,7 @@ class PillIconButton(ctk.CTkFrame):
             return "break"
         if getattr(self, "_click_lock", False):
             return "break"
+        CustomTooltip.hide_global()
         self._click_lock = True
         try:
             self.after(220, lambda: setattr(self, "_click_lock", False))
@@ -603,6 +606,7 @@ class PillTextButton(ctk.CTkFrame):
             return "break"
         if getattr(self, "_click_lock", False):
             return "break"
+        CustomTooltip.hide_global()
         self._click_lock = True
         try:
             self.after(220, lambda: setattr(self, "_click_lock", False))
@@ -759,3 +763,4 @@ class RightSidebar(ctk.CTkFrame):
                 )
             else:
                 btn.configure(fg_color=fg_color, hover_color=hover_color, outside_bg=outside_bg)
+
