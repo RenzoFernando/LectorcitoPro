@@ -1,5 +1,3 @@
-
-
 import os
 import sys
 import shutil
@@ -17,6 +15,94 @@ from view.tags_dialog import TagsConfigDialog
 from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
 from view.ui_constants import PROFILE_SWITCH_FADE_DELAY_MS, RESTORE_FADE_DELAY_MS
+
+
+INSTALL_MARKER_FILE = ".lectorcito_installed"
+
+
+def _normalize_exe_path(path):
+    return str(path).strip().replace('"', '') if path is not None else ""
+
+
+def _normalize_compare_path(path):
+    clean_path = _normalize_exe_path(path)
+    if not clean_path:
+        return ""
+    try:
+        return os.path.normcase(os.path.abspath(clean_path))
+    except Exception:
+        return os.path.normcase(clean_path)
+
+
+def _get_runtime_exe_path():
+    if not getattr(sys, 'frozen', False):
+        return ""
+    exe_path = os.path.abspath(sys.executable)
+    if not os.path.isfile(exe_path):
+        return ""
+    if not exe_path.lower().endswith(".exe"):
+        return ""
+    return exe_path
+
+
+def _get_install_marker_path(exe_path=""):
+    resolved_exe_path = _normalize_exe_path(exe_path) or _get_runtime_exe_path()
+    if not resolved_exe_path:
+        return ""
+    return os.path.join(os.path.dirname(resolved_exe_path), INSTALL_MARKER_FILE)
+
+
+def _is_installed_runtime(exe_path=""):
+    marker_path = _get_install_marker_path(exe_path)
+    return bool(marker_path and os.path.isfile(marker_path))
+
+
+def _get_installed_exe_path():
+    runtime_exe_path = _get_runtime_exe_path()
+    if runtime_exe_path and _is_installed_runtime(runtime_exe_path):
+        return runtime_exe_path
+    return ""
+
+
+def _get_effective_exe_path(controller, provided_path=None, persist_changes=True, allow_script_fallback=False):
+    manual_path = _normalize_exe_path(provided_path)
+    saved_path = _normalize_exe_path(controller.config.get("custom_exe_path", ""))
+    runtime_exe_path = _get_runtime_exe_path()
+    installed_exe_path = _get_installed_exe_path()
+
+    if manual_path:
+        return manual_path
+
+    if installed_exe_path:
+        if persist_changes and _normalize_compare_path(saved_path) != _normalize_compare_path(installed_exe_path):
+            controller.config["custom_exe_path"] = installed_exe_path
+            save_preferences_silent(controller)
+        return installed_exe_path
+
+    if saved_path and runtime_exe_path and _normalize_compare_path(saved_path) == _normalize_compare_path(runtime_exe_path):
+        saved_path = ""
+        if persist_changes and controller.config.get("custom_exe_path", ""):
+            controller.config["custom_exe_path"] = ""
+            save_preferences_silent(controller)
+
+    if saved_path:
+        return saved_path
+
+    if allow_script_fallback and not getattr(sys, 'frozen', False):
+        return _normalize_exe_path(sys.executable)
+
+    return ""
+
+
+def _get_programs_folder(shell):
+    start_menu = shell.SpecialFolders("StartMenu")
+    programs_folder = os.path.join(start_menu, "Programs")
+    if not os.path.exists(programs_folder):
+        try:
+            os.makedirs(programs_folder)
+        except Exception:
+            programs_folder = start_menu
+    return programs_folder
 
 
 # =============================================================================
@@ -182,7 +268,7 @@ def show_etiqueta_config_dialog(controller):
 
 def show_settings_dialog(controller):
     current_ext = controller.config.get("report_extension", ".txt")
-    current_exe = controller.config.get("custom_exe_path", "")
+    current_exe = _get_effective_exe_path(controller, persist_changes=True, allow_script_fallback=False)
 
     def on_save(new_ext, new_exe_path):
         _update_settings_values(controller, new_ext, new_exe_path)
@@ -203,11 +289,25 @@ def show_settings_dialog(controller):
 
 def _update_settings_values(controller, new_ext, new_exe_path):
     changed = False
-    if new_ext in [".txt", ".md"]:
+
+    if new_ext in [".txt", ".md"] and controller.config.get("report_extension") != new_ext:
         controller.config["report_extension"] = new_ext
         changed = True
-    clean_path = new_exe_path.strip().replace('"', '')
-    if clean_path is not None:
+
+    clean_path = _normalize_exe_path(new_exe_path)
+    installed_exe_path = _get_installed_exe_path()
+
+    if installed_exe_path:
+        clean_path = installed_exe_path
+
+    current_saved_path = _normalize_exe_path(controller.config.get("custom_exe_path", ""))
+    runtime_exe_path = _get_runtime_exe_path()
+
+    if clean_path and runtime_exe_path and not installed_exe_path:
+        if _normalize_compare_path(clean_path) == _normalize_compare_path(runtime_exe_path):
+            clean_path = ""
+
+    if _normalize_compare_path(current_saved_path) != _normalize_compare_path(clean_path):
         controller.config["custom_exe_path"] = clean_path
         changed = True
 
@@ -217,31 +317,36 @@ def _update_settings_values(controller, new_ext, new_exe_path):
 
 def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None):
     msg_parent = parent_window if parent_window else controller.view
+    manual_path = _normalize_exe_path(user_exe_path)
+    saved_path = _normalize_exe_path(controller.config.get("custom_exe_path", ""))
     target_path = ""
-    if user_exe_path and str(user_exe_path).strip():
-        target_path = str(user_exe_path).strip().replace('"', '')
-        controller.config["custom_exe_path"] = target_path
-        save_preferences_silent(controller)
-    else:
-        target_path = controller.config.get("custom_exe_path", "").strip().replace('"', '')
 
-    if not target_path or not os.path.exists(target_path) or not target_path.lower().endswith(".exe"):
-        if not getattr(sys, 'frozen', False):
-            target_path = sys.executable
-            print(controller.view._tr("shortcut_script_warning"))
-        else:
+    if manual_path:
+        target_path = manual_path
+        if not os.path.exists(target_path) or not target_path.lower().endswith(".exe"):
             msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "error_title", "msg_path_invalid"))
             return
+        if _normalize_compare_path(saved_path) != _normalize_compare_path(target_path):
+            controller.config["custom_exe_path"] = target_path
+            save_preferences_silent(controller)
+    else:
+        target_path = _get_effective_exe_path(controller, persist_changes=True, allow_script_fallback=True)
+
+    if not target_path or not os.path.exists(target_path) or not target_path.lower().endswith(".exe"):
+        msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "error_title", "msg_path_invalid"))
+        return
 
     try:
         work_dir = os.path.dirname(target_path)
         app_name = APP_NAME_INTERNAL
+        icon_path = target_path
 
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-        if not getattr(sys, 'frozen', False):
-            base_path = os.path.abspath(os.path.join(base_path, "..", ".."))
-        icon_path = os.path.join(base_path, 'resources', 'branding', 'lector.ico')
-        icon_path = os.path.normpath(icon_path)
+        if not os.path.exists(icon_path):
+            base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+            if not getattr(sys, 'frozen', False):
+                base_path = os.path.abspath(os.path.join(base_path, ".", "."))
+            icon_path = os.path.join(base_path, 'resources', 'branding', 'lector.ico')
+            icon_path = os.path.normpath(icon_path)
 
         shell = win32com.client.Dispatch("WScript.Shell")
         link_path = ""
@@ -255,19 +360,13 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
             msg_key = "msg_shortcut_desktop_ok"
 
         elif mode == "start":
-            start_menu = shell.SpecialFolders("StartMenu")
-            programs_folder = os.path.join(start_menu, "Programs")
-            if not os.path.exists(programs_folder):
-                try:
-                    os.makedirs(programs_folder)
-                except:
-                    programs_folder = start_menu
+            programs_folder = _get_programs_folder(shell)
             link_path = os.path.join(programs_folder, f"{app_name}.lnk")
             msg_key = "msg_shortcut_start_ok"
 
         elif mode in ["taskbar", "start_pin"]:
-            docs_dir = shell.SpecialFolders("MyDocuments")
-            link_path = os.path.join(docs_dir, f"{app_name}.lnk")
+            programs_folder = _get_programs_folder(shell)
+            link_path = os.path.join(programs_folder, f"{app_name}.lnk")
             msg_key = "msg_shortcut_taskbar_ok" if mode == "taskbar" else "msg_shortcut_pin_start_ok"
 
         shortcut = shell.CreateShortCut(link_path)
@@ -280,7 +379,9 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
         shortcut.Save()
 
         if mode in ["taskbar", "start_pin"]:
-            success_pin = _try_programmatic_pin(link_path, taskbar=(mode == "taskbar"))
+            success_pin = _try_programmatic_pin(target_path, taskbar=(mode == "taskbar"))
+            if not success_pin:
+                success_pin = _try_programmatic_pin(link_path, taskbar=(mode == "taskbar"))
 
             if success_pin:
                 force_open_explorer = False
@@ -303,11 +404,13 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
                 link_path = new_path
             except Exception as e:
                 print(f"Error renombrando LNK: {e}")
+
         if force_open_explorer:
             try:
                 subprocess.run(f'explorer /select,"{link_path}"', shell=True)
             except Exception:
                 pass
+
         msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "info_title", msg_key))
     except Exception as e:
         msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "error_title", "msg_shortcut_error", str(e)))
@@ -322,7 +425,8 @@ def _try_programmatic_pin(link_path, taskbar=True):
         shell = win32com.client.Dispatch("Shell.Application")
         ns = shell.NameSpace(folder)
         item = ns.ParseName(filename)
-        if not item: return False
+        if not item:
+            return False
 
         keywords = ["anclar a la barra de tareas", "pin to taskbar", "taskbar"] if taskbar else \
             ["anclar a inicio", "pin to start", "start"]
@@ -330,7 +434,8 @@ def _try_programmatic_pin(link_path, taskbar=True):
         for verb in item.Verbs():
             v_name = verb.Name.lower()
             if any(k in v_name for k in keywords):
-                if "desanclar" in v_name or "unpin" in v_name: continue
+                if "desanclar" in v_name or "unpin" in v_name:
+                    continue
                 verb.DoIt()
                 return True
         return False

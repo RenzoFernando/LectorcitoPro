@@ -26,10 +26,11 @@ set "ENTRY_POINT=src/main.py"
 set "VENV_PYTHON=.venv\Scripts\python.exe"
 set "META_EXPORT_SCRIPT=.build_meta_export.py"
 set "META_EXPORT_CMD=.build_meta_export.cmd"
+set "PORTABLE_ARTIFACT_NAME=Lectorcito Pro Portable.exe"
 
 echo.
 echo =======================================================
-echo  Compilador de Aplicacion (Motor: Nuitka)
+echo  Compilador de Aplicacion Portable (Motor: Nuitka)
 echo =======================================================
 echo.
 
@@ -108,7 +109,6 @@ echo [TRADEMARK] %TRADEMARK_TEXT%
 echo.
 
 echo Instalando/Verificando Nuitka y dependencias...
-REM Usamos el pip especifico del entorno para garantizar consistencia
 "%PYTHON_CMD%" -m pip install -r requirements.txt --default-timeout=100 > nul
 echo.
 
@@ -167,23 +167,22 @@ if %errorlevel% neq 0 (
 
 echo.
 echo =======================================================
-echo  Compilacion exitosa!
+echo  Compilacion portable exitosa!
 echo =======================================================
 echo.
 
 REM --- Organizacion del archivo ejecutable ---
-echo Moviendo %APP_EXE_NAME% a la carpeta '%OUTPUT_FOLDER%'...
+echo Moviendo artefacto portable a la carpeta '%OUTPUT_FOLDER%'...
 if not exist "%OUTPUT_FOLDER%" mkdir "%OUTPUT_FOLDER%"
+if exist "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" del /q "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" > nul 2>&1
 
-REM Nuitka deja el exe en la carpeta definida en --output-dir (dist)
-move "dist\%APP_EXE_NAME%" "%OUTPUT_FOLDER%\" > nul
+move "dist\%APP_EXE_NAME%" "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" > nul
 
 if %errorlevel% neq 0 (
     echo.
     echo ERROR: No se pudo mover el archivo. Busquelo en la carpeta 'dist\'.
 ) else (
-    echo El archivo %APP_EXE_NAME% esta listo en la carpeta '%OUTPUT_FOLDER%'.
-    echo Ya puede usar 'firmar_aplicacion.ps1' para firmarlo si lo desea.
+    echo El archivo %PORTABLE_ARTIFACT_NAME% esta listo en la carpeta '%OUTPUT_FOLDER%'.
 )
 echo.
 
