@@ -58,6 +58,8 @@ $CarpetaSalidaName = Get-AppMetaValue "app_meta.APP_OUTPUT_DIR_NAME" "downloads"
 $NombreExe = Get-AppMetaValue "app_meta.APP_EXECUTABLE_NAME" "LectorcitoPro.exe"
 $CarpetaCertName = Get-AppMetaValue "app_meta.APP_CERT_DIR_NAME" "certificate_resources"
 $AppNameInternal = Get-AppMetaValue "app_meta.APP_NAME_INTERNAL" "LectorcitoPro"
+$PublisherName = Get-AppMetaValue "app_meta.APP_PUBLISHER_NAME" "Renzo Fernando Mosquera Daza"
+$FriendlySignerName = Get-AppMetaValue "app_meta.APP_SIGNATURE_FRIENDLY_NAME" "Lectorcito Pro Code Signing"
 
 $CarpetaSalida = Join-Path -Path $PSScriptRoot $CarpetaSalidaName
 $RutaExe = Join-Path -Path $CarpetaSalida $NombreExe
@@ -67,7 +69,7 @@ $CarpetaCert = Join-Path -Path $PSScriptRoot $CarpetaCertName
 $NombreCert = "${AppNameInternal}_Key.pfx"
 $RutaCert = Join-Path -Path $CarpetaCert $NombreCert
 $PasswordCert = "Lectorcito123"
-$SujetoCert = "CN=${AppNameInternal}_Autor"
+$SujetoCert = "CN=$PublisherName"
 
 # -----------------------------------------------------------------------------
 # 2. VERIFICACIONES
@@ -105,7 +107,7 @@ if (Test-Path -Path $RutaCert) {
                                           -Subject $SujetoCert `
                                           -CertStoreLocation "Cert:\CurrentUser\My" `
                                           -NotAfter (Get-Date).AddYears(5) `
-                                          -FriendlyName "$AppNameInternal Developer ID"
+                                          -FriendlyName $FriendlySignerName
 
     $PasswordSecure = ConvertTo-SecureString -String $PasswordCert -Force -AsPlainText
     Export-PfxCertificate -Cert $CertTemp -FilePath $RutaCert -Password $PasswordSecure

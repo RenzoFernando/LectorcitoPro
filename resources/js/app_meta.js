@@ -1,14 +1,24 @@
 window.APP_META = {
     "nameInternal": "LectorcitoPro",
     "displayName": "Lectorcito Pro",
+    "productName": "Lectorcito Pro",
     "version": "8.0.4",
+    "fileVersion": "8.0.4.0",
+    "productVersion": "8.0.4.0",
     "author": "Renzo Fernando Mosquera Daza",
+    "companyName": "Renzo Fernando Mosquera Daza",
+    "publisherName": "Renzo Fernando Mosquera Daza",
+    "fileDescription": "Herramienta de escritorio profesional para auditoría de código, documentación técnica y consolidación de contextos para Inteligencia Artificial.",
     "repositoryUrl": "https://github.com/RenzoFernando/LectorcitoPro",
     "websiteUrl": "https://renzofernando.github.io/LectorcitoPro/",
     "manualTitle": "Manual de Usuario",
     "documentTitle": "Manual de Usuario - Lectorcito Pro",
     "downloadUrl": "https://github.com/RenzoFernando/LectorcitoPro/releases/latest/download/LectorcitoPro.exe",
     "executableName": "LectorcitoPro.exe",
+    "installerName": "LectorcitoPro-Setup.exe",
+    "releaseBasename": "LectorcitoPro-8.0.4",
     "currentYear": 2026,
-    "copyrightText": "© 2026 Renzo Fernando Mosquera Daza. Todos los derechos reservados."
+    "copyrightText": "© 2026 Renzo Fernando Mosquera Daza. Todos los derechos reservados.",
+    "legalCopyright": "Copyright 2026 - Renzo Fernando Mosquera Daza - All Rights Reserved.",
+    "trademark": "Lectorcito Pro"
 };

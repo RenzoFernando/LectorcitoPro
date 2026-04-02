@@ -20,13 +20,12 @@ REM     - RUTA: %LOCALAPPDATA%\Nuitka\Nuitka\Cache\downloads\depends\x86_64\
 REM     - ACCION: Descomprimir el ZIP ahi. Debe quedar "depends.exe" visible.
 REM ==============================================================================
 
-set "APP_NAME=LectorcitoPro"
-set "APP_EXE_NAME=LectorcitoPro.exe"
+cd /d "%~dp0"
+
 set "ENTRY_POINT=src/main.py"
-set "ICON_FILE=resources/branding/lector.ico"
-set "RESOURCES_FOLDER=resources"
-set "OUTPUT_FOLDER=downloads"
 set "VENV_PYTHON=.venv\Scripts\python.exe"
+set "META_EXPORT_SCRIPT=.build_meta_export.py"
+set "META_EXPORT_CMD=.build_meta_export.cmd"
 
 echo.
 echo =======================================================
@@ -49,11 +48,49 @@ echo Version detectada:
 "%PYTHON_CMD%" --version
 echo.
 
-for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_NAME_INTERNAL)"`) do set "APP_NAME=%%i"
-for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_EXECUTABLE_NAME)"`) do set "APP_EXE_NAME=%%i"
-for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_ICON_ICO_RELATIVE_PATH)"`) do set "ICON_FILE=%%i"
-for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_RESOURCES_DIR_NAME)"`) do set "RESOURCES_FOLDER=%%i"
-for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_OUTPUT_DIR_NAME)"`) do set "OUTPUT_FOLDER=%%i"
+if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1
+if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
+
+> "%META_EXPORT_SCRIPT%" echo import os
+>> "%META_EXPORT_SCRIPT%" echo import sys
+>> "%META_EXPORT_SCRIPT%" echo sys.path.insert^(0, os.path.abspath^("src"^)^)
+>> "%META_EXPORT_SCRIPT%" echo import app_meta
+>> "%META_EXPORT_SCRIPT%" echo meta = [
+>> "%META_EXPORT_SCRIPT%" echo     ("APP_NAME", app_meta.APP_NAME_INTERNAL),
+>> "%META_EXPORT_SCRIPT%" echo     ("APP_EXE_NAME", app_meta.APP_EXECUTABLE_NAME),
+>> "%META_EXPORT_SCRIPT%" echo     ("ICON_FILE", app_meta.APP_ICON_ICO_RELATIVE_PATH),
+>> "%META_EXPORT_SCRIPT%" echo     ("RESOURCES_FOLDER", app_meta.APP_RESOURCES_DIR_NAME),
+>> "%META_EXPORT_SCRIPT%" echo     ("OUTPUT_FOLDER", app_meta.APP_OUTPUT_DIR_NAME),
+>> "%META_EXPORT_SCRIPT%" echo     ("PRODUCT_NAME", app_meta.APP_PRODUCT_NAME),
+>> "%META_EXPORT_SCRIPT%" echo     ("FILE_DESCRIPTION", app_meta.APP_FILE_DESCRIPTION),
+>> "%META_EXPORT_SCRIPT%" echo     ("PRODUCT_VERSION", app_meta.APP_PRODUCT_VERSION),
+>> "%META_EXPORT_SCRIPT%" echo     ("FILE_VERSION", app_meta.APP_FILE_VERSION),
+>> "%META_EXPORT_SCRIPT%" echo     ("COMPANY_NAME", app_meta.APP_COMPANY_NAME),
+>> "%META_EXPORT_SCRIPT%" echo     ("COPYRIGHT_TEXT", app_meta.APP_LEGAL_COPYRIGHT),
+>> "%META_EXPORT_SCRIPT%" echo     ("TRADEMARK_TEXT", app_meta.APP_TRADEMARK),
+>> "%META_EXPORT_SCRIPT%" echo ]
+>> "%META_EXPORT_SCRIPT%" echo for key, value in meta:
+>> "%META_EXPORT_SCRIPT%" echo     text = str^(value^).replace^('^"', ''^)
+>> "%META_EXPORT_SCRIPT%" echo     print^(f'set "{key}={text}"'^)
+
+"%PYTHON_CMD%" "%META_EXPORT_SCRIPT%" > "%META_EXPORT_CMD%"
+if errorlevel 1 goto :meta_error
+
+call "%META_EXPORT_CMD%"
+if errorlevel 1 goto :meta_error
+
+if not defined APP_NAME goto :meta_error
+if not defined APP_EXE_NAME goto :meta_error
+if not defined ICON_FILE goto :meta_error
+if not defined RESOURCES_FOLDER goto :meta_error
+if not defined OUTPUT_FOLDER goto :meta_error
+if not defined PRODUCT_NAME goto :meta_error
+if not defined FILE_DESCRIPTION goto :meta_error
+if not defined PRODUCT_VERSION goto :meta_error
+if not defined FILE_VERSION goto :meta_error
+if not defined COMPANY_NAME goto :meta_error
+if not defined COPYRIGHT_TEXT goto :meta_error
+if not defined TRADEMARK_TEXT goto :meta_error
 
 echo Metadatos detectados:
 echo [APP] %APP_NAME%
@@ -61,6 +98,13 @@ echo [EXE] %APP_EXE_NAME%
 echo [ICON] %ICON_FILE%
 echo [RESOURCES] %RESOURCES_FOLDER%
 echo [OUTPUT] %OUTPUT_FOLDER%
+echo [PRODUCT] %PRODUCT_NAME%
+echo [DESCRIPTION] %FILE_DESCRIPTION%
+echo [PRODUCT VERSION] %PRODUCT_VERSION%
+echo [FILE VERSION] %FILE_VERSION%
+echo [COMPANY] %COMPANY_NAME%
+echo [COPYRIGHT] %COPYRIGHT_TEXT%
+echo [TRADEMARK] %TRADEMARK_TEXT%
 echo.
 
 echo Instalando/Verificando Nuitka y dependencias...
@@ -94,6 +138,13 @@ REM --enable-plugin=tk-inter : Necesario para interfaces graficas
     --output-filename="%APP_EXE_NAME%" ^
     --windows-icon-from-ico="%ICON_FILE%" ^
     --windows-console-mode=disable ^
+    --windows-company-name="%COMPANY_NAME%" ^
+    --product-name="%PRODUCT_NAME%" ^
+    --file-description="%FILE_DESCRIPTION%" ^
+    --file-version="%FILE_VERSION%" ^
+    --product-version="%PRODUCT_VERSION%" ^
+    --copyright="%COPYRIGHT_TEXT%" ^
+    --trademark="%TRADEMARK_TEXT%" ^
     --enable-plugin=tk-inter ^
     --include-package=customtkinter ^
     --include-data-dir="%RESOURCES_FOLDER%=%RESOURCES_FOLDER%" ^
@@ -102,6 +153,8 @@ REM --enable-plugin=tk-inter : Necesario para interfaces graficas
     "%ENTRY_POINT%"
 
 if %errorlevel% neq 0 (
+    if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1
+    if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
     echo.
     echo ******************************************************
     echo * ERROR: La compilacion fallo.                       *
@@ -138,6 +191,20 @@ REM --- Limpieza final ---
 if exist "dist" rmdir /s /q dist
 if exist "%APP_NAME%.build" rmdir /s /q "%APP_NAME%.build"
 if exist "%APP_NAME%.onefile-build" rmdir /s /q "%APP_NAME%.onefile-build"
+if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1
+if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
 
 pause
 endlocal
+goto :eof
+
+:meta_error
+if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1
+if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
+echo.
+echo ******************************************************
+echo * ERROR: No se pudieron cargar los metadatos desde   *
+echo * 'src\app_meta.py'.                                 *
+echo ******************************************************
+pause
+exit /b 1
