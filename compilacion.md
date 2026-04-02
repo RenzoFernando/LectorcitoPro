@@ -29,7 +29,7 @@
 
 
 4. **Distribuir:**
-* Copia el archivo `LectorcitoPro.exe` que está en la carpeta `descargas/`.
+* Copia el archivo `LectorcitoPro.exe` que está en la carpeta `downloads/`.
 * **Importante:** Borra la carpeta `recursos_certificado`.
 
 ---
@@ -60,7 +60,7 @@
 
 **Caso C: "UnauthorizedAccess" al firmar**
 
-* **Solución:** No olvides ejecutar el comando mágico antes de firmar:
+* **Solución:** No olvides ejecutar el comando mágico antes de firmar:  
 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force`
 
 ---

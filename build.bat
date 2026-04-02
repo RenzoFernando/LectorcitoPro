@@ -21,15 +21,16 @@ REM     - ACCION: Descomprimir el ZIP ahi. Debe quedar "depends.exe" visible.
 REM ==============================================================================
 
 set "APP_NAME=LectorcitoPro"
+set "APP_EXE_NAME=LectorcitoPro.exe"
 set "ENTRY_POINT=src/main.py"
-set "ICON_FILE=recursos/lector.ico"
-set "RESOURCES_FOLDER=recursos"
-set "OUTPUT_FOLDER=descargas"
+set "ICON_FILE=resources/branding/lector.ico"
+set "RESOURCES_FOLDER=resources"
+set "OUTPUT_FOLDER=downloads"
 set "VENV_PYTHON=.venv\Scripts\python.exe"
 
 echo.
 echo =======================================================
-echo  Compilador para %APP_NAME% (Motor: Nuitka)
+echo  Compilador de Aplicacion (Motor: Nuitka)
 echo =======================================================
 echo.
 
@@ -46,6 +47,20 @@ if exist "%VENV_PYTHON%" (
 REM --- Verificacion de version ---
 echo Version detectada:
 "%PYTHON_CMD%" --version
+echo.
+
+for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_NAME_INTERNAL)"`) do set "APP_NAME=%%i"
+for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_EXECUTABLE_NAME)"`) do set "APP_EXE_NAME=%%i"
+for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_ICON_ICO_RELATIVE_PATH)"`) do set "ICON_FILE=%%i"
+for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_RESOURCES_DIR_NAME)"`) do set "RESOURCES_FOLDER=%%i"
+for /f "usebackq delims=" %%i in (`"%PYTHON_CMD%" -c "import os,sys;sys.path.insert(0, os.path.abspath('src'));import app_meta;print(app_meta.APP_OUTPUT_DIR_NAME)"`) do set "OUTPUT_FOLDER=%%i"
+
+echo Metadatos detectados:
+echo [APP] %APP_NAME%
+echo [EXE] %APP_EXE_NAME%
+echo [ICON] %ICON_FILE%
+echo [RESOURCES] %RESOURCES_FOLDER%
+echo [OUTPUT] %OUTPUT_FOLDER%
 echo.
 
 echo Instalando/Verificando Nuitka y dependencias...
@@ -76,7 +91,7 @@ REM --standalone --onefile : Crea un solo archivo .exe portatil
 REM --enable-plugin=tk-inter : Necesario para interfaces graficas
 
 "%PYTHON_CMD%" -m nuitka --onefile --standalone ^
-    --output-filename="%APP_NAME%.exe" ^
+    --output-filename="%APP_EXE_NAME%" ^
     --windows-icon-from-ico="%ICON_FILE%" ^
     --windows-console-mode=disable ^
     --enable-plugin=tk-inter ^
@@ -104,17 +119,17 @@ echo =======================================================
 echo.
 
 REM --- Organizacion del archivo ejecutable ---
-echo Moviendo %APP_NAME%.exe a la carpeta '%OUTPUT_FOLDER%'...
+echo Moviendo %APP_EXE_NAME% a la carpeta '%OUTPUT_FOLDER%'...
 if not exist "%OUTPUT_FOLDER%" mkdir "%OUTPUT_FOLDER%"
 
 REM Nuitka deja el exe en la carpeta definida en --output-dir (dist)
-move "dist\%APP_NAME%.exe" "%OUTPUT_FOLDER%\" > nul
+move "dist\%APP_EXE_NAME%" "%OUTPUT_FOLDER%\" > nul
 
 if %errorlevel% neq 0 (
     echo.
     echo ERROR: No se pudo mover el archivo. Busquelo en la carpeta 'dist\'.
 ) else (
-    echo El archivo %APP_NAME%.exe esta listo en la carpeta '%OUTPUT_FOLDER%'.
+    echo El archivo %APP_EXE_NAME% esta listo en la carpeta '%OUTPUT_FOLDER%'.
     echo Ya puede usar 'firmar_aplicacion.ps1' para firmarlo si lo desea.
 )
 echo.

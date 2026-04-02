@@ -235,8 +235,8 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
 
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         if not getattr(sys, 'frozen', False):
-            base_path = os.path.join(base_path, "..")
-        icon_path = os.path.join(base_path, 'recursos', 'lector.ico')
+            base_path = os.path.abspath(os.path.join(base_path, "..", ".."))
+        icon_path = os.path.join(base_path, 'resources', 'branding', 'lector.ico')
         icon_path = os.path.normpath(icon_path)
 
         shell = win32com.client.Dispatch("WScript.Shell")

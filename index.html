@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual de Usuario - Lectorcito Pro</title>
-    <link rel="stylesheet" href="recursos/estilos.css">
-    <link rel="icon" type="image/x-icon" href="recursos/lector.ico">
+    <title>Manual de Usuario</title>
+    <link rel="stylesheet" href="resources/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="resources/branding/lector.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -14,8 +14,8 @@
 
     <nav class="navbar">
         <div class="logo-container">
-            <img src="recursos/logo_oscuro.png" alt="Lectorcito Pro Logo" id="app-logo" class="nav-logo">
-            <span class="version-tag">v8.0.0</span>
+            <img src="resources/branding/logo_oscuro.png" alt="Logo de la aplicación" id="app-logo" class="nav-logo">
+            <span class="version-tag" id="app-version-tag"></span>
         </div>
         <div class="nav-links">
             <a href="#intro">Inicio</a>
@@ -25,7 +25,7 @@
         </div>
         <div class="nav-controls">
             <button id="theme-toggle" class="icon-btn" title="Cambiar Tema">
-                <img src="recursos/luna.png" alt="Tema" id="theme-icon">
+                <img src="resources/icons/luna.png" alt="Tema" id="theme-icon">
             </button>
             <a href="#descargas" class="btn btn-sm btn-blue">Descargar</a>
         </div>
@@ -36,17 +36,17 @@
             <div class="hero-content fade-in-up">
                 <h1>Documentación y Análisis de Código Simplificado</h1>
                 <p class="hero-desc">
-                    <strong>Lectorcito Pro</strong> es la herramienta definitiva para desarrolladores que necesitan consolidar proyectos complejos en un solo archivo de texto. Ideal para crear contextos para Inteligencia Artificial (LLMs), auditorías de código y documentación técnica.
+                    <strong id="hero-app-name"></strong> es la herramienta definitiva para desarrolladores que necesitan consolidar proyectos complejos en un solo archivo de texto. Ideal para crear contextos para Inteligencia Artificial (LLMs), auditorías de código y documentación técnica.
                 </p>
                 <div class="hero-buttons">
-                    <a href="#descargas" class="btn btn-blue">Obtener Lectorcito</a>
-                    <a href="https://github.com/RenzoFernando/LectorcitoPro.git" target="_blank" class="btn btn-outline">
-                        <img src="recursos/github_oscuro.png" class="btn-icon-img" id="github-btn-icon" alt="Github"> Ver Código
+                    <a href="#descargas" class="btn btn-blue" id="hero-download-link">Obtener la aplicación</a>
+                    <a href="#" target="_blank" class="btn btn-outline" id="hero-repo-link">
+                        <img src="resources/icons/github_oscuro.png" class="btn-icon-img" id="github-btn-icon" alt="Github"> Ver Código
                     </a>
                 </div>
             </div>
             <div class="hero-image fade-in-up">
-                <img src="recursos/lector.png" alt="Mascota Lectorcito" class="floating-img">
+                <img src="resources/branding/lector.png" alt="Mascota de la aplicación" class="floating-img">
             </div>
         </div>
     </header>
@@ -154,21 +154,21 @@
                 <div class="tool-group fade-in-up">
                     <h3>Control de Archivos</h3>
                     <div class="tool-item">
-                        <img src="recursos/ver_claro.png" class="tool-icon bg-dark" alt="Ver">
+                        <img src="resources/icons/ver_claro.png" class="tool-icon bg-dark" alt="Ver">
                         <div>
                             <h4>Qué Ver (Inclusión)</h4>
                             <p>Define explícitamente qué extensiones (<code>.py</code>, <code>.js</code>) y qué carpetas importantes (<code>src</code>) quieres leer. Soporta autodeteción de extensiones.</p>
                         </div>
                     </div>
                     <div class="tool-item">
-                        <img src="recursos/nover_claro.png" class="tool-icon bg-dark" alt="No Ver">
+                        <img src="resources/icons/nover_claro.png" class="tool-icon bg-dark" alt="No Ver">
                         <div>
                             <h4>Qué No Ver (Exclusión)</h4>
                             <p>Crucial para el rendimiento. Bloquea carpetas basura como <code>node_modules</code>, <code>.git</code> o archivos sensibles como <code>.env</code>.</p>
                         </div>
                     </div>
                     <div class="tool-item">
-                        <img src="recursos/etiqueta_claro.png" class="tool-icon bg-dark" alt="Etiqueta">
+                        <img src="resources/icons/etiqueta_claro.png" class="tool-icon bg-dark" alt="Etiqueta">
                         <div>
                             <h4>Multimedia (Solo Listar)</h4>
                             <p>Archivos binarios (imágenes, PDFs, ejecutables) que deben aparecer en el reporte para constancia, pero sin intentar leer su contenido ilegible.</p>
@@ -179,21 +179,21 @@
                 <div class="tool-group fade-in-up">
                     <h3>Interfaz y Sistema</h3>
                     <div class="tool-item">
-                        <img src="recursos/luna.png" class="tool-icon bg-dark" alt="Tema">
+                        <img src="resources/icons/luna.png" class="tool-icon bg-dark" alt="Tema">
                         <div>
                             <h4>Tema</h4>
                             <p>Alterna instantáneamente entre el Modo Claro y el Modo Oscuro para reducir la fatiga visual.</p>
                         </div>
                     </div>
                     <div class="tool-item">
-                        <img src="recursos/traducir_claro.png" class="tool-icon bg-dark" alt="Idioma">
+                        <img src="resources/icons/traducir_claro.png" class="tool-icon bg-dark" alt="Idioma">
                         <div>
                             <h4>Idioma / Language</h4>
                             <p>Traduce toda la interfaz entre Español e Inglés en tiempo real.</p>
                         </div>
                     </div>
                     <div class="tool-item">
-                        <img src="recursos/perfil_claro.png" class="tool-icon bg-dark" alt="Perfil">
+                        <img src="resources/icons/perfil_claro.png" class="tool-icon bg-dark" alt="Perfil">
                         <div>
                             <h4>Gestor de Perfiles</h4>
                             <p>Crea entornos de trabajo. Ejemplo: Un perfil "Python" que ignora <code>venv</code> y lee <code>.py</code>, y otro "Web" que lee <code>.js</code> y <code>.css</code>.</p>
@@ -204,28 +204,28 @@
                 <div class="tool-group fade-in-up">
                     <h3>Ajustes Avanzados</h3>
                     <div class="tool-item">
-                        <img src="recursos/ajustes_claro.png" class="tool-icon bg-dark" alt="Ajustes">
+                        <img src="resources/icons/ajustes_claro.png" class="tool-icon bg-dark" alt="Ajustes">
                         <div>
                             <h4>Ajustes</h4>
                             <p>Cambia el formato de salida (<code>.txt</code> o <code>.md</code>) y crea accesos directos en el Escritorio o Menú Inicio.</p>
                         </div>
                     </div>
                     <div class="tool-item">
-                        <img src="recursos/restaurar_claro.png" class="tool-icon bg-dark" alt="Restaurar">
+                        <img src="resources/icons/restaurar_claro.png" class="tool-icon bg-dark" alt="Restaurar">
                         <div>
                             <h4>Restaurar Fábrica</h4>
                             <p>Si algo sale mal, este botón devuelve toda la configuración a su estado original.</p>
                         </div>
                     </div>
                     <div class="tool-item">
-                        <img src="recursos/github_claro.png" class="tool-icon bg-dark" alt="Github">
+                        <img src="resources/icons/github_claro.png" class="tool-icon bg-dark" alt="Github">
                         <div>
                             <h4>Código Fuente</h4>
                             <p>Abre el repositorio oficial para ver actualizaciones, reportar errores o auditar el código.</p>
                         </div>
                     </div>
                     <div class="tool-item">
-                        <img src="recursos/info_claro.png" class="tool-icon bg-dark" alt="Info">
+                        <img src="resources/icons/info_claro.png" class="tool-icon bg-dark" alt="Info">
                         <div>
                             <h4>Información</h4>
                             <p>Muestra la versión actual y abre el manual de usuario online.</p>
@@ -242,10 +242,10 @@
             <div class="download-container">
                 <div class="download-card">
                     <div class="download-icon">
-                        <img src="recursos/lector.png" alt="Mascota Lectorcito">
+                        <img src="resources/branding/lector.png" alt="Mascota de la aplicación">
                     </div>
                     <div class="download-details">
-                        <h3>Lectorcito Pro</h3>
+                        <h3 id="download-app-name"></h3>
                         <p>No requiere instalación. Simplemente descarga el ejecutable, guárdalo donde quieras y haz doble clic.</p>
                         <ul class="specs-list">
                             <li>Sistema: Windows 10 / 11</li>
@@ -253,10 +253,10 @@
                             <li>Tipo: Portable (.exe)</li>
                         </ul>
                         <div class="download-actions">
-                            <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest/download/LectorcitoPro.exe" class="btn btn-green">
+                            <a href="#" class="btn btn-green" id="download-exe-link">
                                 Descargar .EXE
                             </a>
-                            <a href="https://github.com/RenzoFernando/LectorcitoPro" target="_blank" class="btn btn-outline">
+                            <a href="#" target="_blank" class="btn btn-outline" id="download-repo-link">
                                 Ver Repositorio
                             </a>
                         </div>
@@ -268,11 +268,12 @@
 
     <footer class="footer">
         <div class="container">
-            <p><strong>Lectorcito Pro</strong> v8.0.0</p>
-            <p class="copyright">&copy; 2026 Renzo Fernando Mosquera Daza. Todos los derechos reservados.</p>
+            <p><strong id="footer-app-name"></strong> <span id="footer-app-version"></span></p>
+            <p class="copyright" id="footer-copyright"></p>
         </div>
     </footer>
 
-    <script src="recursos/script.js"></script>
+    <script src="resources/js/app_meta.js"></script>
+    <script src="resources/js/scripts.js"></script>
 </body>
 </html>

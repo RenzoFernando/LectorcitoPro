@@ -48,8 +48,9 @@ nuitka-crash-report.xml
 
 # ── Carpeta de reportes ─────────────────────────────────
 Lecturas/
-descargas/
-recursos_certificado/
+Readings/
+downloads/
+certificate_resources/
 
 # ── Otros archivos temporales ───────────────────────────
 *.tmp

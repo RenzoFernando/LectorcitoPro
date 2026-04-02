@@ -21,12 +21,12 @@ def resource_path(relative_path: str) -> str:
         # Nuitka o Modo Desarrollo
         base_path = os.path.dirname(os.path.abspath(__file__))
 
-        # Si estamos en 'src', los recursos suelen estar un nivel arriba
+        # Si estamos en 'src', los resources suelen estar un nivel arriba
         # Nuitka mantiene la estructura interna 'src' al compilar
         if os.path.basename(base_path) == 'src':
             base_path = os.path.abspath(os.path.join(base_path, ".."))
 
-    return os.path.join(base_path, 'recursos', relative_path)
+    return os.path.join(base_path, 'resources', relative_path)
 
 
 # =============================================================================

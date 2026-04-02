@@ -49,7 +49,7 @@ class LectorcitoApp(ctk.CTk):
         self._modal_fail_safe_after_id = None
         self._dialog_cache = {}
 
-        self.title("Lectorcito Pro")
+        self.title(APP_DISPLAY_NAME)
         self._app_w = 600
         self._app_h = 500
         self.geometry(f"{self._app_w}x{self._app_h}")
@@ -168,7 +168,7 @@ class LectorcitoApp(ctk.CTk):
         self._create_main_buttons(center)
         self._create_status_area(center)
 
-        self.left_sidebar = LeftSidebar(left_container, text=f"Lectorcito Pro v{VERSION}")
+        self.left_sidebar = LeftSidebar(left_container, text=f"{APP_DISPLAY_NAME} v{VERSION}")
         self.right_sidebar = RightSidebar(right_container, icons=self.icons, current_theme=self.current_theme)
         self.sidebar_buttons = self.right_sidebar.buttons
 
@@ -601,4 +601,4 @@ class LectorcitoApp(ctk.CTk):
             self.restore_ui_from_modal()
 
     def show_app_info(self):
-        webbrowser.open("https://renzofernando.github.io/LectorcitoPro/")
+        webbrowser.open(APP_WEBSITE_URL)

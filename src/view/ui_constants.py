@@ -1,5 +1,4 @@
-from app_meta import APP_VERSION, APP_AUTHOR, APP_REPOSITORY_URL, get_current_year
-
+from app_meta import APP_VERSION, APP_AUTHOR, APP_REPOSITORY_WEB_URL, get_current_year
 # =============================================================================
 # CONSTANTES DE INTERFAZ
 # =============================================================================
@@ -7,7 +6,7 @@ from app_meta import APP_VERSION, APP_AUTHOR, APP_REPOSITORY_URL, get_current_ye
 VERSION = APP_VERSION
 YEAR = get_current_year()
 AUTHOR = APP_AUTHOR
-REPO_URL = APP_REPOSITORY_URL
+REPO_URL = APP_REPOSITORY_WEB_URL
 
 # Definicion de paletas de colores para temas Claro/Oscuro
 COLORS = {

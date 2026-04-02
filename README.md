@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/RenzoFernando/LectorcitoPro/main/recursos/lector.png" alt="Logo de Lectorcito Pro" width="150">
+  <img src="https://raw.githubusercontent.com/RenzoFernando/LectorcitoPro/main/resources/branding/lector.png" alt="Logo de Lectorcito Pro" width="150">
   <h1>Lectorcito Pro</h1>
   <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest">
     <img src="https://img.shields.io/github/v/release/RenzoFernando/LectorcitoPro?style=for-the-badge&label=Descargar%20Ultima%20Version&color=blue" alt="Descargar Última Versión">
@@ -90,7 +90,6 @@ Desde el menú de ajustes se puede configurar:
 ## <a name="estructura"></a>Estructura del Proyecto
 
 ```text
-
 LectorcitoPro/
 ├── Historial de Versiones.md
 ├── README.md
@@ -99,19 +98,25 @@ LectorcitoPro/
 ├── firmar_aplicacion.ps1
 ├── index.html
 ├── pyproject.toml
-├── recursos
 ├── requirements.txt
 ├── setup_amp.bat
+├── resources/...
 └── src
+    ├── __init__.py
+    ├── app_meta.py
     ├── config.py
+    ├── file_rules.py
+    ├── main.py
+    ├── utils.py
     ├── controller
+    │   ├── __init__.py
     │   ├── controller.py
     │   └── handlers.py
-    ├── main.py
     ├── model
+    │   ├── __init__.py
     │   └── processor.py
-    ├── utils.py
     └── view
+        ├── __init__.py
         ├── dialogs.py
         ├── gradient_progress.py
         ├── profiles_dialog.py
@@ -124,8 +129,7 @@ LectorcitoPro/
         ├── ui.py
         ├── ui_assets.py
         └── ui_constants.py
-
-```
+````
 
 ---
 
@@ -144,38 +148,34 @@ Si desea compilar el proyecto desde el código fuente o contribuir al desarrollo
 El proyecto incluye scripts automatizados en la raíz para facilitar el despliegue del entorno de desarrollo.
 
 1. **Clonar el Repositorio:**
+
 ```bash
 git clone https://github.com/RenzoFernando/LectorcitoPro.git
 cd LectorcitoPro
-
 ```
-
 
 2. **Preparar Entorno Virtual:**
-Ejecute el script `setup_amp.bat`. Este script creará el entorno virtual (`.venv`), actualizará `pip` e instalará todas las dependencias listadas en `requirements.txt`.
+   Ejecute el script `setup_amp.bat`. Este script creará el entorno virtual (`.venv`), actualizará `pip` e instalará todas las dependencias listadas en `requirements.txt`.
+
 ```batch
 .\setup_amp.bat
-
 ```
-
 
 3. **Ejecución en Desarrollo:**
-Para correr la aplicación sin compilar:
+   Para correr la aplicación sin compilar:
+
 ```bash
 .venv\Scripts\python.exe src/main.py
-
 ```
-
 
 4. **Compilación a Ejecutable (.exe):**
-El proyecto utiliza **Nuitka** para compilar el código Python a C++ y posteriormente a código máquina, garantizando alto rendimiento y ofuscación. Ejecute el script de construcción:
+   El proyecto utiliza **Nuitka** para compilar el código Python a C++ y posteriormente a código máquina, garantizando alto rendimiento y ofuscación. Ejecute el script de construcción:
+
 ```batch
 .\build.bat
-
 ```
 
-
-El ejecutable resultante (`LectorcitoPro.exe`) se ubicará en la carpeta `descargas/`.
+El ejecutable resultante (`LectorcitoPro.exe`) se ubicará en la carpeta `downloads/`.
 
 ---
 
@@ -183,4 +183,3 @@ El ejecutable resultante (`LectorcitoPro.exe`) se ubicará en la carpeta `descar
 
 Este proyecto se distribuye bajo los términos de la **Licencia MIT**.
 Copyright © 2026 - Renzo Fernando Mosquera Daza - All Rights Reserved.
-

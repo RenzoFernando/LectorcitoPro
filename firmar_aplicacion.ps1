@@ -15,6 +15,33 @@
     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 #>
 
+function Get-PythonCommand {
+    $venvPython = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+    if (Test-Path $venvPython) {
+        return $venvPython
+    }
+    if (Get-Command py -ErrorAction SilentlyContinue) {
+        return "py"
+    }
+    return "python"
+}
+
+function Get-AppMetaValue([string]$Expression, [string]$DefaultValue) {
+    try {
+        $python = Get-PythonCommand
+        $command = "import os,sys; sys.path.insert(0, os.path.abspath('src')); import app_meta; print($Expression)"
+        $value = (& $python -c $command 2>$null | Select-Object -First 1)
+        if ($null -ne $value) {
+            $trimmed = $value.ToString().Trim()
+            if ($trimmed) {
+                return $trimmed
+            }
+        }
+    } catch {
+    }
+    return $DefaultValue
+}
+
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "   FIRMA DIGITAL NATIVA (PowerShell)    " -ForegroundColor Cyan
@@ -25,16 +52,22 @@ Write-Host ""
 # 1. CONFIGURACION DE RUTAS
 # -----------------------------------------------------------------------------
 $PSScriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-$CarpetaSalida = Join-Path -Path $PSScriptRoot "descargas"
-$NombreExe = "LectorcitoPro.exe"
+Set-Location $PSScriptRoot
+
+$CarpetaSalidaName = Get-AppMetaValue "app_meta.APP_OUTPUT_DIR_NAME" "downloads"
+$NombreExe = Get-AppMetaValue "app_meta.APP_EXECUTABLE_NAME" "LectorcitoPro.exe"
+$CarpetaCertName = Get-AppMetaValue "app_meta.APP_CERT_DIR_NAME" "certificate_resources"
+$AppNameInternal = Get-AppMetaValue "app_meta.APP_NAME_INTERNAL" "LectorcitoPro"
+
+$CarpetaSalida = Join-Path -Path $PSScriptRoot $CarpetaSalidaName
 $RutaExe = Join-Path -Path $CarpetaSalida $NombreExe
 
 # Configuración del Certificado
-$CarpetaCert = Join-Path -Path $PSScriptRoot "recursos_certificado"
-$NombreCert = "LectorcitoPro_Key.pfx"
+$CarpetaCert = Join-Path -Path $PSScriptRoot $CarpetaCertName
+$NombreCert = "${AppNameInternal}_Key.pfx"
 $RutaCert = Join-Path -Path $CarpetaCert $NombreCert
-$PasswordCert = "Lectorcito123" # Contraseña interna para el archivo PFX
-$SujetoCert = "CN=LectorcitoPro_Autor"
+$PasswordCert = "Lectorcito123"
+$SujetoCert = "CN=${AppNameInternal}_Autor"
 
 # -----------------------------------------------------------------------------
 # 2. VERIFICACIONES
@@ -60,7 +93,6 @@ $CertificadoObj = $null
 
 if (Test-Path -Path $RutaCert) {
     Write-Host "[INFO] Certificado existente encontrado." -ForegroundColor Yellow
-    # Cargar certificado existente
     try {
         $CertificadoObj = Get-PfxCertificate -FilePath $RutaCert
     } catch {
@@ -68,15 +100,13 @@ if (Test-Path -Path $RutaCert) {
     }
 } else {
     Write-Host "[INFO] Creando nuevo certificado autofirmado..." -ForegroundColor Green
-    
-    # Crear certificado en el almacén personal del usuario
+
     $CertTemp = New-SelfSignedCertificate -Type CodeSigningCert `
                                           -Subject $SujetoCert `
                                           -CertStoreLocation "Cert:\CurrentUser\My" `
                                           -NotAfter (Get-Date).AddYears(5) `
-                                          -FriendlyName "LectorcitoPro Developer ID"
+                                          -FriendlyName "$AppNameInternal Developer ID"
 
-    # Exportar a archivo PFX para guardarlo en la carpeta del proyecto
     $PasswordSecure = ConvertTo-SecureString -String $PasswordCert -Force -AsPlainText
     Export-PfxCertificate -Cert $CertTemp -FilePath $RutaCert -Password $PasswordSecure
     

@@ -8,7 +8,7 @@ from utils import resource_path
 # =============================================================================
 
 def get_app_icon_path() -> str:
-    return resource_path("lector.ico")
+    return resource_path(os.path.join("branding", "lector.ico"))
 
 
 def load_sidebar_icons(size=(22, 22)) -> dict:
@@ -17,16 +17,16 @@ def load_sidebar_icons(size=(22, 22)) -> dict:
 
     for key in icon_keys:
         try:
-            img_dark = Image.open(resource_path(f"{key}_oscuro.png"))
-            img_light = Image.open(resource_path(f"{key}_claro.png"))
+            img_dark = Image.open(resource_path(os.path.join("icons", f"{key}_oscuro.png")))
+            img_light = Image.open(resource_path(os.path.join("icons", f"{key}_claro.png")))
             icons[key] = ctk.CTkImage(light_image=img_light, dark_image=img_dark, size=size)
         except Exception as e:
             print(f"Error cargando icono '{key}': {e}")
             icons[key] = None
 
     try:
-        icons["sun"] = ctk.CTkImage(Image.open(resource_path("sol.png")), size=(24, 24))
-        icons["moon"] = ctk.CTkImage(Image.open(resource_path("luna.png")), size=(24, 24))
+        icons["sun"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "sol.png"))), size=(24, 24))
+        icons["moon"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "luna.png"))), size=(24, 24))
     except Exception as e:
         print(f"Error cargando iconos de tema: {e}")
         icons["sun"] = None
@@ -37,8 +37,8 @@ def load_sidebar_icons(size=(22, 22)) -> dict:
 
 def load_logo(target_width=150) -> ctk.CTkImage | None:
     try:
-        logo_light = Image.open(resource_path("logo_oscuro.png"))
-        logo_dark = Image.open(resource_path("logo_claro.png"))
+        logo_light = Image.open(resource_path(os.path.join("branding", "logo_oscuro.png")))
+        logo_dark = Image.open(resource_path(os.path.join("branding", "logo_claro.png")))
 
         ow, oh = logo_light.size
         ratio = oh / ow if ow else 1.0
