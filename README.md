@@ -27,13 +27,12 @@ La línea **8.0.9** cierra la versión 8 con un enfoque claro en **calidad, esta
 ## Tabla de Contenidos
 
 1. [Acceso y Descarga](#acceso)
-2. [Qué aporta la versión 8](#version8)
-3. [Características Técnicas](#caracteristicas)
-4. [Manual de Uso](#uso)
-5. [Distribución Windows](#distribucion)
-6. [Estructura del Proyecto](#estructura)
-7. [Guía para Desarrolladores](#desarrolladores)
-8. [Licencia](#licencia)
+2. [Características Técnicas](#caracteristicas)
+3. [Manual de Uso](#uso)
+4. [Distribución Windows](#distribucion)
+5. [Estructura del Proyecto](#estructura)
+6. [Guía para Desarrolladores](#desarrolladores)
+7. [Licencia](#licencia)
 
 ---
 
@@ -54,23 +53,6 @@ Canales oficiales:
 
 * **Sitio Web Oficial:** https://renzofernando.github.io/LectorcitoPro/
 * **GitHub Releases:** https://github.com/RenzoFernando/LectorcitoPro/releases/latest
-
----
-
-## <a name="version8"></a>Qué aporta la versión 8
-
-La versión 8 consolida el trabajo hecho en rendimiento, consistencia visual y distribución:
-
-* Infraestructura de ventanas, apertura y transiciones refinada.
-* Setup más limpio y presentación más profesional del producto.
-* Mejoras de rapidez en operaciones frecuentes y vistas pesadas.
-* Ajustes visuales integrales para reducir inconsistencias entre pantallas.
-* Metadatos profesionales para ejecutable, instalador y publicación.
-* Empaquetado dual con artefacto **instalable** y **portable**.
-* Mejor integración con Windows para accesos directos y comportamiento esperado.
-* Mejor organización del flujo de descarga y documentación pública.
-* Integración de exclusiones asistidas con `.gitignore` desde la aplicación.
-* Cierre estable de la rama 8 con release final **8.0.9**.
 
 ---
 
