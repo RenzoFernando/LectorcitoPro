@@ -3,10 +3,9 @@ from __future__ import annotations
 import json
 import os
 
-
 APP_NAME_INTERNAL = "LectorcitoPro"
 APP_DISPLAY_NAME = "Lectorcito Pro"
-APP_VERSION = "8.1.0"
+APP_VERSION = "8.0.8"
 APP_AUTHOR = "Renzo Fernando Mosquera Daza"
 APP_VENDOR_NAME = "APPS_RenzoFernando"
 APP_COMPANY_NAME = "Renzo Fernando Mosquera Daza"
@@ -20,12 +19,21 @@ APP_WEBSITE_URL = "https://renzofernando.github.io/LectorcitoPro/"
 APP_MANUAL_TITLE = "Manual de Usuario"
 APP_EXECUTABLE_NAME = f"{APP_NAME_INTERNAL}.exe"
 APP_INSTALLER_NAME = f"{APP_NAME_INTERNAL}-Setup.exe"
+APP_INSTALLER_BASENAME = os.path.splitext(APP_INSTALLER_NAME)[0]
+APP_PORTABLE_ARTIFACT_NAME = f"{APP_NAME_INTERNAL}-Portable.exe"
 APP_RELEASE_BASENAME = f"{APP_NAME_INTERNAL}-{APP_VERSION}"
 APP_RESOURCES_DIR_NAME = "resources"
 APP_OUTPUT_DIR_NAME = "downloads"
 APP_CERT_DIR_NAME = "certificate_resources"
+APP_LICENSE_FILE_NAME = "LICENSE"
+APP_LICENSE_RELATIVE_PATH = APP_LICENSE_FILE_NAME
 APP_ICON_ICO_RELATIVE_PATH = os.path.join(APP_RESOURCES_DIR_NAME, "branding", "lector.ico")
 APP_WEB_META_RELATIVE_PATH = os.path.join(APP_RESOURCES_DIR_NAME, "js", "app_meta.js")
+APP_PUBLISHER_URL = APP_WEBSITE_URL
+APP_SUPPORT_URL = APP_REPOSITORY_WEB_URL
+APP_UPDATES_URL = f"{APP_REPOSITORY_WEB_URL}/releases/latest"
+APP_SIGNING_TIMESTAMP_URL = "http://timestamp.digicert.com"
+APP_INSTALL_MARKER_FILE = ".lectorcito_installed"
 
 
 def get_current_year() -> int:
@@ -97,6 +105,7 @@ def get_web_meta_payload() -> dict:
         "downloadUrl": get_release_download_url(),
         "executableName": APP_EXECUTABLE_NAME,
         "installerName": APP_INSTALLER_NAME,
+        "portableArtifactName": APP_PORTABLE_ARTIFACT_NAME,
         "releaseBasename": APP_RELEASE_BASENAME,
         "currentYear": get_current_year(),
         "copyrightText": get_copyright_text(),

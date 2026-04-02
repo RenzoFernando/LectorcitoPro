@@ -1,4 +1,3 @@
-
 import sys
 import customtkinter as ctk
 from tkinter import TclError

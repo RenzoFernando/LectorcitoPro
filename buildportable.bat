@@ -26,7 +26,6 @@ set "ENTRY_POINT=src/main.py"
 set "VENV_PYTHON=.venv\Scripts\python.exe"
 set "META_EXPORT_SCRIPT=.build_meta_export.py"
 set "META_EXPORT_CMD=.build_meta_export.cmd"
-set "PORTABLE_ARTIFACT_NAME=Lectorcito Pro Portable.exe"
 
 echo.
 echo =======================================================
@@ -69,10 +68,12 @@ if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
 >> "%META_EXPORT_SCRIPT%" echo     ("COMPANY_NAME", app_meta.APP_COMPANY_NAME),
 >> "%META_EXPORT_SCRIPT%" echo     ("COPYRIGHT_TEXT", app_meta.APP_LEGAL_COPYRIGHT),
 >> "%META_EXPORT_SCRIPT%" echo     ("TRADEMARK_TEXT", app_meta.APP_TRADEMARK),
+>> "%META_EXPORT_SCRIPT%" echo     ("PORTABLE_ARTIFACT_NAME", app_meta.APP_PORTABLE_ARTIFACT_NAME),
+>> "%META_EXPORT_SCRIPT%" echo     ("LICENSE_FILE", app_meta.APP_LICENSE_RELATIVE_PATH),
 >> "%META_EXPORT_SCRIPT%" echo ]
 >> "%META_EXPORT_SCRIPT%" echo for key, value in meta:
->> "%META_EXPORT_SCRIPT%" echo     text = str^(value^).replace^('^"', ''^)
->> "%META_EXPORT_SCRIPT%" echo     print^(f'set "{key}={text}"'^)
+>> "%META_EXPORT_SCRIPT%" echo     text = str^(value^).replace^(chr^(34^), ''^)
+>> "%META_EXPORT_SCRIPT%" echo     print^('set ' + chr^(34^) + key + '=' + text + chr^(34^)^)
 
 "%PYTHON_CMD%" "%META_EXPORT_SCRIPT%" > "%META_EXPORT_CMD%"
 if errorlevel 1 goto :meta_error
@@ -92,6 +93,18 @@ if not defined FILE_VERSION goto :meta_error
 if not defined COMPANY_NAME goto :meta_error
 if not defined COPYRIGHT_TEXT goto :meta_error
 if not defined TRADEMARK_TEXT goto :meta_error
+if not defined PORTABLE_ARTIFACT_NAME goto :meta_error
+if not defined LICENSE_FILE goto :meta_error
+
+if not exist "%LICENSE_FILE%" (
+    echo.
+    echo ******************************************************
+    echo * ERROR: No se encontro el archivo de licencia.      *
+    echo * Falta: %LICENSE_FILE%                              *
+    echo ******************************************************
+    pause
+    exit /b 1
+)
 
 echo Metadatos detectados:
 echo [APP] %APP_NAME%
@@ -106,6 +119,8 @@ echo [FILE VERSION] %FILE_VERSION%
 echo [COMPANY] %COMPANY_NAME%
 echo [COPYRIGHT] %COPYRIGHT_TEXT%
 echo [TRADEMARK] %TRADEMARK_TEXT%
+echo [PORTABLE] %PORTABLE_ARTIFACT_NAME%
+echo [LICENSE] %LICENSE_FILE%
 echo.
 
 echo Instalando/Verificando Nuitka y dependencias...
@@ -119,6 +134,8 @@ if exist "dist" rmdir /s /q dist
 if exist "%APP_NAME%.dist" rmdir /s /q "%APP_NAME%.dist"
 if exist "%APP_NAME%.build" rmdir /s /q "%APP_NAME%.build"
 if exist "%APP_NAME%.onefile-build" rmdir /s /q "%APP_NAME%.onefile-build"
+if exist "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" del /q "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" > nul 2>&1
+if exist "%OUTPUT_FOLDER%\%LICENSE_FILE%" del /q "%OUTPUT_FOLDER%\%LICENSE_FILE%" > nul 2>&1
 echo Limpieza completada.
 echo.
 
@@ -174,8 +191,6 @@ echo.
 REM --- Organizacion del archivo ejecutable ---
 echo Moviendo artefacto portable a la carpeta '%OUTPUT_FOLDER%'...
 if not exist "%OUTPUT_FOLDER%" mkdir "%OUTPUT_FOLDER%"
-if exist "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" del /q "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" > nul 2>&1
-
 move "dist\%APP_EXE_NAME%" "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" > nul
 
 if %errorlevel% neq 0 (
