@@ -5,7 +5,7 @@ import os
 
 APP_NAME_INTERNAL = "LectorcitoPro"
 APP_DISPLAY_NAME = "Lectorcito Pro"
-APP_VERSION = "8.0.8"
+APP_VERSION = "8.0.9"
 APP_AUTHOR = "Renzo Fernando Mosquera Daza"
 APP_VENDOR_NAME = "APPS_RenzoFernando"
 APP_COMPANY_NAME = "Renzo Fernando Mosquera Daza"
@@ -45,8 +45,16 @@ def get_project_root() -> str:
     return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
+def get_installer_download_url() -> str:
+    return f"{APP_REPOSITORY_WEB_URL}/releases/latest/download/{APP_INSTALLER_NAME}"
+
+
+def get_portable_download_url() -> str:
+    return f"{APP_REPOSITORY_WEB_URL}/releases/latest/download/{APP_PORTABLE_ARTIFACT_NAME}"
+
+
 def get_release_download_url() -> str:
-    return f"{APP_REPOSITORY_WEB_URL}/releases/latest/download/{APP_EXECUTABLE_NAME}"
+    return get_installer_download_url()
 
 
 def get_document_title() -> str:
@@ -102,7 +110,10 @@ def get_web_meta_payload() -> dict:
         "websiteUrl": APP_WEBSITE_URL,
         "manualTitle": APP_MANUAL_TITLE,
         "documentTitle": get_document_title(),
+        "releaseUrl": APP_UPDATES_URL,
         "downloadUrl": get_release_download_url(),
+        "installerDownloadUrl": get_installer_download_url(),
+        "portableDownloadUrl": get_portable_download_url(),
         "executableName": APP_EXECUTABLE_NAME,
         "installerName": APP_INSTALLER_NAME,
         "portableArtifactName": APP_PORTABLE_ARTIFACT_NAME,

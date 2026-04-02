@@ -117,3 +117,17 @@
 8.  Implementado un sistema de validación para evitar conflictos lógicos entre etiquetas de inclusión y exclusión.
 9.  Optimizado el sistema de Tooltips para ofrecer descripciones contextuales en los nuevos elementos de la interfaz.
 10. Refactorizado el sistema de persistencia para soportar la estructura compleja de los nuevos perfiles y ajustes.
+
+---
+
+## Versión 8: Calidad, Estabilidad y Distribución Profesional
+1.  Reestructurada la infraestructura de ventanas, aperturas y transiciones para lograr una experiencia más limpia, sólida y coherente desde el arranque hasta el cierre de diálogos.
+2.  Refinado el flujo visual de inicialización de la aplicación para que la carga se perciba más profesional, reduciendo glitches, saltos y apariciones bruscas.
+3.  Optimizadas operaciones clave y vistas pesadas para mejorar la rapidez general de uso en escenarios reales de lectura, navegación y configuración.
+4.  Corregidas inconsistencias visuales integrales entre paneles, modales, estados y elementos compartidos de la interfaz.
+5.  Fortalecida la presentación profesional del producto mediante metadata más completa para ejecutable, instalador, publicación y distribución.
+6.  Implementado empaquetado dual de release con artefacto **portable** y artefacto **instalable**, dejando una distribución más flexible para distintos tipos de usuario.
+7.  Mejorada la integración con Windows mediante un flujo más confiable de instalación, accesos directos y comportamiento esperado del sistema operativo.
+8.  Actualizada la documentación pública y la landing page para reflejar correctamente la nueva distribución, la release final 8.0.9 y el instalable como opción recomendada.
+9.  Integrada la función de exclusión asistida con `.gitignore` dentro del apartado de **Qué No Ver**, reforzando limpieza, precisión y rendimiento al analizar proyectos.
+10. Consolidado el cierre estable de la versión 8 con una release final enfocada en calidad, estabilidad, optimización y preparación profesional para producción.

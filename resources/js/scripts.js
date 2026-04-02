@@ -16,11 +16,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function normalizeRepositoryUrl(url) {
+        if (!url) return '';
+        return url.endsWith('.git') ? url.slice(0, -4) : url;
+    }
+
+    function buildReleaseAssetUrl(assetName) {
+        const repositoryUrl = normalizeRepositoryUrl(appMeta.repositoryUrl || '');
+        if (!repositoryUrl || !assetName) return '';
+        return `${repositoryUrl}/releases/latest/download/${assetName}`;
+    }
+
+    function buildCreatorProfileUrl(repositoryUrl) {
+        if (!repositoryUrl) return '';
+        try {
+            const url = new URL(repositoryUrl);
+            const pathParts = url.pathname.split('/').filter(Boolean);
+            if (pathParts.length >= 1) {
+                return `${url.origin}/${pathParts[0]}`;
+            }
+        } catch (error) {
+        }
+        return '';
+    }
+
     function applyAppMeta() {
         const displayName = appMeta.displayName || '';
         const versionText = appMeta.version ? `v${appMeta.version}` : '';
         const currentYear = appMeta.currentYear || new Date().getFullYear();
         const author = appMeta.author || '';
+        const repositoryUrl = normalizeRepositoryUrl(appMeta.repositoryUrl || '');
+        const creatorProfileUrl = buildCreatorProfileUrl(repositoryUrl);
+        const installerDownloadUrl = buildReleaseAssetUrl(appMeta.installerName || '');
+        const portableDownloadUrl = buildReleaseAssetUrl(appMeta.portableArtifactName || '');
 
         if (displayName) {
             document.title = `Manual de Usuario - ${displayName}`;
@@ -28,53 +56,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setText('app-version-tag', versionText);
         setText('hero-app-name', displayName);
-        setText('download-app-name', displayName);
         setText('footer-app-name', displayName);
         setText('footer-app-version', versionText);
+        setText('download-installer-title', `${displayName} Instalable`);
+        setText('download-portable-title', `${displayName} Portable`);
 
         if (author) {
             setText('footer-copyright', `© ${currentYear} ${author}. Todos los derechos reservados.`);
         }
 
-        setHref('hero-repo-link', appMeta.repositoryUrl);
-        setHref('download-exe-link', appMeta.downloadUrl);
-        setHref('download-repo-link', appMeta.repositoryUrl);
+        setHref('hero-repo-link', repositoryUrl);
+        setHref('download-repo-link', repositoryUrl);
+        setHref('hero-download-link', installerDownloadUrl || '#descargas');
+        setHref('download-installer-link', installerDownloadUrl);
+        setHref('download-portable-link', portableDownloadUrl);
+        setHref('creator-profile-link', creatorProfileUrl);
     }
 
-    // --- ELEMENTOS DOM ---
     const themeToggleBtn = document.getElementById('theme-toggle');
     const themeIcon = document.getElementById('theme-icon');
     const appLogo = document.getElementById('app-logo');
     const githubIcon = document.getElementById('github-btn-icon');
+    const downloadGithubIcon = document.getElementById('download-github-btn-icon');
+    const navLinks = Array.from(document.querySelectorAll('.nav-link'));
+    const trackedSections = Array.from(document.querySelectorAll('.section-anchor'));
 
-    // Estado inicial
     let isDarkMode = false;
 
-    // --- FUNCIÓN DE ACTUALIZACIÓN VISUAL ---
     function updateThemeVisuals(isDark) {
-        // 1. Icono del botón Tema (Sol/Luna)
-        // Si es oscuro, mostramos sol para cambiar a claro.
         if (themeIcon) {
             themeIcon.src = isDark ? 'resources/icons/luna.png' : 'resources/icons/sol.png';
         }
 
-        // 2. Logos de la Aplicación (Invertidos al fondo)
-        // Fondo web oscuro -> Logo Claro | Fondo web claro -> Logo Oscuro
         const logoSrc = isDark ? 'resources/branding/logo_claro.png' : 'resources/branding/logo_oscuro.png';
         if (appLogo) appLogo.src = logoSrc;
 
-        // 3. Icono de Github en botón (Invertido)
         const gitSrc = isDark ? 'resources/icons/github_claro.png' : 'resources/icons/github_oscuro.png';
         if (githubIcon) githubIcon.src = gitSrc;
+        if (downloadGithubIcon) downloadGithubIcon.src = gitSrc;
+    }
 
-        // Nota: Los iconos de la "Barra de Herramientas" (tool-item) NO cambian.
-        // Tienen la clase .bg-dark y siempre usan iconos _claro.png (blancos)
-        // para mantener consistencia visual con la app real.
+    function updateActiveNav() {
+        const scrollPosition = window.scrollY + 120;
+        let currentSectionId = 'intro';
+
+        trackedSections.forEach(section => {
+            if (section.offsetTop <= scrollPosition) {
+                currentSectionId = section.id;
+            }
+        });
+
+        navLinks.forEach(link => {
+            const target = link.getAttribute('href');
+            link.classList.toggle('active', target === `#${currentSectionId}`);
+        });
     }
 
     applyAppMeta();
 
-    // --- MANEJADOR DE EVENTOS ---
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
@@ -83,19 +122,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- DETECCIÓN AUTOMÁTICA DEL SISTEMA ---
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.body.classList.add('dark-mode');
         isDarkMode = true;
     }
 
-    // Aplicar estado inicial
     updateThemeVisuals(isDarkMode);
+    updateActiveNav();
 
-    // --- ANIMACIONES AL HACER SCROLL (Intersection Observer) ---
     const observerOptions = {
         threshold: 0.1,
-        rootMargin: "0px 0px -50px 0px"
+        rootMargin: '0px 0px -50px 0px'
     };
 
     const observer = new IntersectionObserver((entries) => {
@@ -107,28 +144,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }, observerOptions);
 
-    // Elementos a animar
     const animatedElements = document.querySelectorAll('.fade-in-up');
     animatedElements.forEach(el => observer.observe(el));
 
-    // --- SCROLL SUAVE PARA LINKS ---
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
-            e.preventDefault();
             const targetId = this.getAttribute('href');
-            if(targetId === '#') return;
+            if (targetId === '#' || !targetId.startsWith('#')) return;
 
+            e.preventDefault();
             const targetElement = document.querySelector(targetId);
-            if(targetElement){
+            if (targetElement) {
                 const headerOffset = 80;
                 const elementPosition = targetElement.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
                 window.scrollTo({
                     top: offsetPosition,
-                    behavior: "smooth"
+                    behavior: 'smooth'
                 });
             }
         });
     });
+
+    window.addEventListener('scroll', updateActiveNav, { passive: true });
+    window.addEventListener('resize', updateActiveNav);
 });

@@ -8,7 +8,7 @@
     <link rel="icon" type="image/x-icon" href="resources/branding/lector.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -17,22 +17,23 @@
             <img src="resources/branding/logo_oscuro.png" alt="Logo de la aplicación" id="app-logo" class="nav-logo">
             <span class="version-tag" id="app-version-tag"></span>
         </div>
-        <div class="nav-links">
-            <a href="#intro">Inicio</a>
-            <a href="#workflow">Flujo</a>
-            <a href="#main-menu">Funciones</a>
-            <a href="#sidebar-tools">Herramientas</a>
+        <div class="nav-links" id="main-nav-links">
+            <a href="#intro" class="nav-link active">Inicio</a>
+            <a href="#workflow" class="nav-link">Flujo</a>
+            <a href="#main-menu" class="nav-link">Funciones</a>
+            <a href="#sidebar-tools" class="nav-link">Herramientas</a>
+            <a href="#descargas" class="nav-link">Descargas</a>
         </div>
         <div class="nav-controls">
             <button id="theme-toggle" class="icon-btn" title="Cambiar Tema">
-                <img src="resources/icons/luna.png" alt="Tema" id="theme-icon">
+                <img src="resources/icons/sol.png" alt="Tema" id="theme-icon">
             </button>
             <a href="#descargas" class="btn btn-sm btn-blue">Descargar</a>
         </div>
     </nav>
 
-    <header id="intro" class="hero">
-        <div class="container">
+    <header id="intro" class="hero section-anchor">
+        <div class="container hero-shell">
             <div class="hero-content fade-in-up">
                 <h1>Documentación y Análisis de Código Simplificado</h1>
                 <p class="hero-desc">
@@ -40,8 +41,8 @@
                 </p>
                 <div class="hero-buttons">
                     <a href="#descargas" class="btn btn-blue" id="hero-download-link">Obtener la aplicación</a>
-                    <a href="#" target="_blank" class="btn btn-outline" id="hero-repo-link">
-                        <img src="resources/icons/github_oscuro.png" class="btn-icon-img" id="github-btn-icon" alt="Github"> Ver Código
+                    <a href="#" target="_blank" class="btn btn-outline btn-repo" id="hero-repo-link">
+                        <img src="resources/icons/github_oscuro.png" class="btn-icon-img" id="github-btn-icon" alt="Github"> Ver Repositorio
                     </a>
                 </div>
             </div>
@@ -51,7 +52,7 @@
         </div>
     </header>
 
-    <section id="workflow" class="section">
+    <section id="workflow" class="section section-anchor">
         <div class="container">
             <h2 class="section-title">Flujo de Trabajo Sugerido</h2>
             <p class="section-subtitle">Sigue estos 3 pasos para obtener el mejor resultado.</p>
@@ -61,28 +62,28 @@
                     <div class="timeline-number">1</div>
                     <div class="timeline-content">
                         <h3>Configura los Filtros</h3>
-                        <p>Antes de leer, ve a la barra lateral. Usa <strong>"Qué No Ver"</strong> para excluir carpetas pesadas (como <code>node_modules</code> o <code>venv</code>) y <strong>"Qué Ver"</strong> para asegurar que lees las extensiones correctas (.py, .js, .html).</p>
+                        <p>Antes de leer, ve a la barra lateral. Usa <strong>"Qué No Ver"</strong> para excluir carpetas pesadas como <code>node_modules</code> o <code>venv</code>, y <strong>"Qué Ver"</strong> para asegurar que lees las extensiones correctas.</p>
                     </div>
                 </div>
                 <div class="timeline-item fade-in-up">
                     <div class="timeline-number">2</div>
                     <div class="timeline-content">
                         <h3>Selecciona y Genera</h3>
-                        <p>Presiona <strong>"Generar Lectura Completa"</strong>. Selecciona la carpeta raíz de tu proyecto. Lectorcito escaneara recursivamente todo el contenido.</p>
+                        <p>Presiona <strong>"Generar Lectura Completa"</strong>, selecciona la carpeta raíz de tu proyecto y deja que la aplicación escanee recursivamente todo el contenido permitido.</p>
                     </div>
                 </div>
                 <div class="timeline-item fade-in-up">
                     <div class="timeline-number">3</div>
                     <div class="timeline-content">
                         <h3>Resultados Listos</h3>
-                        <p>El reporte se guardará automáticamente. Usa el botón <strong>"Abrir Último Reporte"</strong> para ver el archivo `.txt` consolidado y listo para copiar a tu IA favorita.</p>
+                        <p>El reporte se guardará automáticamente. Luego puedes abrir el último archivo generado o compartirlo directamente como contexto de trabajo para documentación o IA.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="main-menu" class="section alt-bg">
+    <section id="main-menu" class="section alt-bg section-anchor">
         <div class="container">
             <h2 class="section-title">Menú Principal</h2>
             <p class="section-subtitle">Explicación detallada de las 6 funciones centrales de la aplicación.</p>
@@ -93,7 +94,7 @@
                         <h3>1. Seleccionar Destino</h3>
                     </div>
                     <div class="card-body">
-                        <p>Por defecto, los reportes se guardan dentro de la aplicación. Con este botón puedes elegir una carpeta externa personalizada (ej: Escritorio o Documentos) para que todos tus reportes se guarden allí.</p>
+                        <p>Por defecto, los reportes se guardan dentro de la aplicación. Con este botón puedes elegir una carpeta externa personalizada para que todos los reportes se guarden allí.</p>
                     </div>
                 </div>
 
@@ -102,7 +103,7 @@
                         <h3>2. Generar Lectura Completa</h3>
                     </div>
                     <div class="card-body">
-                        <p><strong>La función principal.</strong> Abre un selector para elegir la carpeta de tu proyecto. Analiza archivos, ignora lo configurado en los filtros y crea un archivo único con todo el código fuente.</p>
+                        <p><strong>La función principal.</strong> Abre un selector para elegir la carpeta de tu proyecto, analiza archivos, ignora lo configurado en los filtros y crea un archivo único con todo el código fuente.</p>
                     </div>
                 </div>
 
@@ -111,7 +112,7 @@
                         <h3>3. Crear Estructura de Árbol</h3>
                     </div>
                     <div class="card-body">
-                        <p>No lee el contenido de los archivos. Solo genera un diagrama visual de la jerarquía de carpetas y archivos. Muy útil para entender la arquitectura del proyecto sin leer el código.</p>
+                        <p>No lee el contenido de los archivos. Solo genera un diagrama visual de la jerarquía de carpetas y archivos para entender la arquitectura del proyecto de forma inmediata.</p>
                     </div>
                 </div>
 
@@ -120,7 +121,7 @@
                         <h3>4. Abrir Carpeta Lecturas</h3>
                     </div>
                     <div class="card-body">
-                        <p>Abre el explorador de archivos de Windows directamente en la carpeta donde se están guardando tus reportes generados.</p>
+                        <p>Abre el explorador de archivos de Windows directamente en la carpeta donde se están guardando los reportes generados.</p>
                     </div>
                 </div>
 
@@ -129,7 +130,7 @@
                         <h3>5. Abrir Último Reporte</h3>
                     </div>
                     <div class="card-body">
-                        <p>Acceso rápido. Abre inmediatamente el archivo `.txt` o `.md` más reciente que hayas generado, ahorrándote tiempo de búsqueda.</p>
+                        <p>Acceso rápido al archivo más reciente generado, en formato <code>.txt</code> o <code>.md</code>, sin tener que buscarlo manualmente.</p>
                     </div>
                 </div>
 
@@ -138,17 +139,17 @@
                         <h3>6. Eliminar Lecturas</h3>
                     </div>
                     <div class="card-body">
-                        <p>Función de limpieza. Borra todos los archivos dentro de la carpeta de "Lecturas" actual para liberar espacio o reiniciar auditorías.</p>
+                        <p>Función de limpieza para borrar todos los archivos dentro de la carpeta de lecturas actual y dejar el espacio listo para un nuevo proceso.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="sidebar-tools" class="section">
+    <section id="sidebar-tools" class="section section-anchor">
         <div class="container">
             <h2 class="section-title">Barra de Herramientas</h2>
-            <p class="section-subtitle">Domina la configuración con las 10 herramientas laterales.</p>
+            <p class="section-subtitle">Configura lectura, exclusiones, perfiles y ajustes del sistema desde un solo lugar.</p>
 
             <div class="tools-list">
                 <div class="tool-group fade-in-up">
@@ -157,21 +158,21 @@
                         <img src="resources/icons/ver_claro.png" class="tool-icon bg-dark" alt="Ver">
                         <div>
                             <h4>Qué Ver (Inclusión)</h4>
-                            <p>Define explícitamente qué extensiones (<code>.py</code>, <code>.js</code>) y qué carpetas importantes (<code>src</code>) quieres leer. Soporta autodeteción de extensiones.</p>
+                            <p>Define qué extensiones y carpetas relevantes quieres leer. También soporta autodetección para facilitar la preparación de proyectos nuevos.</p>
                         </div>
                     </div>
                     <div class="tool-item">
                         <img src="resources/icons/nover_claro.png" class="tool-icon bg-dark" alt="No Ver">
                         <div>
                             <h4>Qué No Ver (Exclusión)</h4>
-                            <p>Crucial para el rendimiento. Bloquea carpetas basura como <code>node_modules</code>, <code>.git</code> o archivos sensibles como <code>.env</code>.</p>
+                            <p>Bloquea carpetas basura, archivos sensibles y ahora también puede apoyarse en reglas compatibles con <code>.gitignore</code> para una exclusión más cómoda.</p>
                         </div>
                     </div>
                     <div class="tool-item">
                         <img src="resources/icons/etiqueta_claro.png" class="tool-icon bg-dark" alt="Etiqueta">
                         <div>
                             <h4>Multimedia (Solo Listar)</h4>
-                            <p>Archivos binarios (imágenes, PDFs, ejecutables) que deben aparecer en el reporte para constancia, pero sin intentar leer su contenido ilegible.</p>
+                            <p>Permite dejar constancia de archivos binarios o pesados dentro del reporte sin intentar procesar su contenido.</p>
                         </div>
                     </div>
                 </div>
@@ -182,21 +183,21 @@
                         <img src="resources/icons/luna.png" class="tool-icon bg-dark" alt="Tema">
                         <div>
                             <h4>Tema</h4>
-                            <p>Alterna instantáneamente entre el Modo Claro y el Modo Oscuro para reducir la fatiga visual.</p>
+                            <p>Alterna entre Modo Claro y Modo Oscuro con una presentación limpia y coherente con la apariencia general de la aplicación.</p>
                         </div>
                     </div>
                     <div class="tool-item">
                         <img src="resources/icons/traducir_claro.png" class="tool-icon bg-dark" alt="Idioma">
                         <div>
                             <h4>Idioma / Language</h4>
-                            <p>Traduce toda la interfaz entre Español e Inglés en tiempo real.</p>
+                            <p>Traduce la interfaz entre Español e Inglés en tiempo real para adaptarse a distintos entornos de trabajo.</p>
                         </div>
                     </div>
                     <div class="tool-item">
                         <img src="resources/icons/perfil_claro.png" class="tool-icon bg-dark" alt="Perfil">
                         <div>
                             <h4>Gestor de Perfiles</h4>
-                            <p>Crea entornos de trabajo. Ejemplo: Un perfil "Python" que ignora <code>venv</code> y lee <code>.py</code>, y otro "Web" que lee <code>.js</code> y <code>.css</code>.</p>
+                            <p>Guarda configuraciones completas para reutilizarlas según el tipo de proyecto, flujo o stack tecnológico.</p>
                         </div>
                     </div>
                 </div>
@@ -207,28 +208,28 @@
                         <img src="resources/icons/ajustes_claro.png" class="tool-icon bg-dark" alt="Ajustes">
                         <div>
                             <h4>Ajustes</h4>
-                            <p>Cambia el formato de salida (<code>.txt</code> o <code>.md</code>) y crea accesos directos en el Escritorio o Menú Inicio.</p>
+                            <p>Cambia el formato de salida y administra integraciones con Windows como accesos directos y distribución del ejecutable.</p>
                         </div>
                     </div>
                     <div class="tool-item">
                         <img src="resources/icons/restaurar_claro.png" class="tool-icon bg-dark" alt="Restaurar">
                         <div>
                             <h4>Restaurar Fábrica</h4>
-                            <p>Si algo sale mal, este botón devuelve toda la configuración a su estado original.</p>
+                            <p>Devuelve la configuración a su estado original si necesitas reiniciar la experiencia o corregir ajustes conflictivos.</p>
                         </div>
                     </div>
                     <div class="tool-item">
                         <img src="resources/icons/github_claro.png" class="tool-icon bg-dark" alt="Github">
                         <div>
                             <h4>Código Fuente</h4>
-                            <p>Abre el repositorio oficial para ver actualizaciones, reportar errores o auditar el código.</p>
+                            <p>Abre el repositorio oficial para revisar versiones, soporte y estado general del proyecto.</p>
                         </div>
                     </div>
                     <div class="tool-item">
                         <img src="resources/icons/info_claro.png" class="tool-icon bg-dark" alt="Info">
                         <div>
                             <h4>Información</h4>
-                            <p>Muestra la versión actual y abre el manual de usuario online.</p>
+                            <p>Muestra la versión actual y facilita el acceso al manual de usuario en línea.</p>
                         </div>
                     </div>
                 </div>
@@ -236,32 +237,57 @@
         </div>
     </section>
 
-<section id="descargas" class="section highlight-bg">
+    <section id="descargas" class="section highlight-bg section-anchor">
         <div class="container">
-            <h2 class="section-title">Descarga y Uso</h2>
-            <div class="download-container">
-                <div class="download-card">
+            <h2 class="section-title">Descargas Oficiales</h2>
+            <p class="section-subtitle">El instalable es la opción recomendada. El portable queda disponible para llevar la aplicación sin instalación.</p>
+
+            <div class="downloads-grid">
+                <div class="download-card fade-in-up recommended-card">
                     <div class="download-icon">
                         <img src="resources/branding/lector.png" alt="Mascota de la aplicación">
                     </div>
                     <div class="download-details">
-                        <h3 id="download-app-name"></h3>
-                        <p>No requiere instalación. Simplemente descarga el ejecutable, guárdalo donde quieras y haz doble clic.</p>
+                        <span class="download-badge">Recomendado</span>
+                        <h3 id="download-installer-title">Instalable</h3>
+                        <p>Ideal para uso principal en Windows. Integra mejor accesos directos, flujo de instalación y experiencia general del sistema.</p>
                         <ul class="specs-list">
+                            <li>Tipo: Instalable</li>
                             <li>Sistema: Windows 10 / 11</li>
-                            <li>Arquitectura: 64-bits</li>
-                            <li>Tipo: Portable (.exe)</li>
+                            <li>Uso: Principal</li>
                         </ul>
                         <div class="download-actions">
-                            <a href="#" class="btn btn-green" id="download-exe-link">
-                                Descargar .EXE
-                            </a>
-                            <a href="#" target="_blank" class="btn btn-outline" id="download-repo-link">
-                                Ver Repositorio
-                            </a>
+                            <a href="#" class="btn btn-green" id="download-installer-link">Descargar instalable</a>
                         </div>
                     </div>
                 </div>
+
+                <div class="download-card fade-in-up">
+                    <div class="download-icon">
+                        <img src="resources/branding/lector.png" alt="Mascota de la aplicación">
+                    </div>
+                    <div class="download-details">
+                        <span class="download-badge neutral-badge">Opcional</span>
+                        <h3 id="download-portable-title">Portable</h3>
+                        <p>Útil para llevar la aplicación contigo o ejecutarla rápidamente en otros entornos sin pasar por el asistente de instalación.</p>
+                        <ul class="specs-list">
+                            <li>Tipo: Portable</li>
+                            <li>Sistema: Windows 10 / 11</li>
+                            <li>Uso: Secundario</li>
+                        </ul>
+                        <div class="download-actions">
+                            <a href="#" class="btn btn-blue" id="download-portable-link">Descargar portable</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="download-footer-actions fade-in-up">
+                <a href="historialDeVersiones.md" target="_blank" class="btn btn-soft" id="download-history-link">Historial de versiones</a>
+                <a href="#" target="_blank" class="btn btn-outline btn-repo btn-repo-wide" id="download-repo-link">
+                    <img src="resources/icons/github_oscuro.png" class="btn-icon-img" id="download-github-btn-icon" alt="Github"> Ver Repositorio
+                </a>
+                <a href="#" target="_blank" class="btn btn-soft" id="creator-profile-link">Git del creador</a>
             </div>
         </div>
     </section>
