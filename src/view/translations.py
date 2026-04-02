@@ -46,6 +46,7 @@ TRANSLATIONS = {
         "dlg_nover_title": "Configurar qué No Ver",
         "dlg_nover_folder_prompt": "Carpetas a Ignorar por completo (ej: node_modules, .venv):",
         "dlg_nover_file_prompt": "Archivos a Ignorar por nombre completo (ej: license.txt, .env):",
+        "chk_use_gitignore": "Excluir usando .gitignore",
 
         "dlg_etiqueta_title": "Configurar Multimedia y Binarios",
         "dlg_etiqueta_file_prompt": "Extensiones a Omitir Contenido (Solo Listar):",
@@ -199,6 +200,7 @@ TRANSLATIONS = {
         "dlg_nover_title": "Configure what Not to View",
         "dlg_nover_folder_prompt": "Folders to Ignore completely (e.g., node_modules, .venv):",
         "dlg_nover_file_prompt": "Files to Ignore by full name (e.g., license.txt, .env):",
+        "chk_use_gitignore": "Exclude using .gitignore",
 
         "dlg_etiqueta_title": "Configure Multimedia & Binaries",
         "dlg_etiqueta_file_prompt": "Extensions to Skip Content (List Only):",

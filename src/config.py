@@ -30,6 +30,9 @@ def to_tags(items: list[str]) -> list[dict]:
 
 def _normalize_profile_file_rules(profile: dict) -> dict:
     normalized_profile = copy.deepcopy(profile)
+    normalized_profile["use_gitignore_exclusions"] = bool(
+        normalized_profile.get("use_gitignore_exclusions", False)
+    )
     normalized_profile["etiquetas_extensiones_incluidas"] = normalize_file_tag_list(
         normalized_profile.get("etiquetas_extensiones_incluidas", [])
     )
@@ -68,6 +71,7 @@ DEFAULT_CONFIG_VALUES = {
     "theme": "Light",
     "language": "es",
     "report_extension": ".txt",
+    "use_gitignore_exclusions": False,
     "etiquetas_carpetas_importantes": to_tags(["src"]),
     "etiquetas_extensiones_incluidas": to_tags([".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json", ".sql"]),
     "etiquetas_carpetas_excluidas": to_tags(["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]),
@@ -92,6 +96,7 @@ BLANK_PROFILE_CONFIG = {
     "theme": "Light",
     "language": "es",
     "report_extension": ".txt",
+    "use_gitignore_exclusions": False,
     "etiquetas_carpetas_importantes": [],
     "etiquetas_extensiones_incluidas": [],
     "etiquetas_carpetas_excluidas": [],

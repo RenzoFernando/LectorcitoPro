@@ -117,6 +117,7 @@ def show_view_config_dialog(controller):
 def show_no_view_config_dialog(controller):
     current_folders = controller.config.get("etiquetas_carpetas_excluidas", [])
     current_files = controller.config.get("etiquetas_archivos_excluidos", [])
+    use_gitignore_exclusions = controller.config.get("use_gitignore_exclusions", False)
 
     dialog = controller.view.get_no_view_dialog()
     dialog.load_state(
@@ -124,15 +125,18 @@ def show_no_view_config_dialog(controller):
         folders_prompt=controller.view._tr("dlg_nover_folder_prompt"),
         initial_folders=current_folders,
         files_prompt=controller.view._tr("dlg_nover_file_prompt"),
-        initial_files=current_files
+        initial_files=current_files,
+        extra_checkbox_text=controller.view._tr("chk_use_gitignore"),
+        extra_checkbox_value=use_gitignore_exclusions
     )
     dialog.present()
     result = dialog.wait_result()
 
     if result is not None:
-        new_folders, new_files = result
+        new_folders, new_files, use_gitignore_exclusions = result
         controller.config["etiquetas_carpetas_excluidas"] = new_folders
         controller.config["etiquetas_archivos_excluidos"] = normalize_file_tag_list(new_files)
+        controller.config["use_gitignore_exclusions"] = bool(use_gitignore_exclusions)
         save_preferences_silent(controller)
 
 

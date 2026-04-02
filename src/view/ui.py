@@ -483,6 +483,8 @@ class LectorcitoApp(ctk.CTk):
             initial_folders=self.controller.config.get("etiquetas_carpetas_excluidas", []),
             files_prompt=self._tr("dlg_nover_file_prompt"),
             initial_files=self.controller.config.get("etiquetas_archivos_excluidos", []),
+            extra_checkbox_text=self._tr("chk_use_gitignore"),
+            extra_checkbox_value=self.controller.config.get("use_gitignore_exclusions", False),
             persistent=True,
             defer_show=True
         )
