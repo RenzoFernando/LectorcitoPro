@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import os
 from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
-from view.ui_constants import COLORS, DIALOG_ICON_DELAY_MS, DIALOG_PREPARE_DELAY_MS, DIALOG_CENTER_RETRY_DELAY_MS, DIALOG_CENTER_MAX_ATTEMPTS, DIALOG_FADE_IN_STEP, DIALOG_FADE_IN_INTERVAL_MS, DIALOG_FADE_OUT_STEP, DIALOG_FADE_OUT_INTERVAL_MS
+from view.ui_constants import COLORS, DIALOG_ICON_DELAY_MS, DIALOG_PREPARE_DELAY_MS, DIALOG_CENTER_RETRY_DELAY_MS, DIALOG_CENTER_MAX_ATTEMPTS, DIALOG_INITIAL_ALPHA, DIALOG_REVEAL_OFFSET_Y, DIALOG_REVEAL_STEP_PX, DIALOG_FADE_IN_STEP, DIALOG_FADE_IN_INTERVAL_MS, DIALOG_FADE_OUT_STEP, DIALOG_FADE_OUT_INTERVAL_MS
 from view.ui_assets import get_app_icon_path
 
 MESSAGE_AUTO_CLOSE_SECONDS = 10
@@ -118,6 +118,7 @@ class BaseDialog(ctk.CTkToplevel):
         self._persistent_mode = bool(persistent)
         self._defer_show = bool(defer_show)
         self._done_var = ctk.BooleanVar(master=parent, value=False)
+        self._prepare_after_id = None
 
         try:
             self.withdraw()
@@ -138,6 +139,7 @@ class BaseDialog(ctk.CTkToplevel):
 
             self._closing_grab_released = False
             self._escape_bindtag = f"__esc_close_{id(self)}"
+            self._reveal_target_y = None
 
             try:
                 self.bind_class(self._escape_bindtag, "<Escape>", self._on_escape_key, add="+")
@@ -148,7 +150,7 @@ class BaseDialog(ctk.CTkToplevel):
 
             self.after(DIALOG_ICON_DELAY_MS, self._set_icon_safe)
             if not self._defer_show:
-                self.after(DIALOG_PREPARE_DELAY_MS, self._prepare_geometry)
+                self._prepare_after_id = self.after(DIALOG_PREPARE_DELAY_MS, self._prepare_geometry)
 
             self.result = None
             self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
@@ -222,7 +224,13 @@ class BaseDialog(ctk.CTkToplevel):
         CustomTooltip.hide_global()
         if hasattr(self.parent, "dim_ui_for_modal"):
             self.parent.dim_ui_for_modal()
-        self._prepare_geometry()
+        if self._prepare_after_id:
+            try:
+                self.after_cancel(self._prepare_after_id)
+            except Exception:
+                pass
+            self._prepare_after_id = None
+        self._prepare_after_id = self.after(DIALOG_PREPARE_DELAY_MS, self._prepare_geometry)
 
     def wait_result(self):
         try:
@@ -232,6 +240,12 @@ class BaseDialog(ctk.CTkToplevel):
         return self.result
 
     def _finalize_close(self):
+        if self._prepare_after_id:
+            try:
+                self.after_cancel(self._prepare_after_id)
+            except Exception:
+                pass
+            self._prepare_after_id = None
         try:
             self._done_var.set(True)
         except Exception:
@@ -250,8 +264,12 @@ class BaseDialog(ctk.CTkToplevel):
     def _prepare_geometry(self):
         if not self.winfo_exists(): return
 
-        self.deiconify()
-        self.attributes("-alpha", 0.0)
+        self._prepare_after_id = None
+        try:
+            self.withdraw()
+            self.attributes("-alpha", 0.0)
+        except Exception:
+            pass
         self.update_idletasks()
         self.after(DIALOG_CENTER_RETRY_DELAY_MS, lambda: self._try_center_window(0))
 
@@ -287,6 +305,9 @@ class BaseDialog(ctk.CTkToplevel):
             if attempt == 0:
                 x, y = _get_centered_position(target_rect, w, h)
                 self.geometry(f"+{x}+{y}")
+                self.deiconify()
+                self.attributes("-alpha", 0.0)
+                self.lift()
                 self.after(DIALOG_CENTER_RETRY_DELAY_MS, lambda: self._try_center_window(1))
                 return
 
@@ -301,9 +322,14 @@ class BaseDialog(ctk.CTkToplevel):
                 self.after(DIALOG_CENTER_RETRY_DELAY_MS, lambda: self._try_center_window(attempt + 1))
                 return
 
+            self._reveal_target_y = int(self.winfo_y())
+            if DIALOG_REVEAL_OFFSET_Y > 0:
+                self.geometry(f"+{int(self.winfo_x())}+{self._reveal_target_y + DIALOG_REVEAL_OFFSET_Y}")
+
             self.lift()
             self.focus_force()
             self.grab_set()
+            self.attributes("-alpha", DIALOG_INITIAL_ALPHA)
             self._fade_in()
 
         except Exception:
@@ -312,9 +338,21 @@ class BaseDialog(ctk.CTkToplevel):
     def _fade_in(self):
         if not self.winfo_exists(): return
         try:
-            alpha = self.attributes("-alpha")
+            alpha = float(self.attributes("-alpha"))
         except Exception:
-            alpha = 0.0
+            alpha = 1.0
+
+        target_y = self._reveal_target_y
+        if target_y is not None:
+            try:
+                current_y = int(self.winfo_y())
+                if current_y > target_y:
+                    step = min(DIALOG_REVEAL_STEP_PX, current_y - target_y)
+                    self.geometry(f"+{int(self.winfo_x())}+{current_y - step}")
+                else:
+                    self._reveal_target_y = current_y
+            except Exception:
+                self._reveal_target_y = None
 
         if alpha < 1.0:
             new_alpha = min(alpha + DIALOG_FADE_IN_STEP, 1.0)

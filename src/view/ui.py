@@ -15,7 +15,10 @@ from view.ui_constants import (
     VERSION, YEAR, AUTHOR, REPO_URL,
     COLORS, BTN_W_MAIN, BTN_H_MAIN,
     MAIN_WINDOW_SHOW_DELAY_MS, MAIN_WINDOW_CENTER_RETRY_DELAY_MS, MAIN_WINDOW_CENTER_MAX_ATTEMPTS,
-    MAIN_WINDOW_FADE_IN_STEP, MAIN_WINDOW_FADE_IN_INTERVAL_MS, MAIN_WINDOW_FADE_OUT_STEP, MAIN_WINDOW_FADE_OUT_INTERVAL_MS
+    MAIN_WINDOW_INITIAL_ALPHA, MAIN_WINDOW_REVEAL_OFFSET_Y, MAIN_WINDOW_REVEAL_STEP_PX,
+    MAIN_WINDOW_FADE_IN_STEP, MAIN_WINDOW_FADE_IN_INTERVAL_MS, MAIN_WINDOW_FADE_OUT_STEP, MAIN_WINDOW_FADE_OUT_INTERVAL_MS,
+    MAIN_WINDOW_SOFT_REFRESH_ALPHA, MAIN_WINDOW_SWITCH_FADE_OUT_STEP, MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS,
+    MAIN_WINDOW_SWITCH_HOLD_MS, MAIN_WINDOW_SWITCH_FADE_IN_STEP, MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS
 )
 from view.ui_assets import load_sidebar_icons, load_logo, safe_set_window_icon
 from view.sidebars import LeftSidebar, RightSidebar, PillTextButton
@@ -48,6 +51,8 @@ class LectorcitoApp(ctk.CTk):
         self._is_modal_open = False
         self._modal_fail_safe_after_id = None
         self._dialog_cache = {}
+        self._reveal_target_y = None
+        self._is_theme_switching = False
 
         self.title(APP_DISPLAY_NAME)
         self._app_w = 600
@@ -102,13 +107,34 @@ class LectorcitoApp(ctk.CTk):
                 self.geometry(f"{self._app_w}x{self._app_h}+{int(self.winfo_x()) + dx}+{int(self.winfo_y()) + dy}")
                 self.after(MAIN_WINDOW_CENTER_RETRY_DELAY_MS, lambda: self._stabilize_initial_position(attempt + 1))
                 return
+
+            self._reveal_target_y = int(self.winfo_y())
+            if MAIN_WINDOW_REVEAL_OFFSET_Y > 0:
+                self.geometry(f"{self._app_w}x{self._app_h}+{int(self.winfo_x())}+{self._reveal_target_y + MAIN_WINDOW_REVEAL_OFFSET_Y}")
         except Exception:
-            pass
+            self._reveal_target_y = None
+        self.attributes("-alpha", MAIN_WINDOW_INITIAL_ALPHA)
         self._fade_in()
 
     def _fade_in(self):
-        alpha = self.attributes("-alpha")
-        if alpha < 1:
+        try:
+            alpha = float(self.attributes("-alpha"))
+        except Exception:
+            alpha = 1.0
+
+        target_y = self._reveal_target_y
+        if target_y is not None:
+            try:
+                current_y = int(self.winfo_y())
+                if current_y > target_y:
+                    step = min(MAIN_WINDOW_REVEAL_STEP_PX, current_y - target_y)
+                    self.geometry(f"{self._app_w}x{self._app_h}+{int(self.winfo_x())}+{current_y - step}")
+                else:
+                    self._reveal_target_y = current_y
+            except Exception:
+                self._reveal_target_y = None
+
+        if alpha < 1.0:
             self.attributes("-alpha", min(alpha + MAIN_WINDOW_FADE_IN_STEP, 1.0))
             self.after(MAIN_WINDOW_FADE_IN_INTERVAL_MS, self._fade_in)
 
@@ -373,23 +399,65 @@ class LectorcitoApp(ctk.CTk):
             pass
 
     def switch_theme_animated(self, new_theme: str):
+        if new_theme == self.current_theme or self._is_theme_switching:
+            return
+        self._is_theme_switching = True
         self._pending_new_theme = new_theme
+        self._reveal_target_y = None
+        CustomTooltip.hide_global()
         self._fade_out_for_switch()
 
     def _fade_out_for_switch(self):
         try:
-            alpha = self.attributes("-alpha")
+            alpha = float(self.attributes("-alpha"))
             if alpha > 0.0:
-                self.attributes("-alpha", max(alpha - 0.12, 0.0))
-                self.after(12, self._fade_out_for_switch)
+                self.attributes("-alpha", max(alpha - MAIN_WINDOW_SWITCH_FADE_OUT_STEP, 0.0))
+                self.after(MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS, self._fade_out_for_switch)
             else:
-                self.current_theme = self._pending_new_theme
-                self.apply_theme()
-                self._fade_in()
+                self.after(MAIN_WINDOW_SWITCH_HOLD_MS, self._apply_theme_after_switch)
         except Exception:
+            self._is_theme_switching = False
             self.current_theme = self._pending_new_theme
             self.apply_theme()
             self.attributes("-alpha", 1.0)
+
+    def _apply_theme_after_switch(self):
+        try:
+            self.current_theme = self._pending_new_theme
+            self.apply_theme()
+            self.update_idletasks()
+            self.attributes("-alpha", 0.0)
+            self._fade_in_after_switch()
+        except Exception:
+            self._is_theme_switching = False
+            self.attributes("-alpha", 1.0)
+
+    def _fade_in_after_switch(self):
+        try:
+            alpha = float(self.attributes("-alpha"))
+        except Exception:
+            alpha = 1.0
+
+        if alpha < 1.0:
+            self.attributes("-alpha", min(alpha + MAIN_WINDOW_SWITCH_FADE_IN_STEP, 1.0))
+            self.after(MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS, self._fade_in_after_switch)
+        else:
+            self._is_theme_switching = False
+
+    def prepare_soft_refresh(self):
+        CustomTooltip.hide_global()
+        try:
+            current_alpha = float(self.attributes("-alpha"))
+        except Exception:
+            current_alpha = 1.0
+        try:
+            self.attributes("-alpha", min(current_alpha, MAIN_WINDOW_SOFT_REFRESH_ALPHA))
+        except Exception:
+            pass
+        self._reveal_target_y = None
+
+    def complete_soft_refresh(self):
+        self._fade_in()
 
     def _create_view_dialog(self):
         return TagsConfigDialog(

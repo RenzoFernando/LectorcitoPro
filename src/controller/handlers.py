@@ -395,7 +395,7 @@ def _open_profiles_dialog_safe(controller):
 
 
 def _switch_profile_sequence(controller, new_active_id, new_profiles_meta):
-    controller.view.attributes("-alpha", 0.0)
+    controller.view.prepare_soft_refresh()
     controller.view.after(PROFILE_SWITCH_FADE_DELAY_MS, lambda: _load_profile_data(controller, new_active_id, new_profiles_meta))
 
 
@@ -429,7 +429,7 @@ def _load_profile_data(controller, new_active_id, new_profiles_meta):
 
 
 def _show_app_after_switch(controller, new_active_id):
-    controller.view.attributes("-alpha", 1.0)
+    controller.view.complete_soft_refresh()
     controller.view.after(100, lambda:
     controller.view.show_message("info_title", "msg_profile_changed", new_active_id.capitalize())
                           )
@@ -442,7 +442,7 @@ def _show_app_after_switch(controller, new_active_id):
 def restore_default_settings(controller):
     if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
                          controller.view._tr("confirm_restore_prompt")):
-        controller.view.attributes("-alpha", 0.0)
+        controller.view.prepare_soft_refresh()
         controller.view.after(RESTORE_FADE_DELAY_MS, lambda: _execute_restore(controller))
 
 
@@ -472,7 +472,7 @@ def _execute_restore(controller):
 
 
 def _finish_restore(controller):
-    controller.view.attributes("-alpha", 1.0)
+    controller.view.complete_soft_refresh()
     controller.view.after(100, lambda:
     controller.view.show_message("info_title", "msg_restore_success")
                           )
