@@ -1,6 +1,8 @@
 from __future__ import annotations
 import customtkinter as ctk
 from tkinter import Canvas
+import math
+
 
 # =============================================================================
 # UTILIDADES DE COLOR
@@ -69,6 +71,43 @@ def rounded_rect_points(x1: int, y1: int, x2: int, y2: int, r: int) -> list[int]
 
 
 # =============================================================================
+# FUNCIONES DE DIBUJO AVANZADO
+# =============================================================================
+
+def _capsule_points(x1: float, y1: float, x2: float, y2: float, r: float, segments: int = 12) -> list[float]:
+    """Genera los puntos de un polígono con forma de cápsula perfectamente ovalada."""
+    # Asegurar que el radio no sea mayor que la mitad de la dimensión más pequeña
+    if x2 - x1 < 2 * r:
+        r = (x2 - x1) / 2.0
+    if y2 - y1 < 2 * r:
+        r = (y2 - y1) / 2.0
+
+    # Puntos del arco izquierdo
+    cx_left = x1 + r
+    cy = (y1 + y2) / 2.0
+    points_left = []
+    # Ángulo de 90 a 270 grados (pi/2 a 3pi/2)
+    for seg in range(segments + 1):
+        angle = math.pi / 2.0 + (math.pi * seg / segments)
+        px = cx_left + r * math.cos(angle)
+        py = cy + r * math.sin(angle)
+        points_left.extend([px, py])
+
+    # Puntos del arco derecho
+    cx_right = x2 - r
+    points_right = []
+    # Ángulo de -90 a 90 grados (-pi/2 a pi/2)
+    for seg in range(segments + 1):
+        angle = -math.pi / 2.0 + (math.pi * seg / segments)
+        px = cx_right + r * math.cos(angle)
+        py = cy + r * math.sin(angle)
+        points_right.extend([px, py])
+
+    # Unir puntos en orden: arco izquierdo, luego arco derecho
+    return points_left + points_right
+
+
+# =============================================================================
 # WIDGET BARRA DE PROGRESO
 # =============================================================================
 
@@ -90,6 +129,7 @@ class GradientProgressBar(ctk.CTkFrame):
         self._canvas.pack(fill="both", expand=True)
 
         self.bind("<Configure>", lambda e: self._redraw())
+        self._canvas.bind("<Configure>", lambda e: self._redraw())
 
     def set_colors(self, *, track: str, border: str):
         self._track_color = track
@@ -127,12 +167,40 @@ class GradientProgressBar(ctk.CTkFrame):
         self._redraw()
         self._ind_after_id = self.after(16, self._tick_indeterminate)
 
+    def _get_canvas_bg(self) -> str:
+        try:
+            master = self.master
+            if master is not None:
+                color = master.cget("fg_color")
+                if isinstance(color, (tuple, list)) and color:
+                    return color[0]
+                if isinstance(color, str) and color and color != "transparent":
+                    return color
+        except Exception:
+            pass
+        return "#FFFFFF"
+
+    def _draw_capsule_polygon(self, x1, y1, x2, y2, fill, outline=""):
+        if x2 <= x1 or y2 <= y1:
+            return
+
+        h_ = y2 - y1
+        r_ = h_ / 2.0  # Usar división flotante para precisión
+
+        # Usar más segmentos para un óvalo extremadamente suave
+        points = _capsule_points(x1, y1, x2, y2, r_, segments=20)
+        self._canvas.create_polygon(points, outline=outline, fill=fill, smooth=True)
+
     def _draw_track(self, w: int, h: int):
         self._canvas.delete("all")
+        self._canvas.configure(bg=self._get_canvas_bg())
+
         x1, y1 = 1, 1
         x2, y2 = w - 1, h - 1
-        pts = rounded_rect_points(x1, y1, x2, y2, self._r)
-        self._canvas.create_polygon(pts, smooth=True, fill=self._track_color, outline=self._border_color, width=1)
+
+        # Usar polígonos para una forma perfecta y continua de la pista y el borde
+        self._draw_capsule_polygon(x1, y1, x2, y2, self._border_color)
+        self._draw_capsule_polygon(x1 + 1, y1 + 1, x2 - 1, y2 - 1, self._track_color)
 
     def _draw_fill_determinate(self, w: int, h: int):
         if self._value <= 0.0:
@@ -140,58 +208,130 @@ class GradientProgressBar(ctk.CTkFrame):
 
         x1, y1 = 2, 2
         y2 = h - 2
-        usable_w = (w - 4)
-        fill_w = int(usable_w * self._value)
-        x2 = x1 + fill_w
+        usable_w = w - 4
+        fill_w = usable_w * self._value
+        x2 = int(x1 + fill_w)
+
         if x2 <= x1:
             return
 
-        segments = 80
-        seg_w = max(1, fill_w // segments)
+        inner_h = y2 - y1
+        if inner_h <= 0 or fill_w <= 0:
+            return
 
-        x = x1
-        while x < x2:
-            nx = min(x + seg_w, x2)
-            t = (x - x1) / max(1, usable_w)
-            color = gradient_color_at(t)
-            self._canvas.create_rectangle(x, y1, nx, y2, outline="", fill=color)
-            x = nx
+        r = inner_h / 2.0
 
-        # Redondeado izquierdo
-        cap_r = min(self._r, max(2, fill_w // 2))
-        pts_left = rounded_rect_points(x1, y1, min(x1 + cap_r * 2, x2), y2, cap_r)
-        self._canvas.create_polygon(pts_left, smooth=True, fill=gradient_color_at(0.0), outline="")
+        if fill_w <= inner_h:
+            color = gradient_color_at(fill_w / max(1.0, float(usable_w)))
+            # Para anchos muy pequeños, dibujamos un óvalo centrado con create_polygon
+            cx = (x1 + x2) // 2
+            # Un óvalo es una cápsula con ancho y alto iguales a 2r
+            self._draw_capsule_polygon(cx - r, y1, cx + r, y2, color)
+            return
 
-        # Redondeado derecho al completar
-        if self._value >= 0.999:
-            pts_right = rounded_rect_points(max(x1, x2 - cap_r * 2), y1, x2, y2, cap_r)
-            self._canvas.create_polygon(pts_right, smooth=True, fill=gradient_color_at(1.0), outline="")
+        # Para degradar el relleno en Tkinter, la subdivisión es necesaria.
+        # Dibujaremos los extremos con óvalos y el centro con rectángulos subdivididos.
+        # Esto es complejo, pero al tener la PISTA de fondo perfecta (gracias a create_polygon),
+        # los artefactos visuales en el borde deberían desaparecer.
+
+        # Dibujar casquetes ovalados en los extremos para forma perfecta
+        left_color = gradient_color_at(0.0)
+        right_color = gradient_color_at(self._value)
+
+        # Usar create_oval para los extremos del RELLENO DEGRADADO.
+        # Al alinear las geometrías de relleno perfectamente, la pista de fondo polygon
+        # será el único borde visible en las esquinas, solucionando el problema del usuario.
+
+        # Casquete izquierdo del relleno degradado
+        self._canvas.create_oval(x1, y1, x1 + 2 * r, y2, outline="", fill=left_color)
+        # Casquete derecho del relleno degradado
+        self._canvas.create_oval(x2 - 2 * r, y1, x2, y2, outline="", fill=right_color)
+
+        # Dibujar degradado en el cuerpo rectangular
+        # Aseguramos que el cuerpo se alinee perfectamente entre los casquetes.
+        rect_x1 = x1 + r
+        rect_x2 = x2 - r
+        mid_w = rect_x2 - rect_x1
+
+        if mid_w > 0:
+            # Solución de parches eliminada para volver a "estaba mejor el anterior".
+            # La pista de fondo es ahora perfecta, solucionando el artefacto visual principal.
+
+            segments = max(24, int(mid_w))
+            seg_w = mid_w / segments
+            x = rect_x1
+
+            for _ in range(segments):
+                nx = x + seg_w
+                mid = (x + nx) / 2.0
+                t = (mid - 2.0) / max(1.0, float(usable_w))
+                color = gradient_color_at(t)
+
+                # int(nx + 1) para solapamiento de 1px, necesario para degradado central
+                self._canvas.create_rectangle(int(x), y1, int(nx + 1), y2, outline="", fill=color)
+                x = nx
 
     def _draw_fill_indeterminate(self, w: int, h: int):
-        usable_w = (w - 4)
-        seg = int(usable_w * 0.30)
-        start = int(self._ind_phase * (usable_w + seg)) - seg
+        usable_w = w - 4
+        seg = usable_w * 0.30
+        start = self._ind_phase * (usable_w + seg) - seg
         end = start + seg
 
         x1, y1 = 2, 2
         y2 = h - 2
 
-        sx = max(0, start)
-        ex = min(usable_w, end)
+        sx = max(0.0, start)
+        ex = min(float(usable_w), end)
         if ex <= sx:
             return
 
-        segments = 40
-        seg_w = max(1, (ex - sx) // segments)
+        fill_w = ex - sx
+        inner_h = y2 - y1
+        if inner_h <= 0 or fill_w <= 0:
+            return
 
-        x = x1 + sx
-        x_end = x1 + ex
-        while x < x_end:
-            nx = min(x + seg_w, x_end)
-            t = (x - x1) / max(1, usable_w)
-            color = gradient_color_at(t)
-            self._canvas.create_rectangle(x, y1, nx, y2, outline="", fill=color)
-            x = nx
+        r = inner_h / 2.0
+
+        absolute_x1 = x1 + sx
+        absolute_x2 = x1 + ex
+
+        if fill_w <= inner_h:
+            color = gradient_color_at(((sx + ex) / 2.0) / max(1.0, float(usable_w)))
+            # Óvalo centrado para anchos pequeños
+            cx = (absolute_x1 + absolute_x2) // 2
+            self._draw_capsule_polygon(cx - r, y1, cx + r, y2, color)
+            return
+
+        # Colores de los extremos del segmento flotante
+        t_start = sx / max(1.0, float(usable_w))
+        t_end = ex / max(1.0, float(usable_w))
+        left_color = gradient_color_at(t_start)
+        right_color = gradient_color_at(t_end)
+
+        # Casquetes ovalados
+        self._canvas.create_oval(absolute_x1, y1, absolute_x1 + 2 * r, y2, outline="", fill=left_color)
+        self._canvas.create_oval(absolute_x2 - 2 * r, y1, absolute_x2, y2, outline="", fill=right_color)
+
+        # Cuerpo degradado
+        rect_x1 = absolute_x1 + r
+        rect_x2 = absolute_x2 - r
+        mid_w = rect_x2 - rect_x1
+
+        if mid_w > 0:
+            # Solución de parches eliminada para volver a "estaba mejor el anterior".
+            # La pista de fondo es ahora perfecta, solucionando el artefacto visual principal.
+
+            segments = max(16, int(mid_w))
+            seg_w = mid_w / segments
+            x = rect_x1
+            for _ in range(segments):
+                nx = x + seg_w
+                mid = (x + nx) / 2.0
+                t = (mid - 2.0) / max(1.0, float(usable_w))
+                color = gradient_color_at(t)
+                # int(nx + 1) para solapamiento de 1px
+                self._canvas.create_rectangle(int(x), y1, int(nx + 1), y2, outline="", fill=color)
+                x = nx
 
     def _redraw(self):
         try:
