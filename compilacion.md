@@ -7,74 +7,48 @@
 * **Python:** Debes tener **Python 3.11** instalado (NO uses 3.13 ni 3.14). Asegúrate de marcar "Add Python to PATH" al instalar.
 * **Internet:** Necesario la primera vez para bajar librerías y herramientas de compilación.
 * **Inno Setup 6:** Necesario para generar el instalador.
-* **Windows SDK / signtool.exe:** Necesario para la firma de distribución real.
+* **Firmado actual:** El script `firmarAplicacion.ps1` funciona con **autofirmado local** y no requiere `signtool.exe` ni Windows SDK para su flujo actual.
 
 ---
 
 #### 2. Flujo Correcto de Release
 
 1. **Instalar/Resetear Entorno:**
-* Ejecuta `setup_amp.bat`. En la carpeta raiz del proyecto.
+* Ejecuta `setupAmp.bat` en la carpeta raíz del proyecto.
 * Si todo sale bien, dirá `[5/5] Entorno listo`.
 
 2. **Compilar Portable:**
 * Ejecuta `buildportable.bat`.
 * Al finalizar, dejará el archivo portable en `downloads/`.
-* También copiará `LICENSE.txt` en `downloads/`.
 
 3. **Compilar Instalador:**
 * Ejecuta `buildinstaller.bat`.
 * Al finalizar, dejará el instalador en `downloads/`.
-* El instalador mostrará la licencia durante el wizard y además instalará `LICENSE.txt`.
+* El instalador mostrará la licencia durante el wizard y además instalará el archivo `LICENSE` dentro de la aplicación.
 
-4. **Firmado de Prueba:**
-* Este modo no publica nada.
-* Sirve para validar el flujo sin asumir confianza pública.
-* Si no se configura un certificado, el script no firma y solo deja claro que sigues en modo test.
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\firmarAplicacion.ps1 -Mode Test
-```
-
-5. **Firmado de Distribución:**
-* Este modo exige certificado real de publicación.
-* Firma el portable y el instalador.
-* Puedes usar un `.pfx` o un certificado instalado en el almacén del usuario.
+4. **Firmado Local Actual:**
+* Ejecuta `firmarAplicacion.ps1`.
+* El script genera o reutiliza un certificado autofirmado local y firma los artefactos encontrados en `downloads/`.
+* Este flujo sirve para validación local y pruebas del empaquetado en Windows.
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-$env:SIGN_PFX_PATH="C:\Ruta\MiCertificadoPublico.pfx"
-$env:SIGN_PFX_PASSWORD="TuPassword"
-.\firmarAplicacion.ps1 -Mode Distribution
+.\firmarAplicacion.ps1
 ```
 
-6. **Alternativa con thumbprint:**
-* Si el certificado ya está instalado en `CurrentUser\My`, usa el SHA1.
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-$env:SIGN_CERT_SHA1="A1B2C3D4E5F60718293A4B5C6D7E8F9012345678"
-.\firmarAplicacion.ps1 -Mode Distribution
-```
-
-7. **Distribuir:**
-* Publica únicamente los artefactos ya firmados de `downloads/`.
-* No publiques certificados, `.pfx`, contraseñas ni carpetas privadas de firma.
+5. **Distribuir:**
+* Publica únicamente los artefactos que realmente hayas validado.
+* El script actual de `firmarAplicacion.ps1` **no reemplaza** un certificado público real para confianza de distribución externa.
 
 ---
 
-#### 3. Diferencia entre Prueba y Distribución
+#### 3. Alcance del Firmado Actual
 
-**Modo Test**
-* No representa confianza pública.
-* No resuelve SmartScreen.
-* No debe usarse como publicación final.
-
-**Modo Distribution**
-* Está preparado para usar un certificado real.
-* Firma ambos artefactos finales.
-* Es el flujo correcto para release pública.
+**Script actual**
+* Usa certificado autofirmado local.
+* Firma el portable y el instalador si existen en `downloads/`.
+* Puede servir para pruebas, validación interna y comprobación del flujo de release.
+* No equivale a un firmado público de confianza para SmartScreen o distribución abierta.
 
 ---
 
@@ -82,9 +56,8 @@ $env:SIGN_CERT_SHA1="A1B2C3D4E5F60718293A4B5C6D7E8F9012345678"
 
 En `downloads/` deben quedar como base:
 
-* `Lectorcito Pro Portable.exe`
+* `LectorcitoPro-Portable.exe`
 * `LectorcitoPro-Setup.exe`
-* `LICENSE.txt`
 
 ---
 
@@ -120,30 +93,35 @@ set "ISCC_PATH=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 .\buildinstaller.bat
 ```
 
-**Caso D: No se encuentra signtool.exe**
+**Caso D: firmarAplicacion.ps1 falla por permisos**
 
-* **Síntoma:** `firmarAplicacion.ps1` falla diciendo que no encontró `signtool.exe`.
+* **Síntoma:** PowerShell bloquea la ejecución del script.
 * **Solución:**
-1. Instala Windows SDK.
-2. O define la variable `SIGNTOOL_PATH`.
 
 ```powershell
-$env:SIGNTOOL_PATH="C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
-.\firmarAplicacion.ps1 -Mode Distribution
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\firmarAplicacion.ps1
 ```
 
-**Caso E: Distribution rechaza el certificado**
+**Caso E: No se encuentran artefactos para firmar**
 
-* **Síntoma:** el script indica que `Distribution no admite certificado autofirmado`.
+* **Síntoma:** el script indica que no encontró archivos en `downloads/`.
 * **Solución:**
-1. No uses certificados locales de prueba.
-2. Conecta un certificado público real antes de publicar.
+1. Ejecuta primero `buildportable.bat` y `buildinstaller.bat`.
+2. Luego vuelve a correr `firmarAplicacion.ps1`.
+
+**Caso F: El sistema no encuentra el cmdlet New-SelfSignedCertificate**
+
+* **Síntoma:** el script de firmado falla al intentar crear el certificado.
+* **Solución:**
+1. Ejecuta el proceso en una instalación de Windows que tenga disponible `New-SelfSignedCertificate`.
+2. Si estás en un entorno muy recortado, valida el firmado en otro equipo Windows compatible.
 
 ---
 
-#### 6. Como correr los archivos
+#### 6. Cómo correr los archivos
 
-* **setup_amp.bat:** Configura o resetea el entorno de compilación.
+* **setupAmp.bat:** Configura o resetea el entorno de compilación.
 
 ```powershell
 .\setupAmp.bat
@@ -161,8 +139,9 @@ $env:SIGNTOOL_PATH="C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\
 .\buildinstaller.bat
 ```
 
-* **firmarAplicacion.ps1:** Firma los artefactos de release.
+* **firmarAplicacion.ps1:** Firma localmente los artefactos generados.
 
 ```powershell
-.\firmarAplicacion.ps1 -Mode Distribution
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\firmarAplicacion.ps1
 ```

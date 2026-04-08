@@ -72,7 +72,7 @@ if errorlevel 1 goto install_fail
 
 echo [4/5] Setup complete.
 echo.
-echo [5/5] Entorno listo. Ahora ejecuta 'build.bat'.
+echo [5/5] Entorno listo. Ahora ejecuta 'buildportable.bat' y/o 'buildinstaller.bat'.
 echo.
 pause
 exit /b 0

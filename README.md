@@ -22,8 +22,6 @@ Está orientada a desarrolladores que necesitan:
 * Crear documentación técnica rápida del estado actual de un repositorio.
 * Preparar entregables de auditoría con filtros, exclusiones y perfiles reutilizables.
 
-La línea **8.0.9** cierra la versión 8 con un enfoque claro en **calidad, estabilidad, rapidez y distribución profesional**.
-
 ## Tabla de Contenidos
 
 1. [Acceso y Descarga](#acceso)
@@ -106,7 +104,6 @@ Desde el panel de ajustes se puede:
 
 ## <a name="distribucion"></a>Distribución Windows
 
-La publicación final de la versión 8 se apoya en dos flujos complementarios:
 
 * **Portable:** orientado a ejecución directa.
 * **Instalable:** orientado a distribución recomendada para usuarios finales.
