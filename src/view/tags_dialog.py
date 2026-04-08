@@ -44,6 +44,8 @@ class TagsConfigDialog(BaseDialog):
         self._layout_retry_after_id = None
         self._layout_retry_count = 0
         self._resize_after_id = None
+        self._last_window_size = None
+        self._last_layout_widths = None
 
         blue_btn = COLORS['button']['blue']
         self.tag_colors = {
@@ -154,6 +156,8 @@ class TagsConfigDialog(BaseDialog):
         self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
         self.files_list = normalize_file_tag_list(initial_files)
         self.result = None
+        self._last_layout_widths = None
+        self._last_window_size = None
         if self.folders_entry is not None:
             self.folders_entry.delete(0, "end")
         if self.files_entry is not None:
@@ -194,6 +198,16 @@ class TagsConfigDialog(BaseDialog):
     def _on_window_configure(self, event=None):
         if event is not None and event.widget is not self:
             return
+        try:
+            size = (
+                max(1, int(getattr(event, "width", self.winfo_width()))),
+                max(1, int(getattr(event, "height", self.winfo_height())))
+            )
+        except Exception:
+            size = (max(1, int(self.winfo_width())), max(1, int(self.winfo_height())))
+        if size == self._last_window_size:
+            return
+        self._last_window_size = size
         if self._resize_after_id is not None:
             try:
                 self.after_cancel(self._resize_after_id)
@@ -238,10 +252,14 @@ class TagsConfigDialog(BaseDialog):
             widths.append(self._get_container_width(self.folders_scroll_frame))
         widths.append(self._get_container_width(self.files_scroll_frame))
         ready = bool(widths) and min(widths) >= 220
+        widths_key = tuple(widths)
         if not ready and self._layout_retry_count < 8:
             self._layout_retry_count += 1
             self._schedule_layout_refresh(delay=40)
             return
+        if ready and widths_key == self._last_layout_widths:
+            return
+        self._last_layout_widths = widths_key if ready else None
         self.redraw_all_tags()
         if self._layout_retry_count < 2:
             self._layout_retry_count += 1
@@ -308,6 +326,20 @@ class TagsConfigDialog(BaseDialog):
         excl_files_rules = [t["nombre"] for t in self.excluded_files if t["estado"] == "activo"]
         media_rules = list(self.media_extensions)
         current_file_rules = [t["nombre"] for t in self.files_list]
+        added_extensions = []
+        seen_extensions = set()
+
+        try:
+            if self.btn_auto is not None:
+                self.btn_auto.configure(state="disabled")
+            self.ok_button.configure(state="disabled")
+            self.cancel_button.configure(state="disabled")
+            if self.folders_entry is not None:
+                self.folders_entry.configure(state="disabled")
+            if self.files_entry is not None:
+                self.files_entry.configure(state="disabled")
+        except Exception:
+            pass
 
         try:
             for root, dirs, files in os.walk(path):
@@ -322,25 +354,41 @@ class TagsConfigDialog(BaseDialog):
 
                     if not ext:
                         continue
+                    if ext in seen_extensions:
+                        continue
                     if matches_file_rule(filename, media_rules):
                         continue
                     if matches_file_rule(filename, current_file_rules):
                         continue
 
-                    self.files_list.append({"nombre": ext, "estado": "activo"})
+                    seen_extensions.add(ext)
                     current_file_rules.append(ext)
+                    added_extensions.append(ext)
                     added_count += 1
 
+            if added_extensions:
+                self.files_list.extend({"nombre": ext, "estado": "activo"} for ext in added_extensions)
+                self._last_layout_widths = None
                 self.redraw_all_tags()
-
-                if added_count > 0:
-                    self._parent.show_message("info_title", "msg_autodetect_result", str(added_count))
-                else:
-                    self._parent.show_message("info_title", "msg_autodetect_none")
+                self._parent.show_message("info_title", "msg_autodetect_result", str(added_count))
+            else:
+                self._parent.show_message("info_title", "msg_autodetect_none")
 
         except Exception as e:
             print(f"Error autodetectando: {e}")
             self._parent.show_message("error_title", "msg_error_generic")
+        finally:
+            try:
+                if self.btn_auto is not None:
+                    self.btn_auto.configure(state="normal")
+                self.ok_button.configure(state="normal")
+                self.cancel_button.configure(state="normal")
+                if self.folders_entry is not None:
+                    self.folders_entry.configure(state="normal")
+                if self.files_entry is not None:
+                    self.files_entry.configure(state="normal")
+            except Exception:
+                pass
 
     def redraw_all_tags(self):
         if not self.winfo_exists(): return
@@ -434,17 +482,20 @@ class TagsConfigDialog(BaseDialog):
 
         tag_list.append({"nombre": tag_to_check, "estado": "activo"})
         entry.delete(0, "end")
+        self._last_layout_widths = None
         self.redraw_all_tags()
 
     def _delete_tag(self, index, tag_list):
         if index < len(tag_list):
             tag_list.pop(index)
+            self._last_layout_widths = None
             self.redraw_all_tags()
 
     def _toggle_tag_state(self, event, index, tag_list):
         if index < len(tag_list):
             current_state = tag_list[index]["estado"]
             tag_list[index]["estado"] = "inactivo" if current_state == "activo" else "activo"
+            self._last_layout_widths = None
             self.redraw_all_tags()
 
     def _on_ok(self, event=None):
