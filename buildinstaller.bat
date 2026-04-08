@@ -220,17 +220,18 @@ echo.
 >> "%INSTALLER_SCRIPT%" echo.
 >> "%INSTALLER_SCRIPT%" echo [Tasks]
 >> "%INSTALLER_SCRIPT%" echo Name: "desktopicon"; Description: "Crear acceso directo en el Escritorio"; GroupDescription: "Accesos directos:"
->> "%INSTALLER_SCRIPT%" echo Name: "startmenuicon"; Description: "Crear acceso directo en el Menú Inicio"; GroupDescription: "Accesos directos:"; Flags: checkedonce
 >> "%INSTALLER_SCRIPT%" echo.
 >> "%INSTALLER_SCRIPT%" echo [Files]
 >> "%INSTALLER_SCRIPT%" echo Source: "%STAGE_DIR%\%APP_EXE_NAME%"; DestDir: "{app}"; Flags: ignoreversion
 >> "%INSTALLER_SCRIPT%" echo Source: "%STAGE_DIR%\%INSTALL_MARKER_FILE%"; DestDir: "{app}"; Flags: ignoreversion
 >> "%INSTALLER_SCRIPT%" echo Source: "%LICENSE_FILE%"; DestDir: "{app}"; Flags: ignoreversion
 >> "%INSTALLER_SCRIPT%" echo.
+>> "%INSTALLER_SCRIPT%" echo [InstallDelete]
+>> "%INSTALLER_SCRIPT%" echo Type: files; Name: "{group}\Desinstalar %PRODUCT_NAME%"
+>> "%INSTALLER_SCRIPT%" echo.
 >> "%INSTALLER_SCRIPT%" echo [Icons]
 >> "%INSTALLER_SCRIPT%" echo Name: "{autodesktop}\%PRODUCT_NAME%"; Filename: "{app}\%APP_EXE_NAME%"; WorkingDir: "{app}"; IconFilename: "{app}\%APP_EXE_NAME%"; Tasks: desktopicon
->> "%INSTALLER_SCRIPT%" echo Name: "{autoprograms}\%PRODUCT_NAME%"; Filename: "{app}\%APP_EXE_NAME%"; WorkingDir: "{app}"; IconFilename: "{app}\%APP_EXE_NAME%"; Tasks: startmenuicon
->> "%INSTALLER_SCRIPT%" echo Name: "{autoprograms}\Desinstalar %PRODUCT_NAME%"; Filename: "{uninstallexe}"; Tasks: startmenuicon
+>> "%INSTALLER_SCRIPT%" echo Name: "{autoprograms}\%PRODUCT_NAME%"; Filename: "{app}\%APP_EXE_NAME%"; WorkingDir: "{app}"; IconFilename: "{app}\%APP_EXE_NAME%"
 >> "%INSTALLER_SCRIPT%" echo.
 >> "%INSTALLER_SCRIPT%" echo [Run]
 >> "%INSTALLER_SCRIPT%" echo Filename: "{app}\%APP_EXE_NAME%"; Description: "Abrir %PRODUCT_NAME% ahora"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent unchecked runasoriginaluser
