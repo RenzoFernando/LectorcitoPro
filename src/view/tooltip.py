@@ -1,6 +1,7 @@
 import sys
 import customtkinter as ctk
 from tkinter import TclError
+from view.ui_constants import get_theme_tokens, get_button_tokens
 
 TOOLTIP_AUTOHIDE_SECONDS = 2.5
 
@@ -151,19 +152,12 @@ class _SharedTooltipWindow:
         self._fade_after_id = None
 
     def _apply_theme(self):
-        mode = ctk.get_appearance_mode()
-        if mode == "Dark":
-            bg = "#1F2328"
-            border = "#2B3137"
-            text = "#E6EDF3"
-        else:
-            bg = "#FFFFFF"
-            border = "#D0D7DE"
-            text = "#24292F"
+        theme = get_theme_tokens(ctk.get_appearance_mode())
+        blue = get_button_tokens("blue")
 
         try:
-            self._frame.configure(fg_color=bg, border_color=border)
-            self._label.configure(text_color=text)
+            self._frame.configure(fg_color=theme["bg_card"], border_color=blue["border"])
+            self._label.configure(text_color=theme["text_primary"])
         except Exception:
             pass
 
@@ -570,4 +564,3 @@ class CustomTooltip:
             return x0 <= px <= x1 and y0 <= py <= y1
         except Exception:
             return False
-

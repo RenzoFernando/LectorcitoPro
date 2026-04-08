@@ -3,7 +3,7 @@ import copy
 import os
 from tkinter import filedialog
 from file_rules import file_rules_conflict, matches_file_rule, normalize_file_rule, normalize_file_tag_list
-from view.dialogs import BaseDialog, _get_color_tuple, _style_button
+from view.dialogs import BaseDialog, _get_color_tuple, _style_button, _style_checkbox, _style_entry, _style_scrollable
 from view.ui_constants import COLORS
 
 # =============================================================================
@@ -49,8 +49,8 @@ class TagsConfigDialog(BaseDialog):
 
         blue_btn = COLORS['button']['blue']
         self.tag_colors = {
-            "activo": {"fg": blue_btn["bg"], "hover": blue_btn["hover"], "text": "#FFFFFF"},
-            "inactivo": {"fg": "#6c757d", "hover": "#5a6268", "text": "#FFFFFF"}
+            "activo": {"fg": blue_btn["bg"], "hover": blue_btn["hover"], "text": COLORS["light"]["text_on_accent"]},
+            "inactivo": {"fg": _get_color_tuple("bg_panel"), "hover": COLORS["button"]["neutral"]["hover"], "text": _get_color_tuple("text_secondary")}
         }
 
         self.tag_font = ctk.CTkFont(family="Segoe UI", size=11)
@@ -90,6 +90,7 @@ class TagsConfigDialog(BaseDialog):
                 onvalue=True,
                 offvalue=False
             )
+            _style_checkbox(self.extra_checkbox)
             self.extra_checkbox.grid(row=6, column=0, sticky="w", padx=20, pady=(10, 0))
             separator_row = 7
             button_row = 8
@@ -291,6 +292,7 @@ class TagsConfigDialog(BaseDialog):
         ph_text = self._parent._tr("placeholder_tags") if hasattr(self._parent, "_tr") else "Escribir..."
 
         entry = ctk.CTkEntry(input_container, placeholder_text=ph_text)
+        _style_entry(entry)
         entry.pack(side="left", fill="x", expand=True)
 
         if section_id == "folders":

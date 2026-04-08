@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from app_meta import APP_EXECUTABLE_NAME
-from view.dialogs import BaseDialog, _style_button, _get_color_tuple
+from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry, _style_option_menu
 
 
 # =============================================================================
@@ -45,6 +45,7 @@ class SettingsDialog(BaseDialog):
             button_color=_get_color_tuple("card_border"),
             text_color=_get_color_tuple("text")
         )
+        _style_option_menu(self.opt_format)
         self.opt_format.pack(padx=20, pady=(0, 10), anchor="w")
 
         self.lbl_exe_path = ctk.CTkLabel(
@@ -67,6 +68,7 @@ class SettingsDialog(BaseDialog):
             self.main_frame,
             placeholder_text=self.parent_view._tr("ph_exe_path")
         )
+        _style_entry(self.entry_exe)
         self.entry_exe.pack(padx=20, pady=(0, 15), fill="x")
         self.entry_exe.insert(0, self.current_exe_path)
 

@@ -30,15 +30,14 @@ def _lerp_color(c1: str, c2: str, t: float) -> str:
     return _rgb_to_hex((r, g, b))
 
 
-def gradient_color_at(t: float) -> str:
-    # Rojo -> Naranja -> Ambar -> Lima -> Verde
-    stops = [
-        (0.00, "#D03B3D"),
-        (0.30, "#D06A3B"),
-        (0.55, "#D0A33B"),
-        (0.78, "#A8D03B"),
-        (1.00, "#3BD056"),
-    ]
+DEFAULT_STOPS = [
+    (0.00, "#2F6FE4"),
+    (0.55, "#4A7FF1"),
+    (1.00, "#6E63DA"),
+]
+
+def gradient_color_at(t: float, stops: list[tuple[float, str]] | None = None) -> str:
+    stops = list(stops or DEFAULT_STOPS)
     t = max(0.0, min(1.0, float(t)))
 
     for i in range(len(stops) - 1):
@@ -122,8 +121,9 @@ class GradientProgressBar(ctk.CTkFrame):
         self._ind_phase = 0.0
         self._ind_after_id = None
 
-        self._track_color = "#C9CDD1"
-        self._border_color = "#B6BAC0"
+        self._track_color = "#DCE4F2"
+        self._border_color = "#C7D3E8"
+        self._gradient_stops = list(DEFAULT_STOPS)
 
         self._canvas = Canvas(self, height=self._h, highlightthickness=0, bd=0, relief="flat")
         self._canvas.pack(fill="both", expand=True)
@@ -131,9 +131,11 @@ class GradientProgressBar(ctk.CTkFrame):
         self.bind("<Configure>", lambda e: self._redraw())
         self._canvas.bind("<Configure>", lambda e: self._redraw())
 
-    def set_colors(self, *, track: str, border: str):
+    def set_colors(self, *, track: str, border: str, stops: list[tuple[float, str]] | None = None):
         self._track_color = track
         self._border_color = border
+        if stops:
+            self._gradient_stops = list(stops)
         self._redraw()
 
     def set(self, value: float):
@@ -178,7 +180,7 @@ class GradientProgressBar(ctk.CTkFrame):
                     return color
         except Exception:
             pass
-        return "#FFFFFF"
+        return self.cget("fg_color") if isinstance(self.cget("fg_color"), str) and self.cget("fg_color") not in ("", "transparent") else "#FFFFFF"
 
     def _draw_capsule_polygon(self, x1, y1, x2, y2, fill, outline=""):
         if x2 <= x1 or y2 <= y1:
@@ -222,7 +224,7 @@ class GradientProgressBar(ctk.CTkFrame):
         r = inner_h / 2.0
 
         if fill_w <= inner_h:
-            color = gradient_color_at(fill_w / max(1.0, float(usable_w)))
+            color = gradient_color_at(fill_w / max(1.0, float(usable_w)), self._gradient_stops)
             # Para anchos muy pequeños, dibujamos un óvalo centrado con create_polygon
             cx = (x1 + x2) // 2
             # Un óvalo es una cápsula con ancho y alto iguales a 2r
@@ -235,8 +237,8 @@ class GradientProgressBar(ctk.CTkFrame):
         # los artefactos visuales en el borde deberían desaparecer.
 
         # Dibujar casquetes ovalados en los extremos para forma perfecta
-        left_color = gradient_color_at(0.0)
-        right_color = gradient_color_at(self._value)
+        left_color = gradient_color_at(0.0, self._gradient_stops)
+        right_color = gradient_color_at(self._value, self._gradient_stops)
 
         # Usar create_oval para los extremos del RELLENO DEGRADADO.
         # Al alinear las geometrías de relleno perfectamente, la pista de fondo polygon
@@ -265,7 +267,7 @@ class GradientProgressBar(ctk.CTkFrame):
                 nx = x + seg_w
                 mid = (x + nx) / 2.0
                 t = (mid - 2.0) / max(1.0, float(usable_w))
-                color = gradient_color_at(t)
+                color = gradient_color_at(t, self._gradient_stops)
 
                 # int(nx + 1) para solapamiento de 1px, necesario para degradado central
                 self._canvas.create_rectangle(int(x), y1, int(nx + 1), y2, outline="", fill=color)
@@ -296,7 +298,7 @@ class GradientProgressBar(ctk.CTkFrame):
         absolute_x2 = x1 + ex
 
         if fill_w <= inner_h:
-            color = gradient_color_at(((sx + ex) / 2.0) / max(1.0, float(usable_w)))
+            color = gradient_color_at(((sx + ex) / 2.0) / max(1.0, float(usable_w)), self._gradient_stops)
             # Óvalo centrado para anchos pequeños
             cx = (absolute_x1 + absolute_x2) // 2
             self._draw_capsule_polygon(cx - r, y1, cx + r, y2, color)
@@ -305,8 +307,8 @@ class GradientProgressBar(ctk.CTkFrame):
         # Colores de los extremos del segmento flotante
         t_start = sx / max(1.0, float(usable_w))
         t_end = ex / max(1.0, float(usable_w))
-        left_color = gradient_color_at(t_start)
-        right_color = gradient_color_at(t_end)
+        left_color = gradient_color_at(t_start, self._gradient_stops)
+        right_color = gradient_color_at(t_end, self._gradient_stops)
 
         # Casquetes ovalados
         self._canvas.create_oval(absolute_x1, y1, absolute_x1 + 2 * r, y2, outline="", fill=left_color)
@@ -328,7 +330,7 @@ class GradientProgressBar(ctk.CTkFrame):
                 nx = x + seg_w
                 mid = (x + nx) / 2.0
                 t = (mid - 2.0) / max(1.0, float(usable_w))
-                color = gradient_color_at(t)
+                color = gradient_color_at(t, self._gradient_stops)
                 # int(nx + 1) para solapamiento de 1px
                 self._canvas.create_rectangle(int(x), y1, int(nx + 1), y2, outline="", fill=color)
                 x = nx

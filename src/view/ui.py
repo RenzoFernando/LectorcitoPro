@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import customtkinter as ctk
+import tkinter as tk
 import datetime
 import os
 import random
 import webbrowser
+
+from PIL import Image, ImageDraw, ImageFilter, ImageTk
 
 from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
 from view.translations import TRANSLATIONS
@@ -14,6 +17,7 @@ from view.tooltip import CustomTooltip
 from view.ui_constants import (
     VERSION, YEAR, AUTHOR, REPO_URL,
     COLORS, BTN_W_MAIN, BTN_H_MAIN,
+    get_theme_tokens, get_button_tokens, hex_to_rgb, with_alpha,
     MAIN_WINDOW_SHOW_DELAY_MS, MAIN_WINDOW_CENTER_RETRY_DELAY_MS, MAIN_WINDOW_CENTER_MAX_ATTEMPTS,
     MAIN_WINDOW_INITIAL_ALPHA, MAIN_WINDOW_REVEAL_OFFSET_Y, MAIN_WINDOW_REVEAL_STEP_PX,
     MAIN_WINDOW_FADE_IN_STEP, MAIN_WINDOW_FADE_IN_INTERVAL_MS, MAIN_WINDOW_FADE_OUT_STEP, MAIN_WINDOW_FADE_OUT_INTERVAL_MS,
@@ -53,6 +57,8 @@ class LectorcitoApp(ctk.CTk):
         self._dialog_cache = {}
         self._reveal_target_y = None
         self._is_theme_switching = False
+        self._background_after_id = None
+        self._background_photo = None
 
         self.title(APP_DISPLAY_NAME)
         self._app_w = 600
@@ -175,7 +181,71 @@ class LectorcitoApp(ctk.CTk):
     # CONSTRUCCION DE UI
     # =========================================================================
 
+    def _create_atmosphere_background(self):
+        self._background_canvas = tk.Canvas(self, highlightthickness=0, bd=0, relief="flat")
+        self._background_canvas.place(x=0, y=0, relwidth=1.0, relheight=1.0)
+        self.tk.call("lower", self._background_canvas._w)
+        self.bind("<Configure>", self._schedule_background_refresh, add="+")
+
+    def _schedule_background_refresh(self, event=None):
+        if event is not None and event.widget is not self:
+            return
+        if self._background_after_id is not None:
+            try:
+                self.after_cancel(self._background_after_id)
+            except Exception:
+                pass
+        try:
+            self._background_after_id = self.after(16, self._refresh_background_canvas)
+        except Exception:
+            self._background_after_id = None
+
+    def _refresh_background_canvas(self):
+        self._background_after_id = None
+        try:
+            width = max(1, int(self.winfo_width()))
+            height = max(1, int(self.winfo_height()))
+        except Exception:
+            return
+
+        theme = get_theme_tokens(self.current_theme)
+        base_rgb = hex_to_rgb(theme["bg_base"])
+        image = Image.new("RGBA", (width, height), (*base_rgb, 255))
+
+        top_mix = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        top_draw = ImageDraw.Draw(top_mix)
+        elevated_rgb = hex_to_rgb(theme["bg_elevated"])
+        for y in range(height):
+            ratio = max(0.0, min(1.0, y / max(1, height - 1)))
+            opacity = int(42 * (1.0 - ratio))
+            color = tuple(int(elevated_rgb[i] + (base_rgb[i] - elevated_rgb[i]) * ratio) for i in range(3))
+            top_draw.line((0, y, width, y), fill=(*color, opacity))
+        image = Image.alpha_composite(image, top_mix)
+
+        blue_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        ImageDraw.Draw(blue_layer).ellipse((-int(width * 0.18), -int(height * 0.20), int(width * 0.56), int(height * 0.54)), fill=with_alpha(theme["glow_blue_soft"], 88))
+        blue_layer = blue_layer.filter(ImageFilter.GaussianBlur(max(18, width // 10)))
+        image = Image.alpha_composite(image, blue_layer)
+
+        purple_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        ImageDraw.Draw(purple_layer).ellipse((int(width * 0.48), -int(height * 0.12), int(width * 1.08), int(height * 0.52)), fill=with_alpha(theme["glow_purple_soft"], 78))
+        purple_layer = purple_layer.filter(ImageFilter.GaussianBlur(max(18, width // 9)))
+        image = Image.alpha_composite(image, purple_layer)
+
+        base_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        blend_glow = tuple((hex_to_rgb(theme["glow_blue_soft"])[i] + hex_to_rgb(theme["glow_purple_soft"])[i]) // 2 for i in range(3))
+        ImageDraw.Draw(base_layer).ellipse((int(width * 0.10), int(height * 0.58), int(width * 0.92), int(height * 1.20)), fill=(*blend_glow, 34))
+        base_layer = base_layer.filter(ImageFilter.GaussianBlur(max(20, width // 8)))
+        image = Image.alpha_composite(image, base_layer)
+
+        self._background_photo = ImageTk.PhotoImage(image)
+        self._background_canvas.configure(bg=theme["bg_base"])
+        self._background_canvas.delete("all")
+        self._background_canvas.create_image(0, 0, image=self._background_photo, anchor="nw")
+        self.tk.call("lower", self._background_canvas._w)
+
     def _build_ui(self):
+        self._create_atmosphere_background()
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -211,25 +281,24 @@ class LectorcitoApp(ctk.CTk):
         self.lbl_greet.pack()
 
     def _create_main_buttons(self, parent):
-        is_light = self.current_theme == "Light"
-        theme_keys = COLORS["light"] if is_light else COLORS["dark"]
+        theme_keys = get_theme_tokens(self.current_theme)
 
         self.main_menu_frame = ctk.CTkFrame(
             parent,
-            fg_color=theme_keys["surface"],
-            corner_radius=16,
+            fg_color=theme_keys["bg_panel"],
+            corner_radius=18,
             border_width=1,
-            border_color=theme_keys["border"]
+            border_color=theme_keys["border_subtle"]
         )
         self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=(0, 5))
 
         self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame, fg_color="transparent")
-        self.main_buttons_frame.pack(pady=8, padx=10)
+        self.main_buttons_frame.pack(pady=10, padx=10)
 
-        outside_bg = theme_keys["surface"]
-        btn_blue = COLORS["button"]["blue"]
-        btn_green = COLORS["button"]["green"]
-        btn_red = COLORS["button"]["red"]
+        outside_bg = theme_keys["bg_panel"]
+        btn_blue = get_button_tokens("blue")
+        btn_green = get_button_tokens("green")
+        btn_red = get_button_tokens("red")
 
         common = {
             "width": BTN_W_MAIN,
@@ -237,40 +306,29 @@ class LectorcitoApp(ctk.CTk):
             "outside_bg": outside_bg,
             "border_width": 2,
             "font": ("Segoe UI", 11, "bold"),
-            "text_color": "#FFFFFF",
+            "text_color": btn_blue["text"],
         }
 
+        def build_palette(palette):
+            return {
+                "fg_color": palette["bg"],
+                "hover_color": palette["hover"],
+                "border_color": palette["border"],
+                "gradient_start": palette.get("gradient_start"),
+                "gradient_mid": palette.get("gradient_mid"),
+                "gradient_end": palette.get("gradient_end"),
+                "hover_gradient_start": palette.get("hover_gradient_start"),
+                "hover_gradient_mid": palette.get("hover_gradient_mid"),
+                "hover_gradient_end": palette.get("hover_gradient_end"),
+            }
+
         self.main_buttons = {
-            "selpath": PillTextButton(
-                self.main_buttons_frame,
-                fg_color=btn_blue["bg"], hover_color=btn_blue["hover"], border_color=btn_blue["border"],
-                **common
-            ),
-            "choose": PillTextButton(
-                self.main_buttons_frame,
-                fg_color=btn_blue["bg"], hover_color=btn_blue["hover"], border_color=btn_blue["border"],
-                **common
-            ),
-            "create_tree": PillTextButton(
-                self.main_buttons_frame,
-                fg_color=btn_blue["bg"], hover_color=btn_blue["hover"], border_color=btn_blue["border"],
-                **common
-            ),
-            "openlect": PillTextButton(
-                self.main_buttons_frame,
-                fg_color=btn_blue["bg"], hover_color=btn_blue["hover"], border_color=btn_blue["border"],
-                **common
-            ),
-            "openlast": PillTextButton(
-                self.main_buttons_frame,
-                fg_color=btn_green["bg"], hover_color=btn_green["hover"], border_color=btn_green["border"],
-                **common
-            ),
-            "delete": PillTextButton(
-                self.main_buttons_frame,
-                fg_color=btn_red["bg"], hover_color=btn_red["hover"], border_color=btn_red["border"],
-                **common
-            ),
+            "selpath": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
+            "choose": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
+            "create_tree": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
+            "openlect": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
+            "openlast": PillTextButton(self.main_buttons_frame, **build_palette(btn_green), **common),
+            "delete": PillTextButton(self.main_buttons_frame, **build_palette(btn_red), **common),
         }
 
         BTN_SPACING = 1.0
@@ -365,36 +423,34 @@ class LectorcitoApp(ctk.CTk):
             pass
 
     def apply_theme(self):
-        is_light = self.current_theme == "Light"
         ctk.set_appearance_mode(self.current_theme)
 
-        theme_keys = COLORS["light"] if is_light else COLORS["dark"]
+        theme_keys = get_theme_tokens(self.current_theme)
 
-        self.configure(fg_color=theme_keys["bg"])
+        self.configure(fg_color=theme_keys["bg_base"])
+        self._refresh_background_canvas()
 
         self.left_sidebar.apply_theme(self.current_theme)
         self.right_sidebar.apply_theme(self.current_theme)
         self.status_panel.apply_theme(self.current_theme)
 
         try:
-            self.main_menu_frame.configure(fg_color=theme_keys["surface"], border_color=theme_keys["border"])
+            self.main_menu_frame.configure(fg_color=theme_keys["bg_panel"], border_color=theme_keys["border_subtle"])
         except Exception:
             pass
 
         for btn in self.main_buttons.values():
             try:
-                btn.configure(outside_bg=theme_keys["surface"])
+                btn.configure(outside_bg=theme_keys["bg_panel"])
             except Exception:
                 pass
 
         try:
-            self.footer_frame.configure(fg_color=theme_keys["footer_bg"])
+            self.footer_frame.configure(fg_color=theme_keys["bg_footer"])
             self.footer_line.configure(fg_color=theme_keys["separator_line"])
-            self.lbl_greet.configure(text_color=theme_keys["text"])
-
-            for widget in self.footer_frame.winfo_children():
-                if isinstance(widget, ctk.CTkLabel):
-                    widget.configure(text_color=theme_keys["text_secondary"])
+            self.lbl_greet.configure(text_color=theme_keys["text_primary"])
+            self.lbl_title.configure(fg_color="transparent")
+            self.lbl_copyright.configure(text_color=theme_keys["text_secondary"])
         except Exception:
             pass
 

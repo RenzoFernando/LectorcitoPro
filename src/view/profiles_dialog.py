@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from view.dialogs import BaseDialog, _style_button, _get_color_tuple, ConfirmDialog
+from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry, _style_scrollable, ConfirmDialog
 from view.ui_constants import COLORS
 
 
@@ -23,7 +23,9 @@ class ProfilesDialog(BaseDialog):
             "card": _get_color_tuple("card"),
             "text": _get_color_tuple("text"),
             "selected": COLORS["button"]["blue"]["bg"],
-            "hover": COLORS["sidebar_hover"]
+            "selected_border": COLORS["button"]["blue"]["border"],
+            "panel": _get_color_tuple("bg_panel"),
+            "border": _get_color_tuple("border_subtle")
         }
 
         self._build_ui()
@@ -48,6 +50,7 @@ class ProfilesDialog(BaseDialog):
             fg_color="transparent",
             height=250
         )
+        _style_scrollable(self.scroll_frame)
         self.scroll_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
         self.bottom_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
@@ -58,6 +61,7 @@ class ProfilesDialog(BaseDialog):
             placeholder_text=self.parent_view._tr("ph_new_profile") if hasattr(self.parent_view,
                                                                                "_tr") else "Nombre nuevo perfil..."
         )
+        _style_entry(self.entry_new)
         self.entry_new.pack(side="left", fill="x", expand=True, padx=(0, 10))
 
         self.btn_add = ctk.CTkButton(
@@ -119,10 +123,10 @@ class ProfilesDialog(BaseDialog):
 
         item_frame = ctk.CTkFrame(
             self.scroll_frame,
-            fg_color=self.colors["selected"] if is_active else "transparent",
+            fg_color=self.colors["selected"] if is_active else self.colors["panel"],
             border_width=1,
-            border_color=self.colors["text"] if is_active else "gray",
-            corner_radius=8
+            border_color=self.colors["selected_border"] if is_active else self.colors["border"],
+            corner_radius=12
         )
         item_frame.pack(fill="x", pady=4)
 
@@ -130,7 +134,7 @@ class ProfilesDialog(BaseDialog):
             item_frame,
             text=f"  {display_name}{suffix}",
             font=("Segoe UI", 12, "bold" if is_active else "normal"),
-            text_color="#FFFFFF" if is_active else self.colors["text"]
+            text_color=COLORS["light"]["text_on_accent"] if is_active else self.colors["text"]
         )
         lbl.pack(side="left", padx=10, pady=8)
 
@@ -143,8 +147,8 @@ class ProfilesDialog(BaseDialog):
                 text="✕",
                 width=24, height=24,
                 fg_color="transparent",
-                hover_color="#D03B3D",
-                text_color="#FFFFFF" if is_active else self.colors["text"],
+                hover_color=COLORS["button"]["red"]["hover"],
+                text_color=COLORS["light"]["text_on_accent"] if is_active else self.colors["text"],
                 command=lambda p=pid: self._delete_profile(p)
             )
             btn_del.pack(side="right", padx=10)

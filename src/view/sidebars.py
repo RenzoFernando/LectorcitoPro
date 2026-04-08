@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from tkinter import Canvas
 from PIL import Image, ImageDraw, ImageTk
-from view.ui_constants import COLORS, SIDEBAR_WIDTH, BTN_H_ICON
+from view.ui_constants import COLORS, get_theme_tokens, get_button_tokens, SIDEBAR_WIDTH, BTN_H_ICON
 from view.tooltip import CustomTooltip
 
 
@@ -38,6 +38,51 @@ def _auto_border(fill: str) -> str:
     return _mix(fill, "#000000", 0.15)
 
 
+def _gradient_color(stops: list[tuple[float, str]], t: float) -> str:
+    t = max(0.0, min(1.0, float(t)))
+    if not stops:
+        return "#000000"
+    if len(stops) == 1:
+        return stops[0][1]
+    for i in range(len(stops) - 1):
+        p1, c1 = stops[i]
+        p2, c2 = stops[i + 1]
+        if p1 <= t <= p2:
+            local = (t - p1) / max(1e-9, (p2 - p1))
+            return _mix(c1, c2, local)
+    return stops[-1][1]
+
+
+def _build_stops(start: str | None, end: str | None, mid: str | None = None) -> list[tuple[float, str]] | None:
+    if not start or not end:
+        return None
+    if mid:
+        return [(0.0, start), (0.54, mid), (1.0, end)]
+    return [(0.0, start), (1.0, end)]
+
+
+def _mix_stops(stops: list[tuple[float, str]] | None, base_color: str, ratio: float) -> list[tuple[float, str]] | None:
+    if not stops:
+        return None
+    return [(point, _mix(color, base_color, ratio)) for point, color in stops]
+
+
+def _draw_gradient_capsule(img, x1: int, y1: int, x2: int, y2: int, radius: int, stops: list[tuple[float, str]], border_rgb=None, border_width: int = 1):
+    grad_w = max(1, int(x2 - x1))
+    grad_h = max(1, int(y2 - y1))
+    gradient = Image.new("RGBA", (grad_w, grad_h), (0, 0, 0, 0))
+    gradient_draw = ImageDraw.Draw(gradient)
+    for x in range(grad_w):
+        color = _gradient_color(stops, x / max(1, grad_w - 1))
+        gradient_draw.line((x, 0, x, grad_h), fill=_hex_to_rgb(color))
+    mask = Image.new("L", (grad_w, grad_h), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.rounded_rectangle((0, 0, grad_w - 1, grad_h - 1), radius=radius, fill=255)
+    img.paste(gradient, (x1, y1), mask)
+    if border_rgb is not None and border_width > 0:
+        ImageDraw.Draw(img).rounded_rectangle((x1, y1, x2, y2), radius=radius, outline=border_rgb, width=border_width)
+
+
 def _trim_render_cache(cache: dict, limit: int = 12):
     while len(cache) > limit:
         try:
@@ -56,9 +101,11 @@ class LeftSidebar(ctk.CTkFrame):
         self.pack_propagate(False)
 
         self._text = text
-        self._outside_bg = COLORS["light"]["bg"]
-        self._pill_bg = COLORS["light"]["left_bar"]
-        self._text_color = COLORS["light"]["sidebar_text"]
+        light_theme = get_theme_tokens("Light")
+        self._outside_bg = light_theme["bg_base"]
+        self._pill_bg = light_theme["sidebar_pill_start"]
+        self._pill_bg_end = light_theme["sidebar_pill_end"]
+        self._text_color = light_theme["sidebar_text"]
         self._state = "normal"
 
         self._border_w = 2
@@ -93,17 +140,17 @@ class LeftSidebar(ctk.CTkFrame):
         self._schedule_paint()
 
     def apply_theme(self, theme_name: str):
-        is_light = (theme_name == "Light")
-        theme = COLORS["light" if is_light else "dark"]
+        theme = get_theme_tokens(theme_name)
 
-        self._outside_bg = theme["bg"]
-        self._pill_bg = theme["left_bar"]
+        self._outside_bg = theme["bg_base"]
+        self._pill_bg = theme["sidebar_pill_start"]
+        self._pill_bg_end = theme["sidebar_pill_end"]
         self._text_color = theme["sidebar_text"]
 
         if _luma(self._pill_bg) < 140:
-            self._border_color = _mix(self._pill_bg, "#FFFFFF", 0.18)
+            self._border_color = _mix(self._pill_bg_end, "#FFFFFF", 0.18)
         else:
-            self._border_color = _mix(self._pill_bg, "#000000", 0.18)
+            self._border_color = _mix(self._pill_bg_end, "#000000", 0.18)
 
         self._canvas.configure(bg=self._outside_bg)
         self._paint_signature = None
@@ -161,7 +208,7 @@ class LeftSidebar(ctk.CTkFrame):
             if border_fill:
                 border_fill = _mix(border_fill, self._outside_bg, 0.35)
 
-        paint_signature = (w, h, self._outside_bg, pill_fill, text_fill, border_fill, self._state, self._text)
+        paint_signature = (w, h, self._outside_bg, pill_fill, self._pill_bg_end, text_fill, border_fill, self._state, self._text)
         if paint_signature == self._paint_signature and self._canvas.find_all():
             return
 
@@ -180,11 +227,9 @@ class LeftSidebar(ctk.CTkFrame):
             self._paint_signature = paint_signature
             return
 
-        pill_rgb = _hex_to_rgb(pill_fill)
         border_rgb = _hex_to_rgb(border_fill) if border_fill else None
 
         img = Image.new("RGBA", (W, H), outside_rgb)
-        draw = ImageDraw.Draw(img)
 
         pad = 2 * scale
         x1, y1 = pad, pad
@@ -193,14 +238,9 @@ class LeftSidebar(ctk.CTkFrame):
         usable_w = max(10 * scale, (x2 - x1))
         radius = usable_w // 2
         bw = max(1, int(self._border_w * scale))
+        stops = _build_stops(pill_fill, self._pill_bg_end)
 
-        draw.rounded_rectangle(
-            [x1, y1, x2, y2],
-            radius=radius,
-            fill=pill_rgb,
-            outline=border_rgb,
-            width=bw
-        )
+        _draw_gradient_capsule(img, x1, y1, x2, y2, radius, stops, border_rgb=border_rgb, border_width=bw)
 
         img_small = img.resize((w, h), Image.LANCZOS)
         self._pill_photo = ImageTk.PhotoImage(img_small)
@@ -231,11 +271,17 @@ class PillIconButton(ctk.CTkFrame):
             image=None,
             width: int = SIDEBAR_WIDTH,
             height: int = BTN_H_ICON,
-            outside_bg: str = COLORS["light"]["bg"],
-            fg_color: str = COLORS["light"]["left_bar"],
-            hover_color: str = COLORS["sidebar_hover"]["light"],
+            outside_bg: str = COLORS["light"]["bg_base"],
+            fg_color: str = COLORS["light"]["sidebar_pill_start"],
+            hover_color: str = COLORS["light"]["sidebar_pill_hover_start"],
             border_color: str = None,
             border_width: int = 2,
+            gradient_start: str | None = None,
+            gradient_mid: str | None = None,
+            gradient_end: str | None = None,
+            hover_gradient_start: str | None = None,
+            hover_gradient_mid: str | None = None,
+            hover_gradient_end: str | None = None,
             command=None
     ):
         super().__init__(parent, width=width, height=height, fg_color="transparent")
@@ -245,6 +291,12 @@ class PillIconButton(ctk.CTkFrame):
         self._fg_color = fg_color
         self._hover_color = hover_color
         self._border_w = int(border_width)
+        self._gradient_start = gradient_start
+        self._gradient_mid = gradient_mid
+        self._gradient_end = gradient_end
+        self._hover_gradient_start = hover_gradient_start
+        self._hover_gradient_mid = hover_gradient_mid
+        self._hover_gradient_end = hover_gradient_end
 
         self._hovered = False
         self._state = "normal"
@@ -304,6 +356,19 @@ class PillIconButton(ctk.CTkFrame):
         if "hover_color" in kwargs:
             self._hover_color = kwargs.pop("hover_color")
             self._hover_border_color = _auto_border(self._hover_color)
+
+        if "gradient_start" in kwargs:
+            self._gradient_start = kwargs.pop("gradient_start")
+        if "gradient_mid" in kwargs:
+            self._gradient_mid = kwargs.pop("gradient_mid")
+        if "gradient_end" in kwargs:
+            self._gradient_end = kwargs.pop("gradient_end")
+        if "hover_gradient_start" in kwargs:
+            self._hover_gradient_start = kwargs.pop("hover_gradient_start")
+        if "hover_gradient_mid" in kwargs:
+            self._hover_gradient_mid = kwargs.pop("hover_gradient_mid")
+        if "hover_gradient_end" in kwargs:
+            self._hover_gradient_end = kwargs.pop("hover_gradient_end")
 
         if "state" in kwargs:
             self._state = kwargs.pop("state")
@@ -462,17 +527,16 @@ class PillIconButton(ctk.CTkFrame):
 
         fill = self._hover_color if (self._hovered and self._state != "disabled") else self._fg_color
         border = self._hover_border_color if (self._hovered and self._state != "disabled") else self._border_color
+        gradient_stops = _build_stops(self._gradient_start, self._gradient_end, self._gradient_mid)
+        hover_gradient_stops = _build_stops(self._hover_gradient_start, self._hover_gradient_end, self._hover_gradient_mid)
+        active_stops = hover_gradient_stops if (self._hovered and self._state != "disabled" and hover_gradient_stops) else gradient_stops
 
         if self._state == "disabled":
             fill = _mix(fill, self._outside_bg, 0.35)
             border = _mix(border, self._outside_bg, 0.35)
+            active_stops = _mix_stops(active_stops, self._outside_bg, 0.35)
 
-        try:
-            appearance_mode = ctk.get_appearance_mode()
-        except Exception:
-            appearance_mode = "Light"
-
-        paint_signature = (w, h, self._outside_bg, fill, border, self._state, self._hovered, self._border_w, appearance_mode, id(self._image))
+        paint_signature = (w, h, self._outside_bg, fill, border, tuple(active_stops or []), self._state, self._hovered, self._border_w, bool(self._image))
         if paint_signature == self._paint_signature and self._canvas.find_all():
             return
 
@@ -485,61 +549,39 @@ class PillIconButton(ctk.CTkFrame):
             return
 
         outside_rgb = _hex_to_rgb(self._outside_bg)
-        fill_rgb = _hex_to_rgb(fill)
         border_rgb = _hex_to_rgb(border) if border else None
 
         img = Image.new("RGBA", (W, H), outside_rgb)
-        draw = ImageDraw.Draw(img)
 
         pad = 2 * scale
         x1, y1 = pad, pad
         x2, y2 = W - pad, H - pad
 
-        radius = 100
+        usable_w = max(10 * scale, (x2 - x1))
+        usable_h = max(10 * scale, (y2 - y1))
+        radius = min(usable_w, usable_h) // 2
         bw = max(1, int(self._border_w * scale))
 
-        draw.rounded_rectangle(
-            [x1, y1, x2, y2],
-            radius=radius,
-            fill=fill_rgb,
-            outline=border_rgb,
-            width=bw
-        )
+        if active_stops:
+            _draw_gradient_capsule(img, x1, y1, x2, y2, radius, active_stops, border_rgb=border_rgb, border_width=bw)
+        else:
+            ImageDraw.Draw(img).rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=_hex_to_rgb(fill), outline=border_rgb, width=bw)
 
-        pil_icon = self._pick_icon_pil()
-        if pil_icon is not None:
+        icon = self._pick_icon_pil()
+        if icon is not None:
             try:
-                icon = pil_icon.convert("RGBA")
-                fill_lum = _luma(fill)
-                need_light_icon = (fill_lum < 140)
-
-                r, g, b, a = icon.split()
-
-                # Ajustamos color del icono segun el fondo para asegurar contraste
-                if need_light_icon:
-                    icon = Image.merge("RGBA", (
-                        a.point(lambda _: 255),
-                        a.point(lambda _: 255),
-                        a.point(lambda _: 255),
-                        a
-                    ))
-                else:
-                    icon = Image.merge("RGBA", (
-                        a.point(lambda _: 30),
-                        a.point(lambda _: 30),
-                        a.point(lambda _: 30),
-                        a
-                    ))
-
-                target_px = max(14, int(min(w, h) * 0.55))
-                max_side = target_px * scale
+                icon = icon.convert("RGBA")
                 iw, ih = icon.size
-                if iw > 0 and ih > 0:
-                    ratio = min(max_side / iw, max_side / ih)
+                max_w = max(1, int((x2 - x1) * 0.44))
+                max_h = max(1, int((y2 - y1) * 0.44))
+                ratio = min(max_w / max(1, iw), max_h / max(1, ih))
+                if ratio < 1.0 or ratio > 1.02:
                     new_w = max(1, int(iw * ratio))
                     new_h = max(1, int(ih * ratio))
                     resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
                     icon = icon.resize((new_w, new_h), resample)
+                else:
+                    new_w, new_h = iw, ih
 
                 if self._state == "disabled":
                     alpha = icon.split()[-1].point(lambda a: int(a * 0.45))
@@ -547,7 +589,6 @@ class PillIconButton(ctk.CTkFrame):
 
                 ix = (W - new_w) // 2
                 iy = (H - new_h) // 2
-
                 img.alpha_composite(icon, (ix, iy))
             except Exception:
                 pass
@@ -569,11 +610,17 @@ class PillTextButton(ctk.CTkFrame):
             text: str = "",
             width: int = 300,
             height: int = 32,
-            outside_bg: str = COLORS["light"]["bg"],
+            outside_bg: str = COLORS["light"]["bg_base"],
             fg_color: str = COLORS["button"]["blue"]["bg"],
             hover_color: str = COLORS["button"]["blue"]["hover"],
             border_color: str = None,
             border_width: int = 2,
+            gradient_start: str | None = None,
+            gradient_mid: str | None = None,
+            gradient_end: str | None = None,
+            hover_gradient_start: str | None = None,
+            hover_gradient_mid: str | None = None,
+            hover_gradient_end: str | None = None,
             text_color: str = "#FFFFFF",
             font=("Segoe UI", 11, "bold"),
             command=None
@@ -585,6 +632,12 @@ class PillTextButton(ctk.CTkFrame):
         self._fg_color = fg_color
         self._hover_color = hover_color
         self._border_w = int(border_width)
+        self._gradient_start = gradient_start
+        self._gradient_mid = gradient_mid
+        self._gradient_end = gradient_end
+        self._hover_gradient_start = hover_gradient_start
+        self._hover_gradient_mid = hover_gradient_mid
+        self._hover_gradient_end = hover_gradient_end
 
         self._text = text or ""
         self._text_color = text_color
@@ -648,6 +701,19 @@ class PillTextButton(ctk.CTkFrame):
         if "hover_color" in kwargs:
             self._hover_color = kwargs.pop("hover_color")
             self._hover_border_color = _auto_border(self._hover_color)
+
+        if "gradient_start" in kwargs:
+            self._gradient_start = kwargs.pop("gradient_start")
+        if "gradient_mid" in kwargs:
+            self._gradient_mid = kwargs.pop("gradient_mid")
+        if "gradient_end" in kwargs:
+            self._gradient_end = kwargs.pop("gradient_end")
+        if "hover_gradient_start" in kwargs:
+            self._hover_gradient_start = kwargs.pop("hover_gradient_start")
+        if "hover_gradient_mid" in kwargs:
+            self._hover_gradient_mid = kwargs.pop("hover_gradient_mid")
+        if "hover_gradient_end" in kwargs:
+            self._hover_gradient_end = kwargs.pop("hover_gradient_end")
 
         if "border_width" in kwargs:
             self._border_w = int(kwargs.pop("border_width"))
@@ -772,6 +838,9 @@ class PillTextButton(ctk.CTkFrame):
         fill = self._hover_color if (self._hovered and self._state != "disabled") else self._fg_color
         border = self._hover_border_color if (self._hovered and self._state != "disabled") else self._border_color
         text_color = self._text_color
+        gradient_stops = _build_stops(self._gradient_start, self._gradient_end, self._gradient_mid)
+        hover_gradient_stops = _build_stops(self._hover_gradient_start, self._hover_gradient_end, self._hover_gradient_mid)
+        active_stops = hover_gradient_stops if (self._hovered and self._state != "disabled" and hover_gradient_stops) else gradient_stops
 
         if self._state == "disabled":
             fill = _mix(fill, self._outside_bg, 0.35)
@@ -780,8 +849,9 @@ class PillTextButton(ctk.CTkFrame):
                 text_color = _mix(text_color, self._outside_bg, 0.55)
             except Exception:
                 pass
+            active_stops = _mix_stops(active_stops, self._outside_bg, 0.35)
 
-        paint_signature = (w, h, self._outside_bg, fill, border, text_color, self._text, str(self._font), self._state, self._hovered, self._border_w)
+        paint_signature = (w, h, self._outside_bg, fill, border, text_color, self._text, str(self._font), self._state, self._hovered, self._border_w, tuple(active_stops or []))
         if paint_signature == self._paint_signature and self._canvas.find_all():
             return
 
@@ -803,11 +873,9 @@ class PillTextButton(ctk.CTkFrame):
             return
 
         outside_rgb = _hex_to_rgb(self._outside_bg)
-        fill_rgb = _hex_to_rgb(fill)
         border_rgb = _hex_to_rgb(border) if border else None
 
         img = Image.new("RGBA", (W, H), outside_rgb)
-        draw = ImageDraw.Draw(img)
 
         pad = 2 * scale
         x1, y1 = pad, pad
@@ -818,13 +886,10 @@ class PillTextButton(ctk.CTkFrame):
         radius = min(usable_w, usable_h) // 2
         bw = max(1, int(self._border_w * scale))
 
-        draw.rounded_rectangle(
-            [x1, y1, x2, y2],
-            radius=radius,
-            fill=fill_rgb,
-            outline=border_rgb,
-            width=bw
-        )
+        if active_stops:
+            _draw_gradient_capsule(img, x1, y1, x2, y2, radius, active_stops, border_rgb=border_rgb, border_width=bw)
+        else:
+            ImageDraw.Draw(img).rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=_hex_to_rgb(fill), outline=border_rgb, width=bw)
 
         img_small = img.resize((w, h), Image.LANCZOS)
         self._pill_photo = ImageTk.PhotoImage(img_small)
@@ -851,7 +916,7 @@ class PillTextButton(ctk.CTkFrame):
 
 class RightSidebar(ctk.CTkFrame):
     def __init__(self, parent, icons: dict, current_theme: str):
-        bg = COLORS["light"]["bg"] if current_theme == "Light" else COLORS["dark"]["bg"]
+        bg = get_theme_tokens(current_theme)["bg_base"]
         super().__init__(parent, fg_color=bg)
         self.pack(expand=True, anchor="center")
 
@@ -876,11 +941,8 @@ class RightSidebar(ctk.CTkFrame):
         else:
             img = self.icons.get(key)
 
-        theme_keys = COLORS["light"] if is_light else COLORS["dark"]
-
-        fg_color = theme_keys["left_bar"]
-        hover_color = COLORS["sidebar_hover"]["light"] if is_light else COLORS["sidebar_hover"]["dark"]
-        outside_bg = theme_keys["bg"]
+        theme_keys = get_theme_tokens(theme_name)
+        outside_bg = theme_keys["bg_base"]
 
         return PillIconButton(
             self._button_container,
@@ -888,9 +950,15 @@ class RightSidebar(ctk.CTkFrame):
             width=SIDEBAR_WIDTH,
             height=BTN_H_ICON,
             outside_bg=outside_bg,
-            fg_color=fg_color,
-            hover_color=hover_color,
-            border_width=2
+            fg_color=theme_keys["sidebar_pill_start"],
+            hover_color=theme_keys["sidebar_pill_hover_start"],
+            gradient_start=theme_keys["sidebar_pill_start"],
+            gradient_end=theme_keys["sidebar_pill_end"],
+            hover_gradient_start=theme_keys["sidebar_pill_hover_start"],
+            hover_gradient_mid=theme_keys["accent_blue_purple_gradient_mid"],
+            hover_gradient_end=theme_keys["sidebar_pill_hover_end"],
+            border_color=theme_keys["border_strong"],
+            border_width=1
         )
 
     def apply_theme(self, theme_name: str):

@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import os
 from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
-from view.ui_constants import COLORS, DIALOG_ICON_DELAY_MS, DIALOG_PREPARE_DELAY_MS, DIALOG_CENTER_RETRY_DELAY_MS, DIALOG_CENTER_MAX_ATTEMPTS, DIALOG_INITIAL_ALPHA, DIALOG_REVEAL_OFFSET_Y, DIALOG_REVEAL_STEP_PX, DIALOG_FADE_IN_STEP, DIALOG_FADE_IN_INTERVAL_MS, DIALOG_FADE_OUT_STEP, DIALOG_FADE_OUT_INTERVAL_MS
+from view.ui_constants import COLORS, get_button_tokens, get_color_pair, DIALOG_ICON_DELAY_MS, DIALOG_PREPARE_DELAY_MS, DIALOG_CENTER_RETRY_DELAY_MS, DIALOG_CENTER_MAX_ATTEMPTS, DIALOG_INITIAL_ALPHA, DIALOG_REVEAL_OFFSET_Y, DIALOG_REVEAL_STEP_PX, DIALOG_FADE_IN_STEP, DIALOG_FADE_IN_INTERVAL_MS, DIALOG_FADE_OUT_STEP, DIALOG_FADE_OUT_INTERVAL_MS
 from view.ui_assets import get_app_icon_path
 
 MESSAGE_AUTO_CLOSE_SECONDS = 10
@@ -20,27 +20,84 @@ def _restore_parent_modal_state(parent):
 
 def _get_color_tuple(key: str) -> tuple[str, str]:
     key_map = {
-        "bg": "bg",
-        "card": "surface",
-        "card_border": "border",
-        "inner_area": "surface_alt",
-        "text": "text"
+        "bg": "bg_base",
+        "card": "bg_dialog",
+        "card_border": "border_subtle",
+        "inner_area": "bg_panel",
+        "text": "text_primary",
+        "text_secondary": "text_secondary",
+        "text_muted": "text_muted",
+        "separator_line": "separator_line",
+        "border_subtle": "border_subtle",
+        "border_strong": "border_strong",
+        "bg_panel": "bg_panel",
+        "bg_card": "bg_card",
+        "bg_dialog": "bg_dialog"
     }
     actual_key = key_map.get(key, key)
-    return (COLORS["light"][actual_key], COLORS["dark"][actual_key])
+    return get_color_pair(actual_key)
 
 
 def _style_button(btn: ctk.CTkButton, color_type="blue"):
-    base = COLORS["button"].get(color_type, COLORS["button"]["blue"])["bg"]
-    hover = COLORS["button"].get(color_type, COLORS["button"]["blue"])["hover"]
+    palette = get_button_tokens(color_type)
 
     btn.configure(
         corner_radius=16,
-        height=32,
-        font=("Segoe UI", 12),
-        text_color="#FFFFFF",
-        fg_color=base,
-        hover_color=hover
+        height=34,
+        font=("Segoe UI", 12, "bold"),
+        text_color=palette.get("text", _get_color_tuple("text")),
+        fg_color=palette["bg"],
+        hover_color=palette["hover"],
+        border_color=palette["border"],
+        border_width=1
+    )
+
+
+def _style_entry(widget):
+    widget.configure(
+        height=34,
+        corner_radius=12,
+        fg_color=_get_color_tuple("bg_panel"),
+        border_color=_get_color_tuple("border_subtle"),
+        text_color=_get_color_tuple("text"),
+        placeholder_text_color=_get_color_tuple("text_muted")
+    )
+
+
+def _style_option_menu(widget):
+    blue = get_button_tokens("blue")
+    widget.configure(
+        height=34,
+        corner_radius=12,
+        fg_color=_get_color_tuple("bg_panel"),
+        button_color=blue["bg"],
+        button_hover_color=blue["hover"],
+        text_color=_get_color_tuple("text"),
+        dropdown_fg_color=_get_color_tuple("bg_card"),
+        dropdown_hover_color=_get_color_tuple("bg_panel"),
+        dropdown_text_color=_get_color_tuple("text")
+    )
+
+
+def _style_checkbox(widget):
+    blue = get_button_tokens("blue")
+    widget.configure(
+        text_color=_get_color_tuple("text"),
+        fg_color=blue["bg"],
+        hover_color=blue["hover"],
+        border_color=_get_color_tuple("border_strong"),
+        checkmark_color=_get_color_tuple("bg_elevated")
+    )
+
+
+def _style_scrollable(widget):
+    blue = get_button_tokens("blue")
+    widget.configure(
+        fg_color=_get_color_tuple("bg_panel"),
+        border_width=1,
+        border_color=_get_color_tuple("border_subtle"),
+        scrollbar_button_color=blue["bg"],
+        scrollbar_button_hover_color=blue["hover"]
     )
 
 
@@ -179,7 +236,7 @@ class BaseDialog(ctk.CTkToplevel):
             fg_color=_get_color_tuple("card"),
             border_color=_get_color_tuple("card_border"),
             border_width=1,
-            corner_radius=15
+            corner_radius=18
         )
         card.pack(expand=True, fill="both", padx=15, pady=15)
         return card

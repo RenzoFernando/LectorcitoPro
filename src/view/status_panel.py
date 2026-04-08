@@ -4,7 +4,7 @@ import time
 import customtkinter as ctk
 
 from view.gradient_progress import GradientProgressBar
-from view.ui_constants import COLORS
+from view.ui_constants import COLORS, get_theme_tokens, get_button_tokens
 
 
 # =============================================================================
@@ -30,6 +30,7 @@ class StatusPanel(ctk.CTkFrame):
         self.target_progress = 0.0
         self._progress_after_id = None
         self._last_tick = None
+        self._current_theme = "Light"
 
         # --- Construccion UI ---
         self.status_panel = ctk.CTkFrame(self, corner_radius=16, border_width=1)
@@ -52,15 +53,18 @@ class StatusPanel(ctk.CTkFrame):
         )
         self.lbl_percent.grid(row=0, column=1, sticky="e", padx=(0, 8))
 
+        red_btn = get_button_tokens("red")
         self.btn_cancel = ctk.CTkButton(
             top_row,
             text="✕",
             width=28,
             height=28,
             corner_radius=14,
-            fg_color=COLORS["button"]["red"]["bg"],
-            hover_color=COLORS["button"]["red"]["hover"],
-            text_color="white",
+            fg_color=red_btn["bg"],
+            hover_color=red_btn["hover"],
+            border_width=1,
+            border_color=red_btn["border"],
+            text_color=red_btn["text"],
             font=("Segoe UI", 13, "bold"),
         )
         self.btn_cancel.grid(row=0, column=2, sticky="e")
@@ -105,6 +109,7 @@ class StatusPanel(ctk.CTkFrame):
         self.lbl_current_file.configure(text="")
         self._mode = "idle"
         self._set_status("Esperando lectura", with_dots=True)
+        self.apply_theme(self._current_theme)
 
     def set_translator(self, tr_callable):
         self._tr = tr_callable
@@ -133,20 +138,35 @@ class StatusPanel(ctk.CTkFrame):
             self.lbl_status.configure(text=self._status_base)
 
     def apply_theme(self, theme_name: str):
-        is_light = theme_name == "Light"
-        theme = COLORS["light"] if is_light else COLORS["dark"]
+        self._current_theme = theme_name
+        theme = get_theme_tokens(theme_name)
+        red_btn = get_button_tokens("red")
 
         try:
-            self.status_panel.configure(fg_color=theme["surface"], border_color=theme["border"], border_width=1)
+            self.status_panel.configure(fg_color=theme["bg_card"], border_color=theme["border_subtle"], border_width=1)
         except Exception:
-            self.status_panel.configure(fg_color=theme["surface"])
+            self.status_panel.configure(fg_color=theme["bg_card"])
 
-        self.lbl_status.configure(text_color=theme["text"])
-        self.lbl_percent.configure(text_color=theme["text"])
-        self.lbl_processing_prefix.configure(text_color=theme["text"])
+        self.lbl_status.configure(text_color=theme["text_primary"])
+        self.lbl_percent.configure(text_color=theme["text_primary"])
+        self.lbl_processing_prefix.configure(text_color=theme["accent_blue"])
         self.lbl_current_file.configure(text_color=theme["text_secondary"])
+        self.btn_cancel.configure(
+            fg_color=red_btn["bg"],
+            hover_color=red_btn["hover"],
+            border_color=red_btn["border"],
+            text_color=red_btn["text"]
+        )
 
-        self.progress_bar.set_colors(track=theme["progress_track"], border=theme["progress_border"])
+        self.progress_bar.set_colors(
+            track=theme["progress_track"],
+            border=theme["progress_border"],
+            stops=[
+                (0.00, theme["progress_gradient_start"]),
+                (0.55, theme["progress_gradient_mid"]),
+                (1.00, theme["progress_gradient_end"]),
+            ]
+        )
         self.progress_bar.set(self.current_progress / 100.0)
 
     def _on_panel_resize(self, event=None):
