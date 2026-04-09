@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry, _style_scrollable, ConfirmDialog
-from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS
+from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, PROFILES_DIALOG_WIDTH, PROFILES_DIALOG_HEIGHT, PROFILES_DIALOG_TITLE_FONT_SIZE, PROFILES_DIALOG_TITLE_PADY, PROFILES_DIALOG_SCROLL_HEIGHT, PROFILES_DIALOG_SCROLL_PADX, PROFILES_DIALOG_SCROLL_PADY, PROFILES_DIALOG_BOTTOM_PADX, PROFILES_DIALOG_BOTTOM_PADY, PROFILES_DIALOG_ENTRY_PADX, PROFILES_DIALOG_ADD_BUTTON_WIDTH, PROFILE_ITEM_BORDER_WIDTH, PROFILE_ITEM_RADIUS, PROFILE_ITEM_PADY, PROFILE_ITEM_FONT_SIZE, PROFILE_ITEM_LABEL_PADX, PROFILE_ITEM_LABEL_PADY, PROFILE_ITEM_DELETE_BUTTON_SIZE, PROFILE_ITEM_DELETE_PADX
 from view.translations import translate_default
 
 # =============================================================================
@@ -41,40 +41,40 @@ class ProfilesDialog(BaseDialog):
         self.load_state(profiles_meta if profiles_meta is not None else {"default": {}}, active_id, on_save_callback)
 
     def _build_ui(self):
-        self.geometry("450x500")
+        self.geometry(f"{PROFILES_DIALOG_WIDTH}x{PROFILES_DIALOG_HEIGHT}")
 
         self.main_frame = self._create_card_frame()
 
         self.lbl_select_profile = ctk.CTkLabel(
             self.main_frame,
             text=_tr_text(self.parent_view, "lbl_select_profile"),
-            font=(FONT_FAMILY_PRIMARY, 14, "bold"),
+            font=(FONT_FAMILY_PRIMARY, PROFILES_DIALOG_TITLE_FONT_SIZE, "bold"),
             text_color=self.colors["text"]
         )
-        self.lbl_select_profile.pack(pady=(20, 10))
+        self.lbl_select_profile.pack(pady=PROFILES_DIALOG_TITLE_PADY)
 
         self.scroll_frame = ctk.CTkScrollableFrame(
             self.main_frame,
             fg_color="transparent",
-            height=250
+            height=PROFILES_DIALOG_SCROLL_HEIGHT
         )
         _style_scrollable(self.scroll_frame)
-        self.scroll_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        self.scroll_frame.pack(fill="both", expand=True, padx=PROFILES_DIALOG_SCROLL_PADX, pady=PROFILES_DIALOG_SCROLL_PADY)
 
         self.bottom_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.bottom_frame.pack(fill="x", padx=20, pady=20)
+        self.bottom_frame.pack(fill="x", padx=PROFILES_DIALOG_BOTTOM_PADX, pady=PROFILES_DIALOG_BOTTOM_PADY)
 
         self.entry_new = ctk.CTkEntry(
             self.bottom_frame,
             placeholder_text=_tr_text(self.parent_view, "ph_new_profile")
         )
         _style_entry(self.entry_new)
-        self.entry_new.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        self.entry_new.pack(side="left", fill="x", expand=True, padx=PROFILES_DIALOG_ENTRY_PADX)
 
         self.btn_add = ctk.CTkButton(
             self.bottom_frame,
             text="+",
-            width=40,
+            width=PROFILES_DIALOG_ADD_BUTTON_WIDTH,
             command=self._add_profile
         )
         _style_button(self.btn_add, "blue")
@@ -131,19 +131,19 @@ class ProfilesDialog(BaseDialog):
         item_frame = ctk.CTkFrame(
             self.scroll_frame,
             fg_color=self.colors["selected"] if is_active else self.colors["panel"],
-            border_width=1,
+            border_width=PROFILE_ITEM_BORDER_WIDTH,
             border_color=self.colors["selected_border"] if is_active else self.colors["border"],
-            corner_radius=12
+            corner_radius=PROFILE_ITEM_RADIUS
         )
-        item_frame.pack(fill="x", pady=4)
+        item_frame.pack(fill="x", pady=PROFILE_ITEM_PADY)
 
         lbl = ctk.CTkLabel(
             item_frame,
             text=f"  {display_name}{suffix}",
-            font=(FONT_FAMILY_PRIMARY, 12, "bold" if is_active else "normal"),
+            font=(FONT_FAMILY_PRIMARY, PROFILE_ITEM_FONT_SIZE, "bold" if is_active else "normal"),
             text_color=COLORS["light"]["text_on_accent"] if is_active else self.colors["text"]
         )
-        lbl.pack(side="left", padx=10, pady=8)
+        lbl.pack(side="left", padx=PROFILE_ITEM_LABEL_PADX, pady=PROFILE_ITEM_LABEL_PADY)
 
         item_frame.bind("<Button-1>", lambda e, p=pid: self._select_profile(p))
         lbl.bind("<Button-1>", lambda e, p=pid: self._select_profile(p))
@@ -152,13 +152,13 @@ class ProfilesDialog(BaseDialog):
             btn_del = ctk.CTkButton(
                 item_frame,
                 text="✕",
-                width=24, height=24,
+                width=PROFILE_ITEM_DELETE_BUTTON_SIZE, height=PROFILE_ITEM_DELETE_BUTTON_SIZE,
                 fg_color="transparent",
                 hover_color=COLORS["button"]["red"]["hover"],
                 text_color=COLORS["light"]["text_on_accent"] if is_active else self.colors["text"],
                 command=lambda p=pid: self._delete_profile(p)
             )
-            btn_del.pack(side="right", padx=10)
+            btn_del.pack(side="right", padx=PROFILE_ITEM_DELETE_PADX)
 
     def _add_profile(self):
         name = self.entry_new.get().strip()

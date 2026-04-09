@@ -4,7 +4,7 @@ import os
 from tkinter import filedialog
 from file_rules import file_rules_conflict, matches_file_rule, normalize_file_rule, normalize_file_tag_list
 from view.dialogs import BaseDialog, _get_color_tuple, _style_button, _style_checkbox, _style_entry, _style_scrollable
-from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, mix_color, NEUTRAL_WHITE
+from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, mix_color, NEUTRAL_WHITE, TAGS_DIALOG_WIDTH, TAGS_DIALOG_HEIGHT, TAGS_DIALOG_TAG_FONT_SIZE, TAGS_DIALOG_EXTRA_CHECKBOX_PADX, TAGS_DIALOG_EXTRA_CHECKBOX_PADY, TAGS_DIALOG_SEPARATOR_HEIGHT, TAGS_DIALOG_SEPARATOR_PADY, TAGS_DIALOG_BUTTON_FRAME_PADY, TAGS_DIALOG_ACTION_BUTTON_WIDTH, TAGS_DIALOG_ACTION_BUTTON_PADX, TAGS_DIALOG_LAYOUT_REFRESH_DELAY_MS, TAGS_DIALOG_SECTION_LABEL_FONT_SIZE, TAGS_DIALOG_SECTION_LABEL_PADY, TAGS_DIALOG_SECTION_LABEL_PADX, TAGS_DIALOG_SCROLL_PADX, TAGS_DIALOG_SCROLL_BORDER_WIDTH, TAGS_DIALOG_INPUT_PADX, TAGS_DIALOG_INPUT_PADY, TAGS_DIALOG_AUTODETECT_BUTTON_WIDTH, TAGS_DIALOG_AUTODETECT_BUTTON_HEIGHT, TAGS_DIALOG_AUTODETECT_BUTTON_PADX, TAGS_DIALOG_ROW_PADY, TAGS_DIALOG_PILL_SPACING, TAGS_DIALOG_WRAP_SAFETY_PX, TAGS_DIALOG_PILL_RADIUS, TAGS_DIALOG_PILL_LABEL_PADX, TAGS_DIALOG_PILL_LABEL_PADY, TAGS_DIALOG_PILL_CLOSE_SIZE, TAGS_DIALOG_PILL_CLOSE_RADIUS, TAGS_DIALOG_PILL_CLOSE_PADX, TAGS_DIALOG_PILL_CLOSE_PADY
 from view.translations import translate_default
 
 # =============================================================================
@@ -59,9 +59,9 @@ class TagsConfigDialog(BaseDialog):
 
         self.tag_colors = self._build_tag_colors()
 
-        self.tag_font = ctk.CTkFont(family=FONT_FAMILY_PRIMARY, size=11)
+        self.tag_font = ctk.CTkFont(family=FONT_FAMILY_PRIMARY, size=TAGS_DIALOG_TAG_FONT_SIZE)
 
-        self.geometry("600x550")
+        self.geometry(f"{TAGS_DIALOG_WIDTH}x{TAGS_DIALOG_HEIGHT}")
         self.main_frame = self._create_card_frame()
         self.main_frame.grid_columnconfigure(0, weight=1)
 
@@ -97,15 +97,15 @@ class TagsConfigDialog(BaseDialog):
                 offvalue=False
             )
             _style_checkbox(self.extra_checkbox)
-            self.extra_checkbox.grid(row=6, column=0, sticky="w", padx=20, pady=(10, 0))
+            self.extra_checkbox.grid(row=6, column=0, sticky="w", padx=TAGS_DIALOG_EXTRA_CHECKBOX_PADX, pady=TAGS_DIALOG_EXTRA_CHECKBOX_PADY)
             separator_row = 7
             button_row = 8
 
-        separator = ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line"))
-        separator.grid(row=separator_row, column=0, sticky="ew", padx=0, pady=(10, 0))
+        separator = ctk.CTkFrame(self.main_frame, height=TAGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line"))
+        separator.grid(row=separator_row, column=0, sticky="ew", padx=0, pady=TAGS_DIALOG_SEPARATOR_PADY)
 
         button_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        button_frame.grid(row=button_row, column=0, pady=(15, 10), sticky="ew")
+        button_frame.grid(row=button_row, column=0, pady=TAGS_DIALOG_BUTTON_FRAME_PADY, sticky="ew")
         button_frame.grid_columnconfigure((0, 1), weight=1)
 
         txt_ok = _tr_text(self._parent, "btn_ok")
@@ -113,13 +113,13 @@ class TagsConfigDialog(BaseDialog):
 
         self.ok_button = ctk.CTkButton(button_frame, text=txt_ok, command=self._on_ok)
         _style_button(self.ok_button, "green")
-        self.ok_button.configure(width=100)
-        self.ok_button.grid(row=0, column=0, padx=10, sticky="e")
+        self.ok_button.configure(width=TAGS_DIALOG_ACTION_BUTTON_WIDTH)
+        self.ok_button.grid(row=0, column=0, padx=TAGS_DIALOG_ACTION_BUTTON_PADX, sticky="e")
 
         self.cancel_button = ctk.CTkButton(button_frame, text=txt_cancel, command=self._on_cancel)
         _style_button(self.cancel_button, "red")
-        self.cancel_button.configure(width=100)
-        self.cancel_button.grid(row=0, column=1, padx=10, sticky="w")
+        self.cancel_button.configure(width=TAGS_DIALOG_ACTION_BUTTON_WIDTH)
+        self.cancel_button.grid(row=0, column=1, padx=TAGS_DIALOG_ACTION_BUTTON_PADX, sticky="w")
 
         self.bind("<Configure>", self._on_window_configure)
 
@@ -221,7 +221,7 @@ class TagsConfigDialog(BaseDialog):
             except Exception:
                 pass
         try:
-            self._resize_after_id = self.after(30, self._schedule_layout_refresh)
+            self._resize_after_id = self.after(TAGS_DIALOG_LAYOUT_REFRESH_DELAY_MS, self._schedule_layout_refresh)
         except Exception:
             self._resize_after_id = None
 
@@ -310,10 +310,10 @@ class TagsConfigDialog(BaseDialog):
 
     def _create_tag_section(self, section_index, prompt, section_id, text_color):
         base_row = section_index * 3
-        label = ctk.CTkLabel(self.main_frame, text=prompt, font=(FONT_FAMILY_PRIMARY, 12, "bold"), text_color=text_color)
+        label = ctk.CTkLabel(self.main_frame, text=prompt, font=(FONT_FAMILY_PRIMARY, TAGS_DIALOG_SECTION_LABEL_FONT_SIZE, "bold"), text_color=text_color)
         label.grid(
             row=base_row, column=0,
-            sticky="w", pady=(10, 2), padx=20)
+            sticky="w", pady=TAGS_DIALOG_SECTION_LABEL_PADY, padx=TAGS_DIALOG_SECTION_LABEL_PADX)
         if section_id == "folders":
             self.lbl_folders_prompt = label
         else:
@@ -323,14 +323,14 @@ class TagsConfigDialog(BaseDialog):
             self.main_frame,
             label_text="",
             fg_color=_get_color_tuple("inner_area"),
-            border_width=1,
+            border_width=TAGS_DIALOG_SCROLL_BORDER_WIDTH,
             border_color=_get_color_tuple("card_border")
         )
         _style_scrollable(scroll_frame)
-        scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew", padx=20)
+        scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew", padx=TAGS_DIALOG_SCROLL_PADX)
 
         input_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        input_container.grid(row=base_row + 2, column=0, sticky="ew", pady=(5, 0), padx=20)
+        input_container.grid(row=base_row + 2, column=0, sticky="ew", pady=TAGS_DIALOG_INPUT_PADY, padx=TAGS_DIALOG_INPUT_PADX)
 
         ph_text = _tr_text(self._parent, "placeholder_tags")
 
@@ -352,12 +352,12 @@ class TagsConfigDialog(BaseDialog):
                 btn_auto = ctk.CTkButton(
                     input_container,
                     text=txt_auto,
-                    width=80,
-                    height=28,
+                    width=TAGS_DIALOG_AUTODETECT_BUTTON_WIDTH,
+                    height=TAGS_DIALOG_AUTODETECT_BUTTON_HEIGHT,
                     command=self._on_autodetect
                 )
                 _style_button(btn_auto, "blue")
-                btn_auto.pack(side="left", padx=(8, 0))
+                btn_auto.pack(side="left", padx=TAGS_DIALOG_AUTODETECT_BUTTON_PADX)
                 self.btn_auto = btn_auto
 
     def _on_autodetect(self):
@@ -454,11 +454,11 @@ class TagsConfigDialog(BaseDialog):
         row_container = ctk.CTkFrame(frame, fg_color="transparent")
         row_container.pack(fill="x", anchor="nw")
         current_row = ctk.CTkFrame(row_container, fg_color="transparent")
-        current_row.pack(fill="x", anchor="w", pady=(0, 5))
+        current_row.pack(fill="x", anchor="w", pady=TAGS_DIALOG_ROW_PADY)
         current_row_width = 0
 
-        space_between_pills = 6
-        wrap_safety_px = 16
+        space_between_pills = TAGS_DIALOG_PILL_SPACING
+        wrap_safety_px = TAGS_DIALOG_WRAP_SAFETY_PX
 
         for index, tag_data in enumerate(tag_list):
             pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
@@ -470,7 +470,7 @@ class TagsConfigDialog(BaseDialog):
             if current_row_width > 0 and (current_row_width + pill_width) > container_width:
                 pill_frame.destroy()
                 current_row = ctk.CTkFrame(row_container, fg_color="transparent")
-                current_row.pack(fill="x", anchor="w", pady=(0, 5))
+                current_row.pack(fill="x", anchor="w", pady=TAGS_DIALOG_ROW_PADY)
 
                 pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
                 pill_frame.pack(side="left", padx=(0, space_between_pills))
@@ -484,24 +484,24 @@ class TagsConfigDialog(BaseDialog):
         tag_name, tag_state = tag_data["nombre"], tag_data["estado"]
         colors = self.tag_colors[tag_state]
 
-        pill_frame = ctk.CTkFrame(parent, fg_color=colors["fg"], border_color=colors.get("border", colors["fg"]), border_width=colors.get("border_width", 0), corner_radius=14)
+        pill_frame = ctk.CTkFrame(parent, fg_color=colors["fg"], border_color=colors.get("border", colors["fg"]), border_width=colors.get("border_width", 0), corner_radius=TAGS_DIALOG_PILL_RADIUS)
 
         label = ctk.CTkLabel(pill_frame, text=tag_name, text_color=colors["text"], font=self.tag_font)
-        label.pack(side="left", padx=(10, 4), pady=2)
+        label.pack(side="left", padx=TAGS_DIALOG_PILL_LABEL_PADX, pady=TAGS_DIALOG_PILL_LABEL_PADY)
 
         close_button = ctk.CTkButton(
             pill_frame,
             text="✕",
-            width=20,
-            height=20,
-            corner_radius=10,
+            width=TAGS_DIALOG_PILL_CLOSE_SIZE,
+            height=TAGS_DIALOG_PILL_CLOSE_SIZE,
+            corner_radius=TAGS_DIALOG_PILL_CLOSE_RADIUS,
             text_color=colors["text"],
             fg_color="transparent",
             hover_color=colors["hover"],
             command=lambda i=index, l=tag_list: self._delete_tag(i, l)
         )
 
-        close_button.pack(side="right", padx=(0, 8), pady=3)
+        close_button.pack(side="right", padx=TAGS_DIALOG_PILL_CLOSE_PADX, pady=TAGS_DIALOG_PILL_CLOSE_PADY)
         pill_frame.bind("<Button-1>", lambda e, i=index, l=tag_list: self._toggle_tag_state(e, i, l))
         label.bind("<Button-1>", lambda e, i=index, l=tag_list: self._toggle_tag_state(e, i, l))
         return pill_frame

@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from app_meta import APP_EXECUTABLE_NAME
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry
-from view.ui_constants import FONT_FAMILY_PRIMARY, get_button_tokens
+from view.ui_constants import FONT_FAMILY_PRIMARY, get_button_tokens, SETTINGS_DIALOG_WIDTH, SETTINGS_DIALOG_HEIGHT, SETTINGS_DIALOG_MAIN_PADX, SETTINGS_DIALOG_MAIN_PADY, SETTINGS_DIALOG_CONTENT_PADX, SETTINGS_DIALOG_CONTENT_PADY, SETTINGS_DIALOG_SECTION_FONT_SIZE, SETTINGS_DIALOG_SECTION_PADY, SETTINGS_DIALOG_FORMAT_SHELL_BORDER_WIDTH, SETTINGS_DIALOG_FORMAT_SHELL_RADIUS, SETTINGS_DIALOG_FORMAT_SHELL_PADY, SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH, SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT, SETTINGS_DIALOG_FORMAT_BUTTON_PAD, SETTINGS_DIALOG_EXE_LABEL_PADY, SETTINGS_DIALOG_EXAMPLE_FONT_SIZE, SETTINGS_DIALOG_EXAMPLE_PADY, SETTINGS_DIALOG_ENTRY_PADY, SETTINGS_DIALOG_SEPARATOR_HEIGHT, SETTINGS_DIALOG_SEPARATOR_PADY, SETTINGS_DIALOG_SHORTCUTS_LABEL_PADY, SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, SETTINGS_DIALOG_FOOTER_BORDER_WIDTH, SETTINGS_DIALOG_FOOTER_RADIUS, SETTINGS_DIALOG_FOOTER_HEIGHT, SETTINGS_DIALOG_FOOTER_PADX, SETTINGS_DIALOG_FOOTER_PADY, SETTINGS_DIALOG_CLOSE_BUTTON_WIDTH, SETTINGS_DIALOG_CLOSE_BUTTON_HEIGHT, SETTINGS_DIALOG_CLOSE_BUTTON_PADY, SETTINGS_DIALOG_TOGGLE_RADIUS, SETTINGS_DIALOG_TOGGLE_BORDER_WIDTH, SETTINGS_DIALOG_TOGGLE_FONT_SIZE
 from view.translations import translate_default
 
 # =============================================================================
@@ -30,83 +30,83 @@ class SettingsDialog(BaseDialog):
         self.on_shortcut_callback = on_shortcut_callback
         self.result = None
 
-        self.geometry("450x486")
+        self.geometry(f"{SETTINGS_DIALOG_WIDTH}x{SETTINGS_DIALOG_HEIGHT}")
 
         self.main_frame = self._create_card_frame()
-        self.main_frame.pack_configure(padx=15, pady=(15, 8))
+        self.main_frame.pack_configure(padx=SETTINGS_DIALOG_MAIN_PADX, pady=SETTINGS_DIALOG_MAIN_PADY)
 
         self.content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.content_frame.pack(fill="both", expand=True, padx=18, pady=(18, 8))
+        self.content_frame.pack(fill="both", expand=True, padx=SETTINGS_DIALOG_CONTENT_PADX, pady=SETTINGS_DIALOG_CONTENT_PADY)
 
         self.lbl_report_format = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_report_format"),
-            font=(FONT_FAMILY_PRIMARY, 12, "bold"),
+            font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "bold"),
             text_color=_get_color_tuple("text")
         )
-        self.lbl_report_format.pack(pady=(0, 5), anchor="w")
+        self.lbl_report_format.pack(pady=SETTINGS_DIALOG_SECTION_PADY, anchor="w")
 
         self.fmt_var = ctk.StringVar(value=self.selected_extension)
         self.format_shell = ctk.CTkFrame(
             self.content_frame,
             fg_color=_get_color_tuple("bg_panel"),
-            border_width=1,
+            border_width=SETTINGS_DIALOG_FORMAT_SHELL_BORDER_WIDTH,
             border_color=_get_color_tuple("border_subtle"),
-            corner_radius=15
+            corner_radius=SETTINGS_DIALOG_FORMAT_SHELL_RADIUS
         )
-        self.format_shell.pack(pady=(0, 8), anchor="w")
+        self.format_shell.pack(pady=SETTINGS_DIALOG_FORMAT_SHELL_PADY, anchor="w")
 
         self.btn_fmt_txt = ctk.CTkButton(
             self.format_shell,
             text=_tr_text(self.parent_view, "btn_format_txt"),
-            width=84,
-            height=34,
+            width=SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH,
+            height=SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT,
             command=lambda: self._on_format_change(".txt")
         )
-        self.btn_fmt_txt.pack(side="left", padx=4, pady=4)
+        self.btn_fmt_txt.pack(side="left", padx=SETTINGS_DIALOG_FORMAT_BUTTON_PAD, pady=SETTINGS_DIALOG_FORMAT_BUTTON_PAD)
 
         self.btn_fmt_md = ctk.CTkButton(
             self.format_shell,
             text=_tr_text(self.parent_view, "btn_format_md"),
-            width=84,
-            height=34,
+            width=SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH,
+            height=SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT,
             command=lambda: self._on_format_change(".md")
         )
-        self.btn_fmt_md.pack(side="left", padx=(0, 4), pady=4)
+        self.btn_fmt_md.pack(side="left", padx=(0, SETTINGS_DIALOG_FORMAT_BUTTON_PAD), pady=SETTINGS_DIALOG_FORMAT_BUTTON_PAD)
 
         self.lbl_exe_path = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_exe_path", APP_EXECUTABLE_NAME),
-            font=(FONT_FAMILY_PRIMARY, 12, "bold"),
+            font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "bold"),
             text_color=_get_color_tuple("text")
         )
-        self.lbl_exe_path.pack(pady=(10, 2), anchor="w")
+        self.lbl_exe_path.pack(pady=SETTINGS_DIALOG_EXE_LABEL_PADY, anchor="w")
 
         self.lbl_exe_example = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_exe_example", APP_EXECUTABLE_NAME),
-            font=(FONT_FAMILY_PRIMARY, 10, "normal"),
+            font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_EXAMPLE_FONT_SIZE, "normal"),
             text_color=_get_color_tuple("text_secondary")
         )
-        self.lbl_exe_example.pack(pady=(0, 5), anchor="w")
+        self.lbl_exe_example.pack(pady=SETTINGS_DIALOG_EXAMPLE_PADY, anchor="w")
 
         self.entry_exe = ctk.CTkEntry(
             self.content_frame,
             placeholder_text=self.parent_view._tr("ph_exe_path")
         )
         _style_entry(self.entry_exe)
-        self.entry_exe.pack(pady=(0, 8), fill="x")
+        self.entry_exe.pack(pady=SETTINGS_DIALOG_ENTRY_PADY, fill="x")
         self.entry_exe.insert(0, self.current_exe_path)
 
-        ctk.CTkFrame(self.content_frame, height=1, fg_color=_get_color_tuple("separator_line")).pack(fill="x", pady=(2, 6))
+        ctk.CTkFrame(self.content_frame, height=SETTINGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line")).pack(fill="x", pady=SETTINGS_DIALOG_SEPARATOR_PADY)
 
         self.lbl_system_shortcuts = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_system_shortcuts"),
-            font=(FONT_FAMILY_PRIMARY, 12, "bold"),
+            font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "bold"),
             text_color=_get_color_tuple("text")
         )
-        self.lbl_system_shortcuts.pack(pady=(4, 8), anchor="w")
+        self.lbl_system_shortcuts.pack(pady=SETTINGS_DIALOG_SHORTCUTS_LABEL_PADY, anchor="w")
 
         self.shortcuts_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.shortcuts_frame.pack(fill="x")
@@ -117,7 +117,7 @@ class SettingsDialog(BaseDialog):
             command=lambda: self._trigger_shortcut("desktop")
         )
         _style_button(self.btn_desktop, "blue")
-        self.btn_desktop.pack(pady=3, fill="x")
+        self.btn_desktop.pack(pady=SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, fill="x")
 
         self.btn_start = ctk.CTkButton(
             self.shortcuts_frame,
@@ -125,7 +125,7 @@ class SettingsDialog(BaseDialog):
             command=lambda: self._trigger_shortcut("start")
         )
         _style_button(self.btn_start, "blue")
-        self.btn_start.pack(pady=3, fill="x")
+        self.btn_start.pack(pady=SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, fill="x")
 
         self.btn_taskbar = ctk.CTkButton(
             self.shortcuts_frame,
@@ -133,7 +133,7 @@ class SettingsDialog(BaseDialog):
             command=lambda: self._trigger_shortcut("taskbar")
         )
         _style_button(self.btn_taskbar, "blue")
-        self.btn_taskbar.pack(pady=3, fill="x")
+        self.btn_taskbar.pack(pady=SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, fill="x")
 
         self.btn_pin_start = ctk.CTkButton(
             self.shortcuts_frame,
@@ -141,28 +141,28 @@ class SettingsDialog(BaseDialog):
             command=lambda: self._trigger_shortcut("start_pin")
         )
         _style_button(self.btn_pin_start, "blue")
-        self.btn_pin_start.pack(pady=(3, 0), fill="x")
+        self.btn_pin_start.pack(pady=SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, fill="x")
 
         self.footer_frame = ctk.CTkFrame(
             self.main_frame,
             fg_color=_get_color_tuple("bg_panel"),
-            border_width=1,
+            border_width=SETTINGS_DIALOG_FOOTER_BORDER_WIDTH,
             border_color=_get_color_tuple("border_subtle"),
-            corner_radius=16,
-            height=58
+            corner_radius=SETTINGS_DIALOG_FOOTER_RADIUS,
+            height=SETTINGS_DIALOG_FOOTER_HEIGHT
         )
-        self.footer_frame.pack(fill="x", padx=18, pady=(0, 16), side="bottom")
+        self.footer_frame.pack(fill="x", padx=SETTINGS_DIALOG_FOOTER_PADX, pady=SETTINGS_DIALOG_FOOTER_PADY, side="bottom")
         self.footer_frame.pack_propagate(False)
 
         self.btn_close = ctk.CTkButton(
             self.footer_frame,
             text=self.parent_view._tr("btn_ok"),
             command=self._on_ok,
-            width=126,
-            height=36
+            width=SETTINGS_DIALOG_CLOSE_BUTTON_WIDTH,
+            height=SETTINGS_DIALOG_CLOSE_BUTTON_HEIGHT
         )
         _style_button(self.btn_close, "green")
-        self.btn_close.pack(pady=10)
+        self.btn_close.pack(pady=SETTINGS_DIALOG_CLOSE_BUTTON_PADY)
 
         self._apply_format_button_styles()
 
@@ -177,9 +177,9 @@ class SettingsDialog(BaseDialog):
         for value, button in shells.items():
             is_selected = value == selected
             button.configure(
-                corner_radius=12,
-                border_width=1,
-                font=(FONT_FAMILY_PRIMARY, 11, "bold"),
+                corner_radius=SETTINGS_DIALOG_TOGGLE_RADIUS,
+                border_width=SETTINGS_DIALOG_TOGGLE_BORDER_WIDTH,
+                font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_TOGGLE_FONT_SIZE, "bold"),
                 fg_color=blue["bg"] if is_selected else _get_color_tuple("bg_dialog"),
                 hover_color=blue["hover"] if is_selected else neutral["hover"],
                 border_color=blue["border"] if is_selected else _get_color_tuple("border_subtle"),

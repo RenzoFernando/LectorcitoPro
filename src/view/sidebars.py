@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from tkinter import Canvas
 from PIL import Image, ImageDraw, ImageTk
-from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_theme_tokens, get_button_tokens, SIDEBAR_WIDTH, BTN_H_ICON, NEUTRAL_WHITE, NEUTRAL_BLACK
+from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_theme_tokens, get_button_tokens, SIDEBAR_WIDTH, BTN_H_ICON, NEUTRAL_WHITE, NEUTRAL_BLACK, LEFT_SIDEBAR_HEIGHT, SIDEBAR_REPAINT_DELAY_MS, LEFT_SIDEBAR_FONT_SIZE, SIDEBAR_CLICK_LOCK_DELAY_MS, PILL_TEXT_BUTTON_FONT_SIZE, PILL_TEXT_HORIZONTAL_INSET, RIGHT_SIDEBAR_BUTTON_SPACING, RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH
 from view.tooltip import CustomTooltip
 
 # =============================================================================
@@ -171,7 +171,7 @@ class LeftSidebar(ctk.CTkFrame):
         if size == self._last_size:
             return
         self._last_size = size
-        self._schedule_paint(delay=16)
+        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
 
     def _schedule_paint(self, delay=0):
         if self._paint_job is not None:
@@ -222,7 +222,7 @@ class LeftSidebar(ctk.CTkFrame):
                 w / 2, h / 2,
                 text=self._text,
                 angle=90,
-                font=(FONT_FAMILY_PRIMARY, 10, "bold"),
+                font=(FONT_FAMILY_PRIMARY, LEFT_SIDEBAR_FONT_SIZE, "bold"),
                 fill=text_fill
             )
             self._paint_signature = paint_signature
@@ -254,7 +254,7 @@ class LeftSidebar(ctk.CTkFrame):
             w / 2, h / 2,
             text=self._text,
             angle=90,
-            font=(FONT_FAMILY_PRIMARY, 10, "bold"),
+            font=(FONT_FAMILY_PRIMARY, LEFT_SIDEBAR_FONT_SIZE, "bold"),
             fill=text_fill
         )
         self._paint_signature = paint_signature
@@ -433,7 +433,7 @@ class PillIconButton(ctk.CTkFrame):
         CustomTooltip.hide_global()
         self._click_lock = True
         try:
-            self.after(220, lambda: setattr(self, "_click_lock", False))
+            self.after(SIDEBAR_CLICK_LOCK_DELAY_MS, lambda: setattr(self, "_click_lock", False))
         except Exception:
             self._click_lock = False
         if callable(self._command):
@@ -500,7 +500,7 @@ class PillIconButton(ctk.CTkFrame):
         if size == self._last_size:
             return
         self._last_size = size
-        self._schedule_paint(delay=16)
+        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
 
     def _schedule_paint(self, delay=0):
         if self._paint_job is not None:
@@ -623,7 +623,7 @@ class PillTextButton(ctk.CTkFrame):
             hover_gradient_mid: str | None = None,
             hover_gradient_end: str | None = None,
             text_color: str = COLORS["light"]["text_on_accent"],
-            font=(FONT_FAMILY_PRIMARY, 11, "bold"),
+            font=(FONT_FAMILY_PRIMARY, PILL_TEXT_BUTTON_FONT_SIZE, "bold"),
             command=None
     ):
         super().__init__(parent, width=width, height=height, fg_color="transparent")
@@ -790,7 +790,7 @@ class PillTextButton(ctk.CTkFrame):
         CustomTooltip.hide_global()
         self._click_lock = True
         try:
-            self.after(220, lambda: setattr(self, "_click_lock", False))
+            self.after(SIDEBAR_CLICK_LOCK_DELAY_MS, lambda: setattr(self, "_click_lock", False))
         except Exception:
             self._click_lock = False
         if callable(self._command):
@@ -810,7 +810,7 @@ class PillTextButton(ctk.CTkFrame):
         if size == self._last_size:
             return
         self._last_size = size
-        self._schedule_paint(delay=16)
+        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
 
     def _schedule_paint(self, delay=0):
         if self._paint_job is not None:
@@ -861,7 +861,7 @@ class PillTextButton(ctk.CTkFrame):
             self._pill_photo = cached_photo
             self._canvas.delete("all")
             self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
-            wrap_w = max(10, w - 16)
+            wrap_w = max(10, w - PILL_TEXT_HORIZONTAL_INSET)
             self._canvas.create_text(
                 w / 2, h / 2,
                 text=self._text,
@@ -899,7 +899,7 @@ class PillTextButton(ctk.CTkFrame):
         self._canvas.delete("all")
         self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
 
-        wrap_w = max(10, w - 16)
+        wrap_w = max(10, w - PILL_TEXT_HORIZONTAL_INSET)
         self._canvas.create_text(
             w / 2, h / 2,
             text=self._text,
@@ -932,7 +932,7 @@ class RightSidebar(ctk.CTkFrame):
 
         for key in keys:
             btn = self._create_button(key, current_theme)
-            btn.pack(pady=1)
+            btn.pack(pady=RIGHT_SIDEBAR_BUTTON_SPACING)
             self.buttons[key] = btn
 
     def _create_button(self, key: str, theme_name: str) -> PillIconButton:
@@ -960,7 +960,7 @@ class RightSidebar(ctk.CTkFrame):
             hover_gradient_mid=theme_keys.get("sidebar_pill_hover_mid", _mix(theme_keys["sidebar_pill_hover_start"], theme_keys["sidebar_pill_hover_end"], 0.48)),
             hover_gradient_end=theme_keys["sidebar_pill_hover_end"],
             border_color=theme_keys["border_strong"],
-            border_width=1
+            border_width=RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH
         )
 
     def apply_theme(self, theme_name: str):

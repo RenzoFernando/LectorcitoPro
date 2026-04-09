@@ -2,6 +2,7 @@ import os
 import customtkinter as ctk
 from PIL import Image
 from utils import resource_path
+from view.ui_constants import SIDEBAR_ICON_SIZE, THEME_TOGGLE_ICON_SIZE, LOGO_TARGET_WIDTH
 
 # =============================================================================
 # GESTION DE RECURSOS VISUALES
@@ -11,7 +12,7 @@ def get_app_icon_path() -> str:
     return resource_path(os.path.join("branding", "lector.ico"))
 
 
-def load_sidebar_icons(size=(30, 30)) -> dict:
+def load_sidebar_icons(size=SIDEBAR_ICON_SIZE) -> dict:
     icons = {}
     icon_keys = ["ver", "nover", "etiqueta", "traducir", "restaurar", "perfil", "github", "info", "ajustes"]
 
@@ -25,8 +26,8 @@ def load_sidebar_icons(size=(30, 30)) -> dict:
             icons[key] = None
 
     try:
-        icons["sun"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "sol.png"))), size=(32, 32))
-        icons["moon"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "luna.png"))), size=(32, 32))
+        icons["sun"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "sol.png"))), size=THEME_TOGGLE_ICON_SIZE)
+        icons["moon"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "luna.png"))), size=THEME_TOGGLE_ICON_SIZE)
     except Exception as e:
         print(f"Error cargando iconos de tema: {e}")
         icons["sun"] = None
@@ -35,7 +36,7 @@ def load_sidebar_icons(size=(30, 30)) -> dict:
     return icons
 
 
-def load_logo(target_width=165) -> ctk.CTkImage | None:
+def load_logo(target_width=LOGO_TARGET_WIDTH) -> ctk.CTkImage | None:
     try:
         logo_light = Image.open(resource_path(os.path.join("branding", "logo_oscuro.png")))
         logo_dark = Image.open(resource_path(os.path.join("branding", "logo_claro.png")))
@@ -60,4 +61,3 @@ def safe_set_window_icon(window) -> None:
             window._icon_path = icon_path
         except Exception as e:
             print(f"Error al asignar icono: {e}")
-

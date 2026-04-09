@@ -13,6 +13,7 @@ from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
 from view.translations import TRANSLATIONS, translate_default
 from view.dialogs import MessageDialog, _get_widget_window_rect, _get_widget_workarea, _get_centered_position
 from view.tooltip import CustomTooltip
+from view.ui_constants import *
 
 from view.ui_constants import (
     FONT_FAMILY_PRIMARY,
@@ -64,8 +65,8 @@ class LectorcitoApp(ctk.CTk):
         self._background_photo = None
 
         self.title(APP_DISPLAY_NAME)
-        self._app_w = 600
-        self._app_h = 500
+        self._app_w = MAIN_WINDOW_WIDTH
+        self._app_h = MAIN_WINDOW_HEIGHT
         self.geometry(f"{self._app_w}x{self._app_h}")
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
@@ -73,7 +74,7 @@ class LectorcitoApp(ctk.CTk):
         safe_set_window_icon(self)
 
         self.icons = load_sidebar_icons()
-        self.logo_image = load_logo(target_width=165)
+        self.logo_image = load_logo()
 
         self._build_ui()
         self.update_ui_texts()
@@ -81,7 +82,7 @@ class LectorcitoApp(ctk.CTk):
         self.toggle_ui_for_processing(is_active=False)
 
         self.after(MAIN_WINDOW_SHOW_DELAY_MS, self._precise_center_and_show)
-        self.after(MAIN_WINDOW_SHOW_DELAY_MS + 260, self._preload_persistent_dialogs)
+        self.after(MAIN_WINDOW_SHOW_DELAY_MS + MAIN_WINDOW_PRELOAD_DIALOGS_EXTRA_DELAY_MS, self._preload_persistent_dialogs)
 
     def get_real_window_rect(self):
         return _get_widget_window_rect(self)
@@ -199,7 +200,7 @@ class LectorcitoApp(ctk.CTk):
             except Exception:
                 pass
         try:
-            self._background_after_id = self.after(16, self._refresh_background_canvas)
+            self._background_after_id = self.after(MAIN_WINDOW_BG_REFRESH_DELAY_MS, self._refresh_background_canvas)
         except Exception:
             self._background_after_id = None
 
@@ -225,13 +226,13 @@ class LectorcitoApp(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
 
         self.left_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(0, 14))
+        self.left_container.grid(row=0, column=0, sticky="ns", padx=MAIN_WINDOW_SIDE_PADX, pady=MAIN_WINDOW_LEFT_PADY)
 
         self.right_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(0, 15))
+        self.right_container.grid(row=0, column=2, sticky="ns", padx=MAIN_WINDOW_SIDE_PADX, pady=MAIN_WINDOW_RIGHT_PADY)
 
         self.center_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.center_container.grid(row=0, column=1, sticky="nsew", pady=(5, 5))
+        self.center_container.grid(row=0, column=1, sticky="nsew", pady=MAIN_WINDOW_CENTER_PADY)
         self.center_container.grid_columnconfigure(0, weight=1)
         self.center_container.grid_rowconfigure(2, weight=1)
 
@@ -247,12 +248,12 @@ class LectorcitoApp(ctk.CTk):
 
     def _create_header(self, parent):
         self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        self.header_frame.grid(row=0, column=0, sticky="ew", pady=(15, 20))
+        self.header_frame.grid(row=0, column=0, sticky="ew", pady=MAIN_WINDOW_HEADER_PADY)
 
         self.lbl_title = ctk.CTkLabel(self.header_frame, text="", image=self.logo_image)
         self.lbl_title.pack()
 
-        self.lbl_greet = ctk.CTkLabel(self.header_frame, font=(FONT_FAMILY_PRIMARY, 13))
+        self.lbl_greet = ctk.CTkLabel(self.header_frame, font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_GREETING_FONT_SIZE))
         self.lbl_greet.pack()
 
     def _create_main_buttons(self, parent):
@@ -261,14 +262,14 @@ class LectorcitoApp(ctk.CTk):
         self.main_menu_frame = ctk.CTkFrame(
             parent,
             fg_color=theme_keys["bg_panel"],
-            corner_radius=18,
-            border_width=1,
+            corner_radius=MAIN_WINDOW_MAIN_MENU_RADIUS,
+            border_width=MAIN_WINDOW_MAIN_MENU_BORDER_WIDTH,
             border_color=theme_keys["border_subtle"]
         )
-        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=(0, 5))
+        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=(0, MAIN_WINDOW_MAIN_MENU_BOTTOM_GAP))
 
         self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame, fg_color="transparent")
-        self.main_buttons_frame.pack(pady=10, padx=10)
+        self.main_buttons_frame.pack(pady=MAIN_WINDOW_MAIN_MENU_PAD, padx=MAIN_WINDOW_MAIN_MENU_PAD)
 
         outside_bg = theme_keys["bg_panel"]
         btn_blue = get_button_tokens("blue")
@@ -279,8 +280,8 @@ class LectorcitoApp(ctk.CTk):
             "width": BTN_W_MAIN,
             "height": BTN_H_MAIN,
             "outside_bg": outside_bg,
-            "border_width": 2,
-            "font": (FONT_FAMILY_PRIMARY, 11, "bold"),
+            "border_width": MAIN_WINDOW_BUTTON_BORDER_WIDTH,
+            "font": (FONT_FAMILY_PRIMARY, MAIN_WINDOW_BUTTON_FONT_SIZE, "bold"),
             "text_color": btn_blue["text"],
         }
 
@@ -306,34 +307,34 @@ class LectorcitoApp(ctk.CTk):
             "delete": PillTextButton(self.main_buttons_frame, **build_palette(btn_red), **common),
         }
 
-        BTN_SPACING = 1.0
+        BTN_SPACING = MAIN_WINDOW_BUTTON_SPACING
         for btn in self.main_buttons.values():
             btn.pack(pady=BTN_SPACING, anchor="center")
 
     def _create_status_area(self, parent):
         self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=(5, 5))
+        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=MAIN_WINDOW_STATUS_AREA_PADY)
         self.progress_frame.grid_columnconfigure(0, weight=1)
 
-        self.status_panel = StatusPanel(self.progress_frame, min_visible_seconds=1)
+        self.status_panel = StatusPanel(self.progress_frame, min_visible_seconds=MAIN_WINDOW_STATUS_MIN_VISIBLE_SECONDS)
         self.status_panel.grid(row=0, column=0, sticky="ew")
 
         self.btn_cancel = self.status_panel.btn_cancel
 
     def _create_footer(self):
-        self.footer_frame = ctk.CTkFrame(self, height=35, corner_radius=0)
+        self.footer_frame = ctk.CTkFrame(self, height=MAIN_WINDOW_FOOTER_HEIGHT, corner_radius=0)
         self.footer_frame.pack_propagate(False)
 
         self.footer_frame.place(relx=0.0, rely=1.0, anchor="sw", relwidth=1.0)
         self.footer_frame.lift()
 
-        self.footer_line = ctk.CTkFrame(self.footer_frame, height=1, corner_radius=0)
+        self.footer_line = ctk.CTkFrame(self.footer_frame, height=MAIN_WINDOW_FOOTER_LINE_HEIGHT, corner_radius=0)
         self.footer_line.pack(side="top", fill="x")
 
         self.lbl_copyright = ctk.CTkLabel(
             self.footer_frame,
             text="",
-            font=(FONT_FAMILY_PRIMARY, 9)
+            font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_FOOTER_FONT_SIZE)
         )
         self.lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -484,7 +485,7 @@ class LectorcitoApp(ctk.CTk):
             pass
         try:
             self.attributes("-topmost", True)
-            self.after(90, lambda: self.attributes("-topmost", False))
+            self.after(MAIN_WINDOW_TOPMOST_RESET_DELAY_MS, lambda: self.attributes("-topmost", False))
         except Exception:
             pass
 
@@ -645,7 +646,7 @@ class LectorcitoApp(ctk.CTk):
     def _schedule_modal_fail_safe(self):
         self._cancel_modal_fail_safe()
         try:
-            self._modal_fail_safe_after_id = self.after(900, self._modal_fail_safe_check)
+            self._modal_fail_safe_after_id = self.after(MAIN_WINDOW_MODAL_FAIL_SAFE_DELAY_MS, self._modal_fail_safe_check)
         except Exception:
             self._modal_fail_safe_after_id = None
 
@@ -731,4 +732,3 @@ class LectorcitoApp(ctk.CTk):
             self.controller.open_manual_link()
         else:
             webbrowser.open(APP_WEBSITE_URL)
-

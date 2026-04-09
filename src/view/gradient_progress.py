@@ -2,7 +2,7 @@ from __future__ import annotations
 import customtkinter as ctk
 from tkinter import Canvas
 import math
-from view.ui_constants import PROGRESS_DEFAULT_STOPS, PROGRESS_DEFAULT_TRACK, PROGRESS_DEFAULT_BORDER, NEUTRAL_WHITE
+from view.ui_constants import PROGRESS_DEFAULT_STOPS, PROGRESS_DEFAULT_TRACK, PROGRESS_DEFAULT_BORDER, NEUTRAL_WHITE, PROGRESS_CANVAS_TICK_MS, PROGRESS_CAPSULE_SEGMENTS, PROGRESS_MIN_BODY_SEGMENTS, PROGRESS_POINT_SEGMENTS
 
 # =============================================================================
 # UTILIDADES DE COLOR
@@ -69,7 +69,7 @@ def rounded_rect_points(x1: int, y1: int, x2: int, y2: int, r: int) -> list[int]
 # FUNCIONES DE DIBUJO AVANZADO
 # =============================================================================
 
-def _capsule_points(x1: float, y1: float, x2: float, y2: float, r: float, segments: int = 12) -> list[float]:
+def _capsule_points(x1: float, y1: float, x2: float, y2: float, r: float, segments: int = PROGRESS_POINT_SEGMENTS) -> list[float]:
     """Genera los puntos de un polígono con forma de cápsula perfectamente ovalada."""
     # Asegurar que el radio no sea mayor que la mitad de la dimensión más pequeña
     if x2 - x1 < 2 * r:
@@ -163,7 +163,7 @@ class GradientProgressBar(ctk.CTkFrame):
             return
         self._ind_phase = (self._ind_phase + 0.018) % 1.0
         self._redraw()
-        self._ind_after_id = self.after(16, self._tick_indeterminate)
+        self._ind_after_id = self.after(PROGRESS_CANVAS_TICK_MS, self._tick_indeterminate)
 
     def _get_canvas_bg(self) -> str:
         try:
@@ -186,7 +186,7 @@ class GradientProgressBar(ctk.CTkFrame):
         r_ = h_ / 2.0  # Usar división flotante para precisión
 
         # Usar más segmentos para un óvalo extremadamente suave
-        points = _capsule_points(x1, y1, x2, y2, r_, segments=20)
+        points = _capsule_points(x1, y1, x2, y2, r_, segments=PROGRESS_CAPSULE_SEGMENTS)
         self._canvas.create_polygon(points, outline=outline, fill=fill, smooth=True)
 
     def _draw_track(self, w: int, h: int):
@@ -255,7 +255,7 @@ class GradientProgressBar(ctk.CTkFrame):
             # Solución de parches eliminada para volver a "estaba mejor el anterior".
             # La pista de fondo es ahora perfecta, solucionando el artefacto visual principal.
 
-            segments = max(24, int(mid_w))
+            segments = max(PROGRESS_MIN_BODY_SEGMENTS, int(mid_w))
             seg_w = mid_w / segments
             x = rect_x1
 

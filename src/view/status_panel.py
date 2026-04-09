@@ -3,7 +3,7 @@ import time
 import customtkinter as ctk
 
 from view.gradient_progress import GradientProgressBar
-from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_theme_tokens, get_button_tokens
+from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_theme_tokens, get_button_tokens, STATUS_PANEL_DEFAULT_MIN_VISIBLE_SECONDS, STATUS_PANEL_CORNER_RADIUS, STATUS_PANEL_BORDER_WIDTH, STATUS_PANEL_PADX, STATUS_PANEL_PADY, STATUS_PANEL_ROW_PADX, STATUS_PANEL_TOP_ROW_PADY, STATUS_PANEL_STATUS_FONT_SIZE, STATUS_PANEL_PERCENT_FONT_SIZE, STATUS_PANEL_PERCENT_PADX, STATUS_PANEL_CANCEL_SIZE, STATUS_PANEL_CANCEL_RADIUS, STATUS_PANEL_CANCEL_FONT_SIZE, STATUS_PANEL_PROGRESS_HEIGHT, STATUS_PANEL_PROGRESS_RADIUS, STATUS_PANEL_PROGRESS_PADY, STATUS_PANEL_FILE_ROW_PADY, STATUS_PANEL_FILE_PREFIX_FONT_SIZE, STATUS_PANEL_FILE_TEXT_FONT_SIZE, STATUS_PANEL_FILE_WRAP_DEFAULT, STATUS_PANEL_MIN_USABLE_WIDTH, STATUS_PANEL_PREFIX_GAP, STATUS_PANEL_MIN_WRAP, STATUS_PANEL_DOTS_INTERVAL_MS, STATUS_PANEL_PROGRESS_TICK_MS, STATUS_PANEL_SUCCESS_RESET_DELAY_MS, STATUS_PANEL_ELLIPSIS_MAX_LEN, STATUS_PANEL_CONTEXT_MAX_LEN
 from view.translations import translate_default
 
 
@@ -20,7 +20,7 @@ def _translate_status(tr_callable, key: str):
     return translate_default(key)
 
 class StatusPanel(ctk.CTkFrame):
-    def __init__(self, parent, *, min_visible_seconds: float = 2.0):
+    def __init__(self, parent, *, min_visible_seconds: float = STATUS_PANEL_DEFAULT_MIN_VISIBLE_SECONDS):
         super().__init__(parent, fg_color="transparent")
         self.grid_columnconfigure(0, weight=1)
 
@@ -41,63 +41,63 @@ class StatusPanel(ctk.CTkFrame):
         self._current_theme = "Light"
 
         # --- Construccion UI ---
-        self.status_panel = ctk.CTkFrame(self, corner_radius=16, border_width=1)
-        self.status_panel.grid(row=0, column=0, padx=10, pady=(4, 6), sticky="ew")
+        self.status_panel = ctk.CTkFrame(self, corner_radius=STATUS_PANEL_CORNER_RADIUS, border_width=STATUS_PANEL_BORDER_WIDTH)
+        self.status_panel.grid(row=0, column=0, padx=STATUS_PANEL_PADX, pady=STATUS_PANEL_PADY, sticky="ew")
         self.status_panel.grid_columnconfigure(0, weight=1)
 
         top_row = ctk.CTkFrame(self.status_panel, fg_color="transparent")
-        top_row.grid(row=0, column=0, padx=12, pady=(10, 4), sticky="ew")
+        top_row.grid(row=0, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_TOP_ROW_PADY, sticky="ew")
         top_row.grid_columnconfigure(0, weight=1)
         top_row.grid_columnconfigure(1, weight=0)
         top_row.grid_columnconfigure(2, weight=0)
 
         self.lbl_status = ctk.CTkLabel(
-            top_row, text="", font=(FONT_FAMILY_PRIMARY, 11, "normal"), anchor="w"
+            top_row, text="", font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_STATUS_FONT_SIZE, "normal"), anchor="w"
         )
         self.lbl_status.grid(row=0, column=0, sticky="w")
 
         self.lbl_percent = ctk.CTkLabel(
-            top_row, text="0%", font=(FONT_FAMILY_PRIMARY, 11, "bold"), anchor="e"
+            top_row, text="0%", font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_PERCENT_FONT_SIZE, "bold"), anchor="e"
         )
-        self.lbl_percent.grid(row=0, column=1, sticky="e", padx=(0, 8))
+        self.lbl_percent.grid(row=0, column=1, sticky="e", padx=STATUS_PANEL_PERCENT_PADX)
 
         red_btn = get_button_tokens("red")
         self.btn_cancel = ctk.CTkButton(
             top_row,
             text="✕",
-            width=28,
-            height=28,
-            corner_radius=14,
+            width=STATUS_PANEL_CANCEL_SIZE,
+            height=STATUS_PANEL_CANCEL_SIZE,
+            corner_radius=STATUS_PANEL_CANCEL_RADIUS,
             fg_color=red_btn["bg"],
             hover_color=red_btn["hover"],
-            border_width=1,
+            border_width=STATUS_PANEL_BORDER_WIDTH,
             border_color=red_btn["border"],
             text_color=red_btn["text"],
-            font=(FONT_FAMILY_PRIMARY, 13, "bold"),
+            font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_CANCEL_FONT_SIZE, "bold"),
         )
         self.btn_cancel.grid(row=0, column=2, sticky="e")
         self.btn_cancel.grid_remove()
 
-        self.progress_bar = GradientProgressBar(self.status_panel, height=12, corner_radius=8)
-        self.progress_bar.grid(row=1, column=0, padx=12, pady=(0, 6), sticky="ew")
+        self.progress_bar = GradientProgressBar(self.status_panel, height=STATUS_PANEL_PROGRESS_HEIGHT, corner_radius=STATUS_PANEL_PROGRESS_RADIUS)
+        self.progress_bar.grid(row=1, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_PROGRESS_PADY, sticky="ew")
         self.progress_bar.set(0.0)
 
         self.file_row = ctk.CTkFrame(self.status_panel, fg_color="transparent")
-        self.file_row.grid(row=2, column=0, padx=12, pady=(0, 12), sticky="ew")
+        self.file_row.grid(row=2, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_FILE_ROW_PADY, sticky="ew")
         self.file_row.grid_columnconfigure(1, weight=1)
 
         self.lbl_processing_prefix = ctk.CTkLabel(
-            self.file_row, text="", font=(FONT_FAMILY_PRIMARY, 9, "bold"), anchor="w"
+            self.file_row, text="", font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_FILE_PREFIX_FONT_SIZE, "bold"), anchor="w"
         )
-        self.lbl_processing_prefix.grid(row=0, column=0, sticky="w", padx=(0, 6))
+        self.lbl_processing_prefix.grid(row=0, column=0, sticky="w", padx=(0, STATUS_PANEL_PREFIX_GAP))
 
         self.lbl_current_file = ctk.CTkLabel(
             self.file_row,
             text="",
-            font=(FONT_FAMILY_PRIMARY, 9, "normal"),
+            font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_FILE_TEXT_FONT_SIZE, "normal"),
             anchor="w",
             justify="left",
-            wraplength=460,
+            wraplength=STATUS_PANEL_FILE_WRAP_DEFAULT,
         )
         self.lbl_current_file.grid(row=0, column=1, sticky="ew")
 
@@ -151,7 +151,7 @@ class StatusPanel(ctk.CTkFrame):
         red_btn = get_button_tokens("red")
 
         try:
-            self.status_panel.configure(fg_color=theme["bg_card"], border_color=theme["border_subtle"], border_width=1)
+            self.status_panel.configure(fg_color=theme["bg_card"], border_color=theme["border_subtle"], border_width=STATUS_PANEL_BORDER_WIDTH)
         except Exception:
             self.status_panel.configure(fg_color=theme["bg_card"])
 
@@ -183,13 +183,13 @@ class StatusPanel(ctk.CTkFrame):
         except Exception:
             return
 
-        usable = max(180, panel_w - 24)
+        usable = max(STATUS_PANEL_MIN_USABLE_WIDTH, panel_w - (STATUS_PANEL_ROW_PADX * 2))
         try:
             prefix_w = int(self.lbl_processing_prefix.winfo_reqwidth()) + 6
         except Exception:
             prefix_w = 0
 
-        wrap = max(160, usable - prefix_w)
+        wrap = max(STATUS_PANEL_MIN_WRAP, usable - prefix_w)
         try:
             self.lbl_current_file.configure(wraplength=wrap)
         except Exception:
@@ -206,7 +206,7 @@ class StatusPanel(ctk.CTkFrame):
 
     def _start_dots(self):
         self._stop_dots()
-        self._dots_after_id = self.after(450, self._tick_dots)
+        self._dots_after_id = self.after(STATUS_PANEL_DOTS_INTERVAL_MS, self._tick_dots)
 
     def _stop_dots(self):
         if self._dots_after_id is not None:
@@ -225,7 +225,7 @@ class StatusPanel(ctk.CTkFrame):
             self._dots_phase = 1
 
         self.lbl_status.configure(text=f"{self._status_base}{dots}")
-        self._dots_after_id = self.after(450, self._tick_dots)
+        self._dots_after_id = self.after(STATUS_PANEL_DOTS_INTERVAL_MS, self._tick_dots)
 
     def get_min_visible_completion_delay_ms(self) -> int:
         if self._processing_started_at is None:
@@ -238,7 +238,7 @@ class StatusPanel(ctk.CTkFrame):
     def _start_progress_animation(self):
         if self._progress_after_id is None:
             self._last_tick = time.monotonic()
-            self._progress_after_id = self.after(16, self._tick_progress)
+            self._progress_after_id = self.after(STATUS_PANEL_PROGRESS_TICK_MS, self._tick_progress)
 
     def _stop_progress_animation(self):
         if self._progress_after_id is not None:
@@ -282,10 +282,10 @@ class StatusPanel(ctk.CTkFrame):
             self._stop_progress_animation()
             return
 
-        self._progress_after_id = self.after(16, self._tick_progress)
+        self._progress_after_id = self.after(STATUS_PANEL_PROGRESS_TICK_MS, self._tick_progress)
 
     @staticmethod
-    def _ellipsize_middle(s: str, max_len: int = 72) -> str:
+    def _ellipsize_middle(s: str, max_len: int = STATUS_PANEL_ELLIPSIS_MAX_LEN) -> str:
         s = (s or "").strip()
         if len(s) <= max_len:
             return s
@@ -305,7 +305,7 @@ class StatusPanel(ctk.CTkFrame):
         self._start_progress_animation()
 
         if file_context and self._mode == "processing":
-            path_txt = self._ellipsize_middle(str(file_context), max_len=140)
+            path_txt = self._ellipsize_middle(str(file_context), max_len=STATUS_PANEL_CONTEXT_MAX_LEN)
             self.lbl_current_file.configure(text=path_txt)
 
             prefix = self._processing_label_text or _translate_status(self._tr, self._key_processing_label)
@@ -365,7 +365,7 @@ class StatusPanel(ctk.CTkFrame):
             self.lbl_processing_prefix.configure(text="")
             self.lbl_current_file.configure(text="")
 
-            self.after(900, self.back_to_idle)
+            self.after(STATUS_PANEL_SUCCESS_RESET_DELAY_MS, self.back_to_idle)
         else:
             self.back_to_idle()
 

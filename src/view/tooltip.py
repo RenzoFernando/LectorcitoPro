@@ -1,9 +1,7 @@
 import sys
 import customtkinter as ctk
 from tkinter import TclError
-from view.ui_constants import FONT_FAMILY_PRIMARY, get_theme_tokens, get_button_tokens, TOOLTIP_TRANSPARENT_COLOR
-
-TOOLTIP_AUTOHIDE_SECONDS = 2.5
+from view.ui_constants import FONT_FAMILY_PRIMARY, get_theme_tokens, get_button_tokens, TOOLTIP_TRANSPARENT_COLOR, TOOLTIP_FRAME_CORNER_RADIUS, TOOLTIP_FRAME_BORDER_WIDTH, TOOLTIP_FONT_SIZE, TOOLTIP_WRAP_LENGTH, TOOLTIP_LABEL_PADX, TOOLTIP_LABEL_PADY, TOOLTIP_FADE_IN_STEP, TOOLTIP_FADE_OUT_STEP, TOOLTIP_FADE_INTERVAL_MS, TOOLTIP_AUTOHIDE_SECONDS, TOOLTIP_DEFAULT_DELAY_MS, TOOLTIP_DEFAULT_GAP, TOOLTIP_WINDOW_PAD, TOOLTIP_FALLBACK_WIDTH, TOOLTIP_FALLBACK_HEIGHT
 
 # =============================================================================
 # DETECCION DE PANTALLA
@@ -115,19 +113,19 @@ class _SharedTooltipWindow:
 
         self._frame = ctk.CTkFrame(
             self._window,
-            corner_radius=12,
-            border_width=2,
+            corner_radius=TOOLTIP_FRAME_CORNER_RADIUS,
+            border_width=TOOLTIP_FRAME_BORDER_WIDTH,
         )
         self._frame.pack()
 
         self._label = ctk.CTkLabel(
             self._frame,
             text="",
-            font=(FONT_FAMILY_PRIMARY, 10, "normal"),
-            wraplength=260,
+            font=(FONT_FAMILY_PRIMARY, TOOLTIP_FONT_SIZE, "normal"),
+            wraplength=TOOLTIP_WRAP_LENGTH,
             justify="left",
         )
-        self._label.pack(padx=12, pady=8)
+        self._label.pack(padx=TOOLTIP_LABEL_PADX, pady=TOOLTIP_LABEL_PADY)
 
         try:
             self._root.bind("<FocusOut>", self._on_root_invalidate, add="+")
@@ -253,12 +251,12 @@ class _SharedTooltipWindow:
             return
 
         if a < self._target_alpha:
-            a = min(a + 0.12, self._target_alpha)
+            a = min(a + TOOLTIP_FADE_IN_STEP, self._target_alpha)
             try:
                 self._window.attributes("-alpha", a)
             except Exception:
                 return
-            self._fade_after_id = self._window.after(12, self._fade_in_step)
+            self._fade_after_id = self._window.after(TOOLTIP_FADE_INTERVAL_MS, self._fade_in_step)
         else:
             self._fade_after_id = None
 
@@ -278,12 +276,12 @@ class _SharedTooltipWindow:
             return
 
         if a > 0.0:
-            a = max(a - 0.14, 0.0)
+            a = max(a - TOOLTIP_FADE_OUT_STEP, 0.0)
             try:
                 self._window.attributes("-alpha", a)
             except Exception:
                 pass
-            self._fade_after_id = self._window.after(12, self._fade_out_step)
+            self._fade_after_id = self._window.after(TOOLTIP_FADE_INTERVAL_MS, self._fade_out_step)
         else:
             try:
                 self._window.withdraw()
@@ -305,13 +303,13 @@ class _SharedTooltipWindow:
             tw = max(1, int(self._window.winfo_reqwidth()))
             th = max(1, int(self._window.winfo_reqheight()))
         except Exception:
-            tw, th = 240, 40
+            tw, th = TOOLTIP_FALLBACK_WIDTH, TOOLTIP_FALLBACK_HEIGHT
 
         cx = wx + ww // 2
         cy = wy + wh // 2
 
         left, top, right, bottom = _get_monitor_workarea_for_point(cx, cy, widget)
-        pad = 8
+        pad = TOOLTIP_WINDOW_PAD
         gap = int(gap)
 
         space_right = (right - (wx + ww))
@@ -359,7 +357,7 @@ class _SharedTooltipWindow:
 class CustomTooltip:
     _active_tooltip = None
 
-    def __init__(self, widget, text: str, delay: int = 500, placement: str = "auto", gap: int = 10):
+    def __init__(self, widget, text: str, delay: int = TOOLTIP_DEFAULT_DELAY_MS, placement: str = "auto", gap: int = TOOLTIP_DEFAULT_GAP):
         self.widget = widget
         self._text = text or ""
         self.delay = int(delay) if delay is not None else 500
@@ -564,5 +562,3 @@ class CustomTooltip:
             return x0 <= px <= x1 and y0 <= py <= y1
         except Exception:
             return False
-
-
