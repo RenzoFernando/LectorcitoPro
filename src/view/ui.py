@@ -49,6 +49,8 @@ class LectorcitoApp(ctk.CTk):
         self.controller = controller
         self.lang = self.config.get("language", "es")
         self.current_theme = self.config.get("theme", "Light")
+        self.config["language"] = self.lang
+        self.config["theme"] = self.current_theme
 
         self.REPO_URL = REPO_URL
         self.tooltips: dict[str, CustomTooltip] = {}
@@ -209,63 +211,35 @@ class LectorcitoApp(ctk.CTk):
             return
 
         theme = get_theme_tokens(self.current_theme)
-        base_rgb = hex_to_rgb(theme["bg_base"])
-        image = Image.new("RGBA", (width, height), (*base_rgb, 255))
-
-        top_mix = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        top_draw = ImageDraw.Draw(top_mix)
-        elevated_rgb = hex_to_rgb(theme["bg_elevated"])
-        for y in range(height):
-            ratio = max(0.0, min(1.0, y / max(1, height - 1)))
-            opacity = int(42 * (1.0 - ratio))
-            color = tuple(int(elevated_rgb[i] + (base_rgb[i] - elevated_rgb[i]) * ratio) for i in range(3))
-            top_draw.line((0, y, width, y), fill=(*color, opacity))
-        image = Image.alpha_composite(image, top_mix)
-
-        blue_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        ImageDraw.Draw(blue_layer).ellipse((-int(width * 0.18), -int(height * 0.20), int(width * 0.56), int(height * 0.54)), fill=with_alpha(theme["glow_blue_soft"], 88))
-        blue_layer = blue_layer.filter(ImageFilter.GaussianBlur(max(18, width // 10)))
-        image = Image.alpha_composite(image, blue_layer)
-
-        purple_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        ImageDraw.Draw(purple_layer).ellipse((int(width * 0.48), -int(height * 0.12), int(width * 1.08), int(height * 0.52)), fill=with_alpha(theme["glow_purple_soft"], 78))
-        purple_layer = purple_layer.filter(ImageFilter.GaussianBlur(max(18, width // 9)))
-        image = Image.alpha_composite(image, purple_layer)
-
-        base_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        blend_glow = tuple((hex_to_rgb(theme["glow_blue_soft"])[i] + hex_to_rgb(theme["glow_purple_soft"])[i]) // 2 for i in range(3))
-        ImageDraw.Draw(base_layer).ellipse((int(width * 0.10), int(height * 0.58), int(width * 0.92), int(height * 1.20)), fill=(*blend_glow, 34))
-        base_layer = base_layer.filter(ImageFilter.GaussianBlur(max(20, width // 8)))
-        image = Image.alpha_composite(image, base_layer)
-
-        self._background_photo = ImageTk.PhotoImage(image)
+        self._background_photo = None
         self._background_canvas.configure(bg=theme["bg_base"])
         self._background_canvas.delete("all")
-        self._background_canvas.create_image(0, 0, image=self._background_photo, anchor="nw")
+        self._background_canvas.create_rectangle(0, 0, width + 1, height + 1, outline="", fill=theme["bg_base"])
         self.tk.call("lower", self._background_canvas._w)
 
     def _build_ui(self):
         self._create_atmosphere_background()
+        theme_keys = get_theme_tokens(self.current_theme)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        left_container = ctk.CTkFrame(self, fg_color="transparent")
-        left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(0, 14))
+        self.left_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.left_container.grid(row=0, column=0, sticky="ns", padx=15, pady=(0, 14))
 
-        right_container = ctk.CTkFrame(self, fg_color="transparent")
-        right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(0, 15))
+        self.right_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.right_container.grid(row=0, column=2, sticky="ns", padx=15, pady=(0, 15))
 
-        center = ctk.CTkFrame(self, fg_color="transparent")
-        center.grid(row=0, column=1, sticky="nsew", pady=(5, 5))
-        center.grid_columnconfigure(0, weight=1)
-        center.grid_rowconfigure(2, weight=1)
+        self.center_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.center_container.grid(row=0, column=1, sticky="nsew", pady=(5, 5))
+        self.center_container.grid_columnconfigure(0, weight=1)
+        self.center_container.grid_rowconfigure(2, weight=1)
 
-        self._create_header(center)
-        self._create_main_buttons(center)
-        self._create_status_area(center)
+        self._create_header(self.center_container)
+        self._create_main_buttons(self.center_container)
+        self._create_status_area(self.center_container)
 
-        self.left_sidebar = LeftSidebar(left_container, text=f"{APP_DISPLAY_NAME} v{VERSION}")
-        self.right_sidebar = RightSidebar(right_container, icons=self.icons, current_theme=self.current_theme)
+        self.left_sidebar = LeftSidebar(self.left_container, text=f"{APP_DISPLAY_NAME} v{VERSION}")
+        self.right_sidebar = RightSidebar(self.right_container, icons=self.icons, current_theme=self.current_theme)
         self.sidebar_buttons = self.right_sidebar.buttons
 
         self._create_footer()
@@ -435,6 +409,11 @@ class LectorcitoApp(ctk.CTk):
         self.status_panel.apply_theme(self.current_theme)
 
         try:
+            self.left_container.configure(fg_color="transparent")
+            self.right_container.configure(fg_color="transparent")
+            self.center_container.configure(fg_color="transparent")
+            self.header_frame.configure(fg_color="transparent")
+            self.progress_frame.configure(fg_color="transparent")
             self.main_menu_frame.configure(fg_color=theme_keys["bg_panel"], border_color=theme_keys["border_subtle"])
         except Exception:
             pass
@@ -482,11 +461,31 @@ class LectorcitoApp(ctk.CTk):
             self.current_theme = self._pending_new_theme
             self.apply_theme()
             self.update_idletasks()
+            self._restore_window_stack_after_theme_switch()
             self.attributes("-alpha", 0.0)
             self._fade_in_after_switch()
         except Exception:
             self._is_theme_switching = False
             self.attributes("-alpha", 1.0)
+
+    def _restore_window_stack_after_theme_switch(self):
+        try:
+            self.deiconify()
+        except Exception:
+            pass
+        try:
+            self.lift()
+        except Exception:
+            pass
+        try:
+            self.focus_force()
+        except Exception:
+            pass
+        try:
+            self.attributes("-topmost", True)
+            self.after(90, lambda: self.attributes("-topmost", False))
+        except Exception:
+            pass
 
     def _fade_in_after_switch(self):
         try:
@@ -728,3 +727,4 @@ class LectorcitoApp(ctk.CTk):
 
     def show_app_info(self):
         webbrowser.open(APP_WEBSITE_URL)
+

@@ -103,8 +103,9 @@ class LeftSidebar(ctk.CTkFrame):
         self._text = text
         light_theme = get_theme_tokens("Light")
         self._outside_bg = light_theme["bg_base"]
-        self._pill_bg = light_theme["sidebar_pill_start"]
+        self._pill_bg = light_theme["bg_sidebar"]
         self._pill_bg_end = light_theme["sidebar_pill_end"]
+        self._pill_bg_mid = light_theme.get("sidebar_pill_mid", _mix(self._pill_bg, self._pill_bg_end, 0.42))
         self._text_color = light_theme["sidebar_text"]
         self._state = "normal"
 
@@ -143,8 +144,9 @@ class LeftSidebar(ctk.CTkFrame):
         theme = get_theme_tokens(theme_name)
 
         self._outside_bg = theme["bg_base"]
-        self._pill_bg = theme["sidebar_pill_start"]
+        self._pill_bg = theme["bg_sidebar"]
         self._pill_bg_end = theme["sidebar_pill_end"]
+        self._pill_bg_mid = theme.get("sidebar_pill_mid", _mix(self._pill_bg, self._pill_bg_end, 0.42))
         self._text_color = theme["sidebar_text"]
 
         if _luma(self._pill_bg) < 140:
@@ -208,7 +210,7 @@ class LeftSidebar(ctk.CTkFrame):
             if border_fill:
                 border_fill = _mix(border_fill, self._outside_bg, 0.35)
 
-        paint_signature = (w, h, self._outside_bg, pill_fill, self._pill_bg_end, text_fill, border_fill, self._state, self._text)
+        paint_signature = (w, h, self._outside_bg, pill_fill, self._pill_bg_mid, self._pill_bg_end, text_fill, border_fill, self._state, self._text)
         if paint_signature == self._paint_signature and self._canvas.find_all():
             return
 
@@ -238,7 +240,7 @@ class LeftSidebar(ctk.CTkFrame):
         usable_w = max(10 * scale, (x2 - x1))
         radius = usable_w // 2
         bw = max(1, int(self._border_w * scale))
-        stops = _build_stops(pill_fill, self._pill_bg_end)
+        stops = _build_stops(pill_fill, self._pill_bg_end, self._pill_bg_mid)
 
         _draw_gradient_capsule(img, x1, y1, x2, y2, radius, stops, border_rgb=border_rgb, border_width=bw)
 
@@ -572,8 +574,8 @@ class PillIconButton(ctk.CTkFrame):
             try:
                 icon = icon.convert("RGBA")
                 iw, ih = icon.size
-                max_w = max(1, int((x2 - x1) * 0.44))
-                max_h = max(1, int((y2 - y1) * 0.44))
+                max_w = max(1, int((x2 - x1) * 0.56))
+                max_h = max(1, int((y2 - y1) * 0.56))
                 ratio = min(max_w / max(1, iw), max_h / max(1, ih))
                 if ratio < 1.0 or ratio > 1.02:
                     new_w = max(1, int(iw * ratio))
@@ -917,13 +919,13 @@ class PillTextButton(ctk.CTkFrame):
 class RightSidebar(ctk.CTkFrame):
     def __init__(self, parent, icons: dict, current_theme: str):
         bg = get_theme_tokens(current_theme)["bg_base"]
-        super().__init__(parent, fg_color=bg)
+        super().__init__(parent, fg_color="transparent")
         self.pack(expand=True, anchor="center")
 
         self.icons = icons
         self.buttons: dict[str, PillIconButton] = {}
 
-        self._button_container = ctk.CTkFrame(self, fg_color=bg)
+        self._button_container = ctk.CTkFrame(self, fg_color="transparent")
         self._button_container.pack(expand=True, anchor="center")
 
         keys = ["ver", "nover", "etiqueta", "theme_icon", "traducir", "restaurar", "perfil", "github", "info",
@@ -950,12 +952,13 @@ class RightSidebar(ctk.CTkFrame):
             width=SIDEBAR_WIDTH,
             height=BTN_H_ICON,
             outside_bg=outside_bg,
-            fg_color=theme_keys["sidebar_pill_start"],
+            fg_color=theme_keys["bg_sidebar"],
             hover_color=theme_keys["sidebar_pill_hover_start"],
-            gradient_start=theme_keys["sidebar_pill_start"],
+            gradient_start=theme_keys["bg_sidebar"],
+            gradient_mid=theme_keys.get("sidebar_pill_mid", _mix(theme_keys["bg_sidebar"], theme_keys["sidebar_pill_end"], 0.42)),
             gradient_end=theme_keys["sidebar_pill_end"],
             hover_gradient_start=theme_keys["sidebar_pill_hover_start"],
-            hover_gradient_mid=theme_keys["accent_blue_purple_gradient_mid"],
+            hover_gradient_mid=theme_keys.get("sidebar_pill_hover_mid", _mix(theme_keys["sidebar_pill_hover_start"], theme_keys["sidebar_pill_hover_end"], 0.48)),
             hover_gradient_end=theme_keys["sidebar_pill_hover_end"],
             border_color=theme_keys["border_strong"],
             border_width=1
@@ -963,26 +966,30 @@ class RightSidebar(ctk.CTkFrame):
 
     def apply_theme(self, theme_name: str):
         is_light = theme_name == "Light"
-        theme_keys = COLORS["light"] if is_light else COLORS["dark"]
+        theme_keys = get_theme_tokens(theme_name)
 
-        bg = theme_keys["bg"]
+        bg = theme_keys["bg_base"]
         try:
-            self.configure(fg_color=bg)
-            self._button_container.configure(fg_color=bg)
+            self.configure(fg_color="transparent")
+            self._button_container.configure(fg_color="transparent")
         except Exception:
             pass
 
-        fg_color = theme_keys["left_bar"]
-        hover_color = COLORS["sidebar_hover"]["light"] if is_light else COLORS["sidebar_hover"]["dark"]
-        outside_bg = bg
-
         for key, btn in self.buttons.items():
+            kwargs = {
+                "fg_color": theme_keys["bg_sidebar"],
+                "hover_color": theme_keys["sidebar_pill_hover_start"],
+                "outside_bg": bg,
+                "gradient_start": theme_keys["bg_sidebar"],
+                "gradient_mid": theme_keys.get("sidebar_pill_mid", _mix(theme_keys["bg_sidebar"], theme_keys["sidebar_pill_end"], 0.42)),
+                "gradient_end": theme_keys["sidebar_pill_end"],
+                "hover_gradient_start": theme_keys["sidebar_pill_hover_start"],
+                "hover_gradient_mid": theme_keys.get("sidebar_pill_hover_mid", _mix(theme_keys["sidebar_pill_hover_start"], theme_keys["sidebar_pill_hover_end"], 0.48)),
+                "hover_gradient_end": theme_keys["sidebar_pill_hover_end"],
+                "border_color": theme_keys["border_strong"],
+                "border_width": 1,
+            }
             if key == "theme_icon":
-                btn.configure(
-                    image=self.icons.get("moon") if is_light else self.icons.get("sun"),
-                    fg_color=fg_color,
-                    hover_color=hover_color,
-                    outside_bg=outside_bg
-                )
-            else:
-                btn.configure(fg_color=fg_color, hover_color=hover_color, outside_bg=outside_bg)
+                kwargs["image"] = self.icons.get("moon") if is_light else self.icons.get("sun")
+            btn.configure(**kwargs)
+

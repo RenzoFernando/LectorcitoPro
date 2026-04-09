@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from app_meta import APP_EXECUTABLE_NAME
-from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry, _style_option_menu
+from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry
+from view.ui_constants import get_button_tokens
 
 
 # =============================================================================
@@ -20,7 +21,7 @@ class SettingsDialog(BaseDialog):
         self.on_shortcut_callback = on_shortcut_callback
         self.result = None
 
-        self.geometry("450x500")
+        self.geometry("450x486")
 
         self.main_frame = self._create_card_frame()
 
@@ -33,20 +34,32 @@ class SettingsDialog(BaseDialog):
         self.lbl_report_format.pack(pady=(20, 5), padx=20, anchor="w")
 
         self.fmt_var = ctk.StringVar(value=self.selected_extension)
-        self.opt_format = ctk.CTkOptionMenu(
+        self.format_shell = ctk.CTkFrame(
             self.main_frame,
-            values=[".txt", ".md"],
-            command=self._on_format_change,
-            variable=self.fmt_var,
-            width=150,
-            height=28,
-            font=("Segoe UI", 12),
-            fg_color=_get_color_tuple("card_border"),
-            button_color=_get_color_tuple("card_border"),
-            text_color=_get_color_tuple("text")
+            fg_color=_get_color_tuple("bg_panel"),
+            border_width=1,
+            border_color=_get_color_tuple("border_subtle"),
+            corner_radius=15
         )
-        _style_option_menu(self.opt_format)
-        self.opt_format.pack(padx=20, pady=(0, 10), anchor="w")
+        self.format_shell.pack(padx=20, pady=(0, 10), anchor="w")
+
+        self.btn_fmt_txt = ctk.CTkButton(
+            self.format_shell,
+            text="TXT",
+            width=84,
+            height=34,
+            command=lambda: self._on_format_change(".txt")
+        )
+        self.btn_fmt_txt.pack(side="left", padx=4, pady=4)
+
+        self.btn_fmt_md = ctk.CTkButton(
+            self.format_shell,
+            text="MD",
+            width=84,
+            height=34,
+            command=lambda: self._on_format_change(".md")
+        )
+        self.btn_fmt_md.pack(side="left", padx=(0, 4), pady=4)
 
         self.lbl_exe_path = ctk.CTkLabel(
             self.main_frame,
@@ -54,7 +67,7 @@ class SettingsDialog(BaseDialog):
             font=("Segoe UI", 12, "bold"),
             text_color=_get_color_tuple("text")
         )
-        self.lbl_exe_path.pack(pady=(10, 2), padx=20, anchor="w")
+        self.lbl_exe_path.pack(pady=(8, 2), padx=20, anchor="w")
 
         self.lbl_exe_example = ctk.CTkLabel(
             self.main_frame,
@@ -69,11 +82,11 @@ class SettingsDialog(BaseDialog):
             placeholder_text=self.parent_view._tr("ph_exe_path")
         )
         _style_entry(self.entry_exe)
-        self.entry_exe.pack(padx=20, pady=(0, 15), fill="x")
+        self.entry_exe.pack(padx=20, pady=(0, 8), fill="x")
         self.entry_exe.insert(0, self.current_exe_path)
 
         ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line")).pack(fill="x", padx=20,
-                                                                                                  pady=5)
+                                                                                                  pady=(0, 2))
 
         self.lbl_system_shortcuts = ctk.CTkLabel(
             self.main_frame,
@@ -81,7 +94,7 @@ class SettingsDialog(BaseDialog):
             font=("Segoe UI", 12, "bold"),
             text_color=_get_color_tuple("text")
         )
-        self.lbl_system_shortcuts.pack(pady=(15, 10), padx=20, anchor="w")
+        self.lbl_system_shortcuts.pack(pady=(8, 8), padx=20, anchor="w")
 
         self.btn_desktop = ctk.CTkButton(
             self.main_frame,
@@ -115,7 +128,6 @@ class SettingsDialog(BaseDialog):
         _style_button(self.btn_pin_start, "blue")
         self.btn_pin_start.pack(padx=20, pady=4, fill="x")
 
-        # Espaciador flexible
         ctk.CTkFrame(self.main_frame, fg_color="transparent").pack(expand=True, fill="both")
 
         self.btn_close = ctk.CTkButton(
@@ -124,7 +136,29 @@ class SettingsDialog(BaseDialog):
             command=self._on_ok
         )
         _style_button(self.btn_close, "green")
-        self.btn_close.pack(pady=20)
+        self.btn_close.pack(pady=14)
+
+        self._apply_format_button_styles()
+
+    def _apply_format_button_styles(self):
+        blue = get_button_tokens("blue")
+        neutral = get_button_tokens("neutral")
+        selected = self.fmt_var.get()
+        shells = {
+            ".txt": self.btn_fmt_txt,
+            ".md": self.btn_fmt_md,
+        }
+        for value, button in shells.items():
+            is_selected = value == selected
+            button.configure(
+                corner_radius=12,
+                border_width=1,
+                font=("Segoe UI", 11, "bold"),
+                fg_color=blue["bg"] if is_selected else _get_color_tuple("bg_dialog"),
+                hover_color=blue["hover"] if is_selected else neutral["hover"],
+                border_color=blue["border"] if is_selected else _get_color_tuple("border_subtle"),
+                text_color=blue["text"] if is_selected else _get_color_tuple("text")
+            )
 
     def refresh_texts(self):
         try:
@@ -141,6 +175,7 @@ class SettingsDialog(BaseDialog):
         self.btn_taskbar.configure(text=self.parent_view._tr("btn_shortcut_taskbar"))
         self.btn_pin_start.configure(text=self.parent_view._tr("btn_shortcut_pin_start"))
         self.btn_close.configure(text=self.parent_view._tr("btn_ok"))
+        self._apply_format_button_styles()
 
     def load_state(self, current_extension: str, current_exe_path: str, on_save_callback=None, on_shortcut_callback=None):
         self.selected_extension = current_extension
@@ -151,6 +186,7 @@ class SettingsDialog(BaseDialog):
         self.fmt_var.set(self.selected_extension)
         self.entry_exe.delete(0, "end")
         self.entry_exe.insert(0, self.current_exe_path)
+        self._apply_format_button_styles()
         self.refresh_texts()
 
     def present(self):
@@ -162,6 +198,8 @@ class SettingsDialog(BaseDialog):
 
     def _on_format_change(self, value):
         self.selected_extension = value
+        self.fmt_var.set(value)
+        self._apply_format_button_styles()
 
     def _trigger_shortcut(self, shortcut_type):
         current_path_input = self.entry_exe.get().strip().replace('"', '')

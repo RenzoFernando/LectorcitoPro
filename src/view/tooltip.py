@@ -1,3 +1,4 @@
+
 import sys
 import customtkinter as ctk
 from tkinter import TclError
@@ -116,7 +117,7 @@ class _SharedTooltipWindow:
         self._frame = ctk.CTkFrame(
             self._window,
             corner_radius=12,
-            border_width=1,
+            border_width=2,
         )
         self._frame.pack()
 
