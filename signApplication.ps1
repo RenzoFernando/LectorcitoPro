@@ -259,4 +259,4 @@ Write-Host ""
 Read-Host "Presiona Enter para finalizar"
 
 #Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-#.\firmarAplicacion.ps1
+#.\signApplication.ps1

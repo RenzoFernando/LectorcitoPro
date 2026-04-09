@@ -7,7 +7,7 @@
 * **Python:** Debes tener **Python 3.11** instalado (NO uses 3.13 ni 3.14). Asegúrate de marcar "Add Python to PATH" al instalar.
 * **Internet:** Necesario la primera vez para bajar librerías y herramientas de compilación.
 * **Inno Setup 6:** Necesario para generar el instalador.
-* **Firmado actual:** El script `firmarAplicacion.ps1` funciona con **autofirmado local** y no requiere `signtool.exe` ni Windows SDK para su flujo actual.
+* **Firmado actual:** El script `signApplication.ps1` funciona con **autofirmado local** y no requiere `signtool.exe` ni Windows SDK para su flujo actual.
 
 ---
 
@@ -27,18 +27,18 @@
 * El instalador mostrará la licencia durante el wizard y además instalará el archivo `LICENSE` dentro de la aplicación.
 
 4. **Firmado Local Actual:**
-* Ejecuta `firmarAplicacion.ps1`.
+* Ejecuta `signApplication.ps1`.
 * El script genera o reutiliza un certificado autofirmado local y firma los artefactos encontrados en `downloads/`.
 * Este flujo sirve para validación local y pruebas del empaquetado en Windows.
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\firmarAplicacion.ps1
+.\signApplication.ps1
 ```
 
 5. **Distribuir:**
 * Publica únicamente los artefactos que realmente hayas validado.
-* El script actual de `firmarAplicacion.ps1` **no reemplaza** un certificado público real para confianza de distribución externa.
+* El script actual de `signApplication.ps1` **no reemplaza** un certificado público real para confianza de distribución externa.
 
 ---
 
@@ -93,14 +93,14 @@ set "ISCC_PATH=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 .\buildinstaller.bat
 ```
 
-**Caso D: firmarAplicacion.ps1 falla por permisos**
+**Caso D: signApplication.ps1 falla por permisos**
 
 * **Síntoma:** PowerShell bloquea la ejecución del script.
 * **Solución:**
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\firmarAplicacion.ps1
+.\signApplication.ps1
 ```
 
 **Caso E: No se encuentran artefactos para firmar**
@@ -108,7 +108,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 * **Síntoma:** el script indica que no encontró archivos en `downloads/`.
 * **Solución:**
 1. Ejecuta primero `buildportable.bat` y `buildinstaller.bat`.
-2. Luego vuelve a correr `firmarAplicacion.ps1`.
+2. Luego vuelve a correr `signApplication.ps1`.
 
 **Caso F: El sistema no encuentra el cmdlet New-SelfSignedCertificate**
 
@@ -139,9 +139,9 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\buildinstaller.bat
 ```
 
-* **firmarAplicacion.ps1:** Firma localmente los artefactos generados.
+* **signApplication.ps1:** Firma localmente los artefactos generados.
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\firmarAplicacion.ps1
+.\signApplication.ps1
 ```

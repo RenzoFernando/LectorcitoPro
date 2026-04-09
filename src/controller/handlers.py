@@ -143,9 +143,62 @@ def open_destination_folder(controller):
         controller.view.show_message("info_title", "msg_select_dest")
 
 
+def _get_latest_report_path_from_active_folder(controller):
+    path = controller.config.get("lecturas_path")
+    if not path:
+        return ""
+
+    try:
+        active_folder = os.path.abspath(path)
+    except Exception:
+        active_folder = path
+
+    if not os.path.isdir(active_folder):
+        controller.last_report_path = None
+        return ""
+
+    valid_extensions = {".txt", ".md"}
+    valid_prefixes = ("reporte_", "arbol_")
+    latest_report = None
+
+    try:
+        with os.scandir(active_folder) as entries:
+            for entry in entries:
+                if not entry.is_file():
+                    continue
+
+                filename = entry.name
+                extension = os.path.splitext(filename)[1].lower()
+                if extension not in valid_extensions:
+                    continue
+                if not filename.lower().startswith(valid_prefixes):
+                    continue
+
+                try:
+                    stats = entry.stat()
+                    sort_key = (stats.st_mtime, stats.st_ctime, filename.lower())
+                except OSError:
+                    continue
+
+                if latest_report is None or sort_key > latest_report[0]:
+                    latest_report = (sort_key, entry.path)
+    except OSError:
+        controller.last_report_path = None
+        return ""
+
+    controller.last_report_path = latest_report[1] if latest_report else None
+    return controller.last_report_path or ""
+
+
 def open_last_report(controller):
-    if controller.last_report_path and os.path.isfile(controller.last_report_path):
-        webbrowser.open(os.path.realpath(controller.last_report_path))
+    active_path = controller.config.get("lecturas_path")
+    if not active_path:
+        controller.view.show_message("info_title", "msg_select_dest")
+        return
+
+    latest_report_path = _get_latest_report_path_from_active_folder(controller)
+    if latest_report_path and os.path.isfile(latest_report_path):
+        webbrowser.open(os.path.realpath(latest_report_path))
     else:
         controller.view.show_message("info_title", "msg_no_report_yet")
 
@@ -161,6 +214,7 @@ def delete_all_readings(controller):
         try:
             shutil.rmtree(path)
             os.makedirs(path, exist_ok=True)
+            controller.last_report_path = None
             controller.view.show_message("info_title", "msg_delete_success", os.path.basename(path))
         except Exception as e:
             controller.view.show_message("error_title", "msg_delete_error", str(e))

@@ -24,24 +24,28 @@ class SettingsDialog(BaseDialog):
         self.geometry("450x486")
 
         self.main_frame = self._create_card_frame()
+        self.main_frame.pack_configure(padx=15, pady=(15, 8))
+
+        self.content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.content_frame.pack(fill="both", expand=True, padx=18, pady=(18, 8))
 
         self.lbl_report_format = ctk.CTkLabel(
-            self.main_frame,
+            self.content_frame,
             text=self.parent_view._tr("lbl_report_format"),
             font=("Segoe UI", 12, "bold"),
             text_color=_get_color_tuple("text")
         )
-        self.lbl_report_format.pack(pady=(20, 5), padx=20, anchor="w")
+        self.lbl_report_format.pack(pady=(0, 5), anchor="w")
 
         self.fmt_var = ctk.StringVar(value=self.selected_extension)
         self.format_shell = ctk.CTkFrame(
-            self.main_frame,
+            self.content_frame,
             fg_color=_get_color_tuple("bg_panel"),
             border_width=1,
             border_color=_get_color_tuple("border_subtle"),
             corner_radius=15
         )
-        self.format_shell.pack(padx=20, pady=(0, 10), anchor="w")
+        self.format_shell.pack(pady=(0, 8), anchor="w")
 
         self.btn_fmt_txt = ctk.CTkButton(
             self.format_shell,
@@ -62,81 +66,94 @@ class SettingsDialog(BaseDialog):
         self.btn_fmt_md.pack(side="left", padx=(0, 4), pady=4)
 
         self.lbl_exe_path = ctk.CTkLabel(
-            self.main_frame,
+            self.content_frame,
             text=self.parent_view._tr("lbl_exe_path", APP_EXECUTABLE_NAME),
             font=("Segoe UI", 12, "bold"),
             text_color=_get_color_tuple("text")
         )
-        self.lbl_exe_path.pack(pady=(8, 2), padx=20, anchor="w")
+        self.lbl_exe_path.pack(pady=(10, 2), anchor="w")
 
         self.lbl_exe_example = ctk.CTkLabel(
-            self.main_frame,
+            self.content_frame,
             text=self.parent_view._tr("lbl_exe_example", APP_EXECUTABLE_NAME),
             font=("Segoe UI", 10, "normal"),
             text_color=_get_color_tuple("text_secondary")
         )
-        self.lbl_exe_example.pack(pady=(0, 5), padx=20, anchor="w")
+        self.lbl_exe_example.pack(pady=(0, 5), anchor="w")
 
         self.entry_exe = ctk.CTkEntry(
-            self.main_frame,
+            self.content_frame,
             placeholder_text=self.parent_view._tr("ph_exe_path")
         )
         _style_entry(self.entry_exe)
-        self.entry_exe.pack(padx=20, pady=(0, 8), fill="x")
+        self.entry_exe.pack(pady=(0, 8), fill="x")
         self.entry_exe.insert(0, self.current_exe_path)
 
-        ctk.CTkFrame(self.main_frame, height=1, fg_color=_get_color_tuple("separator_line")).pack(fill="x", padx=20,
-                                                                                                  pady=(0, 2))
+        ctk.CTkFrame(self.content_frame, height=1, fg_color=_get_color_tuple("separator_line")).pack(fill="x", pady=(2, 6))
 
         self.lbl_system_shortcuts = ctk.CTkLabel(
-            self.main_frame,
+            self.content_frame,
             text=self.parent_view._tr("lbl_system_shortcuts"),
             font=("Segoe UI", 12, "bold"),
             text_color=_get_color_tuple("text")
         )
-        self.lbl_system_shortcuts.pack(pady=(8, 8), padx=20, anchor="w")
+        self.lbl_system_shortcuts.pack(pady=(4, 8), anchor="w")
+
+        self.shortcuts_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        self.shortcuts_frame.pack(fill="x")
 
         self.btn_desktop = ctk.CTkButton(
-            self.main_frame,
+            self.shortcuts_frame,
             text=self.parent_view._tr("btn_shortcut_desktop"),
             command=lambda: self._trigger_shortcut("desktop")
         )
         _style_button(self.btn_desktop, "blue")
-        self.btn_desktop.pack(padx=20, pady=4, fill="x")
+        self.btn_desktop.pack(pady=3, fill="x")
 
         self.btn_start = ctk.CTkButton(
-            self.main_frame,
+            self.shortcuts_frame,
             text=self.parent_view._tr("btn_shortcut_start"),
             command=lambda: self._trigger_shortcut("start")
         )
         _style_button(self.btn_start, "blue")
-        self.btn_start.pack(padx=20, pady=4, fill="x")
+        self.btn_start.pack(pady=3, fill="x")
 
         self.btn_taskbar = ctk.CTkButton(
-            self.main_frame,
+            self.shortcuts_frame,
             text=self.parent_view._tr("btn_shortcut_taskbar"),
             command=lambda: self._trigger_shortcut("taskbar")
         )
         _style_button(self.btn_taskbar, "blue")
-        self.btn_taskbar.pack(padx=20, pady=4, fill="x")
+        self.btn_taskbar.pack(pady=3, fill="x")
 
         self.btn_pin_start = ctk.CTkButton(
-            self.main_frame,
+            self.shortcuts_frame,
             text=self.parent_view._tr("btn_shortcut_pin_start"),
             command=lambda: self._trigger_shortcut("start_pin")
         )
         _style_button(self.btn_pin_start, "blue")
-        self.btn_pin_start.pack(padx=20, pady=4, fill="x")
+        self.btn_pin_start.pack(pady=(3, 0), fill="x")
 
-        ctk.CTkFrame(self.main_frame, fg_color="transparent").pack(expand=True, fill="both")
+        self.footer_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color=_get_color_tuple("bg_panel"),
+            border_width=1,
+            border_color=_get_color_tuple("border_subtle"),
+            corner_radius=16,
+            height=58
+        )
+        self.footer_frame.pack(fill="x", padx=18, pady=(0, 16), side="bottom")
+        self.footer_frame.pack_propagate(False)
 
         self.btn_close = ctk.CTkButton(
-            self.main_frame,
+            self.footer_frame,
             text=self.parent_view._tr("btn_ok"),
-            command=self._on_ok
+            command=self._on_ok,
+            width=126,
+            height=36
         )
         _style_button(self.btn_close, "green")
-        self.btn_close.pack(pady=14)
+        self.btn_close.pack(pady=10)
 
         self._apply_format_button_styles()
 
@@ -235,3 +252,5 @@ class SettingsDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
+
+

@@ -121,13 +121,13 @@ Además, la release mantiene:
 
 ```text
 LectorcitoPro/
-├── historialDeVersiones.md
+├── versionHistory.md
 ├── LICENSE
 ├── README.md
 ├── buildinstaller.bat
 ├── buildportable.bat
-├── compilacion.md
-├── firmarAplicacion.ps1
+├── compilation.md
+├── signApplication.ps1
 ├── index.html
 ├── pyproject.toml
 ├── requirements.txt

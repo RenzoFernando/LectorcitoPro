@@ -126,8 +126,8 @@
 3.  Optimizadas operaciones clave y vistas pesadas para mejorar la rapidez general de uso en escenarios reales de lectura, navegación y configuración.
 4.  Corregidas inconsistencias visuales integrales entre paneles, modales, estados y elementos compartidos de la interfaz.
 5.  Fortalecida la presentación profesional del producto mediante metadata más completa para ejecutable, instalador, publicación y distribución.
-6.  Implementado empaquetado dual de release con artefacto **portable** y artefacto **instalable**, dejando una distribución más flexible para distintos tipos de usuario.
+6.  Implementado empaquetado dual de release con artefacto portable y artefacto instalable, dejando una distribución más flexible para distintos tipos de usuario.
 7.  Mejorada la integración con Windows mediante un flujo más confiable de instalación, accesos directos y comportamiento esperado del sistema operativo.
 8.  Actualizada la documentación pública y la landing page para reflejar correctamente la nueva distribución, la release final 8.0.9 y el instalable como opción recomendada.
-9.  Integrada la función de exclusión asistida con `.gitignore` dentro del apartado de **Qué No Ver**, reforzando limpieza, precisión y rendimiento al analizar proyectos.
+9.  Integrada la función de exclusión asistida con `.gitignore` dentro del apartado de Qué No Ver reforzando limpieza, precisión y rendimiento al analizar proyectos.
 10. Consolidado el cierre estable de la versión 8 con una release final enfocada en calidad, estabilidad, optimización y preparación profesional para producción.

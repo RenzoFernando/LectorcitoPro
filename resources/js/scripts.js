@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const author = appMeta.author || '';
         const repositoryUrl = normalizeRepositoryUrl(appMeta.repositoryUrl || '');
         const creatorProfileUrl = buildCreatorProfileUrl(repositoryUrl);
-        const installerDownloadUrl = buildReleaseAssetUrl(appMeta.installerName || '');
-        const portableDownloadUrl = buildReleaseAssetUrl(appMeta.portableArtifactName || '');
+        const installerDownloadUrl = appMeta.installerDownloadUrl || appMeta.downloadUrl || buildReleaseAssetUrl(appMeta.installerName || '');
+        const portableDownloadUrl = appMeta.portableDownloadUrl || buildReleaseAssetUrl(appMeta.portableArtifactName || '');
 
         if (displayName) {
             document.title = `Manual de Usuario - ${displayName}`;
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setHref('hero-repo-link', repositoryUrl);
         setHref('download-repo-link', repositoryUrl);
-        setHref('hero-download-link', installerDownloadUrl || '#descargas');
+        setHref('hero-download-link', installerDownloadUrl);
         setHref('download-installer-link', installerDownloadUrl);
         setHref('download-portable-link', portableDownloadUrl);
         setHref('creator-profile-link', creatorProfileUrl);
