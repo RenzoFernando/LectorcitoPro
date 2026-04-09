@@ -11,6 +11,9 @@ TRANSLATIONS = {
         "manual_title": "Manual de Usuario",
         "info_title": "Información",
         "error_title": "Error",
+        "critical_error_title": "Error Crítico {}",
+        "critical_error_message": "Error crítico:\n\n{}\n\nDetalles en:\n{}",
+        "fallback_user": "Usuario",
 
         # --- SALUDOS ---
         "greet_m": ["¡Buenos días!", "¡Un café y a programar!", "¿Listo para un nuevo día?",
@@ -38,6 +41,8 @@ TRANSLATIONS = {
         "btn_restore_defaults": "Restaurar Ajustes",
         "btn_autodetect": "Autodetectar",
         "btn_continue_external": "Continuar",
+        "btn_format_txt": "TXT",
+        "btn_format_md": "MD",
 
         # --- DIALOGOS TAGS ---
         "dlg_ver_title": "Configurar qué Ver",
@@ -75,6 +80,7 @@ TRANSLATIONS = {
         "msg_no_report_yet": "Aún no se ha generado ningún reporte.",
         "msg_error_generic": "Ocurrió un error inesperado durante la operación.",
         "msg_coming_soon": "Próximamente...",
+        "default_report_name": "Reporte",
 
         # --- SELECCION DESTINO ---
         "dlg_dest_choice_title": "Elegir Destino de Reportes",
@@ -169,6 +175,9 @@ TRANSLATIONS = {
         "manual_title": "User Manual",
         "info_title": "Information",
         "error_title": "Error",
+        "critical_error_title": "Critical Error {}",
+        "critical_error_message": "Critical error:\n\n{}\n\nDetails at:\n{}",
+        "fallback_user": "User",
 
         # --- GREETINGS ---
         "greet_m": ["Good morning!", "Coffee and code, let's go!", "Ready for a new day?",
@@ -196,6 +205,8 @@ TRANSLATIONS = {
         "btn_restore_defaults": "Restore Defaults",
         "btn_autodetect": "Auto-detect",
         "btn_continue_external": "Continue",
+        "btn_format_txt": "TXT",
+        "btn_format_md": "MD",
 
         # --- DIALOGS ---
         "dlg_ver_title": "Configure what to View",
@@ -233,6 +244,7 @@ TRANSLATIONS = {
         "msg_no_report_yet": "No report has been generated yet.",
         "msg_error_generic": "An unexpected error occurred during the operation.",
         "msg_coming_soon": "Coming soon...",
+        "default_report_name": "Report",
 
         # --- DESTINATION ---
         "dlg_dest_choice_title": "Choose Report Destination",
@@ -319,3 +331,16 @@ TRANSLATIONS = {
         "tooltip_ajustes": "General settings, report format, and shortcuts."
     }
 }
+
+def translate(language: str, key: str, *args):
+    entry = TRANSLATIONS.get(language, TRANSLATIONS["es"]).get(key, f"<{key}>")
+    if isinstance(entry, list):
+        entry = entry[0] if entry else f"<{key}>"
+    try:
+        return entry.format(*args)
+    except Exception:
+        return entry
+
+
+def translate_default(key: str, *args):
+    return translate("es", key, *args)

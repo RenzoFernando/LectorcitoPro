@@ -10,11 +10,12 @@ import webbrowser
 from PIL import Image, ImageDraw, ImageFilter, ImageTk
 
 from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
-from view.translations import TRANSLATIONS
+from view.translations import TRANSLATIONS, translate_default
 from view.dialogs import MessageDialog, _get_widget_window_rect, _get_widget_workarea, _get_centered_position
 from view.tooltip import CustomTooltip
 
 from view.ui_constants import (
+    FONT_FAMILY_PRIMARY,
     VERSION, YEAR, AUTHOR, REPO_URL,
     COLORS, BTN_W_MAIN, BTN_H_MAIN,
     get_theme_tokens, get_button_tokens, hex_to_rgb, with_alpha,
@@ -251,7 +252,7 @@ class LectorcitoApp(ctk.CTk):
         self.lbl_title = ctk.CTkLabel(self.header_frame, text="", image=self.logo_image)
         self.lbl_title.pack()
 
-        self.lbl_greet = ctk.CTkLabel(self.header_frame, font=("Segoe UI", 13))
+        self.lbl_greet = ctk.CTkLabel(self.header_frame, font=(FONT_FAMILY_PRIMARY, 13))
         self.lbl_greet.pack()
 
     def _create_main_buttons(self, parent):
@@ -279,7 +280,7 @@ class LectorcitoApp(ctk.CTk):
             "height": BTN_H_MAIN,
             "outside_bg": outside_bg,
             "border_width": 2,
-            "font": ("Segoe UI", 11, "bold"),
+            "font": (FONT_FAMILY_PRIMARY, 11, "bold"),
             "text_color": btn_blue["text"],
         }
 
@@ -332,7 +333,7 @@ class LectorcitoApp(ctk.CTk):
         self.lbl_copyright = ctk.CTkLabel(
             self.footer_frame,
             text="",
-            font=("Segoe UI", 9)
+            font=(FONT_FAMILY_PRIMARY, 9)
         )
         self.lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -346,7 +347,7 @@ class LectorcitoApp(ctk.CTk):
         try:
             user = os.getlogin().lower().capitalize()
         except OSError:
-            user = "User"
+            user = self._tr("fallback_user") if hasattr(self, "_tr") else translate_default("fallback_user")
         self.lbl_greet.configure(text=f"{self._tr(greet_key)} {user}{self._tr('welcome')}")
 
         key_map = {
@@ -730,3 +731,4 @@ class LectorcitoApp(ctk.CTk):
             self.controller.open_manual_link()
         else:
             webbrowser.open(APP_WEBSITE_URL)
+

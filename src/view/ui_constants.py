@@ -7,6 +7,7 @@ VERSION = APP_VERSION
 YEAR = get_current_year()
 AUTHOR = APP_AUTHOR
 REPO_URL = APP_REPOSITORY_WEB_URL
+FONT_FAMILY_PRIMARY = "Segoe UI"
 
 # Definicion de paletas de colores para temas Claro/Oscuro
 THEME_TOKENS = {
@@ -22,6 +23,9 @@ THEME_TOKENS = {
         "text_secondary": "#475569",
         "text_muted": "#6B7B92",
         "text_on_accent": "#FFFFFF",
+        "neutral_white": "#FFFFFF",
+        "neutral_black": "#000000",
+        "tooltip_transparent_mask": "#E532F1",
         "border_subtle": "#D7E0EE",
         "border_strong": "#4A5F7E",
         "separator_line": "#DDE5F1",
@@ -78,6 +82,9 @@ THEME_TOKENS = {
         "text_secondary": "#9AA7BA",
         "text_muted": "#78879B",
         "text_on_accent": "#FFFFFF",
+        "neutral_white": "#FFFFFF",
+        "neutral_black": "#000000",
+        "tooltip_transparent_mask": "#E532F1",
         "border_subtle": "#1A2638",
         "border_strong": "#C7D5EA",
         "separator_line": "#1D2A3D",
@@ -189,6 +196,17 @@ COLORS = {
     }
 }
 
+NEUTRAL_WHITE = THEME_TOKENS["light"]["neutral_white"]
+NEUTRAL_BLACK = THEME_TOKENS["light"]["neutral_black"]
+TOOLTIP_TRANSPARENT_COLOR = THEME_TOKENS["light"]["tooltip_transparent_mask"]
+PROGRESS_DEFAULT_TRACK = THEME_TOKENS["light"]["progress_track"]
+PROGRESS_DEFAULT_BORDER = THEME_TOKENS["light"]["progress_border"]
+PROGRESS_DEFAULT_STOPS = [
+    (0.00, THEME_TOKENS["light"]["progress_gradient_start"]),
+    (0.50, THEME_TOKENS["light"]["progress_gradient_mid"]),
+    (1.00, THEME_TOKENS["light"]["progress_gradient_end"]),
+]
+
 
 def resolve_theme_name(theme_name: str | None) -> str:
     if isinstance(theme_name, str) and theme_name.lower() == "dark":
@@ -270,3 +288,5 @@ DIALOG_FADE_OUT_STEP = 0.12
 DIALOG_FADE_OUT_INTERVAL_MS = 12
 PROFILE_SWITCH_FADE_DELAY_MS = 220
 RESTORE_FADE_DELAY_MS = 260
+
+

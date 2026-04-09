@@ -1,11 +1,22 @@
-
 import customtkinter as ctk
 import os
 from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
-from view.ui_constants import COLORS, get_button_tokens, get_color_pair, DIALOG_ICON_DELAY_MS, DIALOG_PREPARE_DELAY_MS, DIALOG_CENTER_RETRY_DELAY_MS, DIALOG_CENTER_MAX_ATTEMPTS, DIALOG_INITIAL_ALPHA, DIALOG_REVEAL_OFFSET_Y, DIALOG_REVEAL_STEP_PX, DIALOG_FADE_IN_STEP, DIALOG_FADE_IN_INTERVAL_MS, DIALOG_FADE_OUT_STEP, DIALOG_FADE_OUT_INTERVAL_MS
+from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_button_tokens, get_color_pair, DIALOG_ICON_DELAY_MS, DIALOG_PREPARE_DELAY_MS, DIALOG_CENTER_RETRY_DELAY_MS, DIALOG_CENTER_MAX_ATTEMPTS, DIALOG_INITIAL_ALPHA, DIALOG_REVEAL_OFFSET_Y, DIALOG_REVEAL_STEP_PX, DIALOG_FADE_IN_STEP, DIALOG_FADE_IN_INTERVAL_MS, DIALOG_FADE_OUT_STEP, DIALOG_FADE_OUT_INTERVAL_MS
 from view.ui_assets import get_app_icon_path
+from view.translations import translate_default
 
 MESSAGE_AUTO_CLOSE_SECONDS = 10
+
+
+def _tr_text(parent, key: str, *args):
+    tr_callable = getattr(parent, "_tr", None)
+    if callable(tr_callable):
+        try:
+            return tr_callable(key, *args)
+        except Exception:
+            pass
+    return translate_default(key, *args)
+
 
 
 def _restore_parent_modal_state(parent):
@@ -45,7 +56,7 @@ def _style_button(btn: ctk.CTkButton, color_type="blue"):
     btn.configure(
         corner_radius=16,
         height=34,
-        font=("Segoe UI", 12, "bold"),
+        font=(FONT_FAMILY_PRIMARY, 12, "bold"),
         text_color=palette.get("text", _get_color_tuple("text")),
         fg_color=palette["bg"],
         hover_color=palette["hover"],
@@ -464,11 +475,11 @@ class MessageDialog(BaseDialog):
             text=message,
             wraplength=350,
             justify="center",
-            font=("Segoe UI", 13),
+            font=(FONT_FAMILY_PRIMARY, 13),
             text_color=_get_color_tuple("text")
         ).pack(fill="x", padx=20, pady=(20, 20))
 
-        btn_text = parent._tr("btn_ok") if hasattr(parent, "_tr") else "OK"
+        btn_text = _tr_text(parent, "btn_ok")
 
         ok_button = ctk.CTkButton(
             card,
@@ -531,15 +542,15 @@ class ConfirmDialog(BaseDialog):
             text=message,
             wraplength=350,
             justify="center",
-            font=("Segoe UI", 13),
+            font=(FONT_FAMILY_PRIMARY, 13),
             text_color=_get_color_tuple("text")
         ).pack(fill="x", padx=20, pady=(25, 25))
 
         button_frame = ctk.CTkFrame(card, fg_color="transparent")
         button_frame.pack(pady=(0, 20))
 
-        txt_yes = parent._tr("btn_yes") if hasattr(parent, "_tr") else "Sí"
-        txt_no = parent._tr("btn_no") if hasattr(parent, "_tr") else "No"
+        txt_yes = _tr_text(parent, "btn_yes")
+        txt_no = _tr_text(parent, "btn_no")
 
         btn_yes = ctk.CTkButton(button_frame, text=txt_yes, width=100, command=self._on_yes)
         _style_button(btn_yes, "green")
@@ -585,7 +596,7 @@ class ExternalLinkDialog(BaseDialog):
             text=message,
             wraplength=360,
             justify="center",
-            font=("Segoe UI", 13),
+            font=(FONT_FAMILY_PRIMARY, 13),
             text_color=_get_color_tuple("text")
         ).pack(fill="x", padx=20, pady=(24, 14))
 
@@ -604,7 +615,7 @@ class ExternalLinkDialog(BaseDialog):
                 text=target_label,
                 wraplength=330,
                 justify="center",
-                font=("Segoe UI", 11),
+                font=(FONT_FAMILY_PRIMARY, 11),
                 text_color=_get_color_tuple("text_secondary")
             ).pack(fill="x", padx=12, pady=10)
 
@@ -612,9 +623,9 @@ class ExternalLinkDialog(BaseDialog):
         button_frame.pack(pady=(0, 20))
 
         if continue_text is None:
-            continue_text = parent._tr("btn_continue_external") if hasattr(parent, "_tr") else "Continue"
+            continue_text = _tr_text(parent, "btn_continue_external")
         if cancel_text is None:
-            cancel_text = parent._tr("btn_cancel_simple") if hasattr(parent, "_tr") else "Cancel"
+            cancel_text = _tr_text(parent, "btn_cancel_simple")
 
         btn_continue = ctk.CTkButton(button_frame, text=continue_text, width=126, command=self._on_continue)
         _style_button(btn_continue, "blue")
@@ -663,7 +674,7 @@ class ChoiceDialog(BaseDialog):
             card,
             text=message,
             wraplength=340,
-            font=("Segoe UI", 13),
+            font=(FONT_FAMILY_PRIMARY, 13),
             text_color=_get_color_tuple("text")
         ).pack(fill="x", padx=20, pady=(25, 15))
 
@@ -696,7 +707,3 @@ class ChoiceDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
-
-
-
-

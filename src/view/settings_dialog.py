@@ -1,17 +1,26 @@
 import customtkinter as ctk
 from app_meta import APP_EXECUTABLE_NAME
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry
-from view.ui_constants import get_button_tokens
-
+from view.ui_constants import FONT_FAMILY_PRIMARY, get_button_tokens
+from view.translations import translate_default
 
 # =============================================================================
 # DIALOGO DE CONFIGURACION GENERAL
 # =============================================================================
 
+def _tr_text(parent, key: str, *args):
+    tr_callable = getattr(parent, "_tr", None)
+    if callable(tr_callable):
+        try:
+            return tr_callable(key, *args)
+        except Exception:
+            pass
+    return translate_default(key, *args)
+
 class SettingsDialog(BaseDialog):
     def __init__(self, parent, current_extension: str = ".txt", current_exe_path: str = "", on_save_callback=None,
                  on_shortcut_callback=None, persistent: bool = False, defer_show: bool = False):
-        title = parent._tr("dlg_settings_title") if hasattr(parent, "_tr") else "Ajustes"
+        title = _tr_text(parent, "dlg_settings_title")
         super().__init__(parent, title, persistent=persistent, defer_show=defer_show)
 
         self.parent_view = parent
@@ -32,7 +41,7 @@ class SettingsDialog(BaseDialog):
         self.lbl_report_format = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_report_format"),
-            font=("Segoe UI", 12, "bold"),
+            font=(FONT_FAMILY_PRIMARY, 12, "bold"),
             text_color=_get_color_tuple("text")
         )
         self.lbl_report_format.pack(pady=(0, 5), anchor="w")
@@ -49,7 +58,7 @@ class SettingsDialog(BaseDialog):
 
         self.btn_fmt_txt = ctk.CTkButton(
             self.format_shell,
-            text="TXT",
+            text=_tr_text(self.parent_view, "btn_format_txt"),
             width=84,
             height=34,
             command=lambda: self._on_format_change(".txt")
@@ -58,7 +67,7 @@ class SettingsDialog(BaseDialog):
 
         self.btn_fmt_md = ctk.CTkButton(
             self.format_shell,
-            text="MD",
+            text=_tr_text(self.parent_view, "btn_format_md"),
             width=84,
             height=34,
             command=lambda: self._on_format_change(".md")
@@ -68,7 +77,7 @@ class SettingsDialog(BaseDialog):
         self.lbl_exe_path = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_exe_path", APP_EXECUTABLE_NAME),
-            font=("Segoe UI", 12, "bold"),
+            font=(FONT_FAMILY_PRIMARY, 12, "bold"),
             text_color=_get_color_tuple("text")
         )
         self.lbl_exe_path.pack(pady=(10, 2), anchor="w")
@@ -76,7 +85,7 @@ class SettingsDialog(BaseDialog):
         self.lbl_exe_example = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_exe_example", APP_EXECUTABLE_NAME),
-            font=("Segoe UI", 10, "normal"),
+            font=(FONT_FAMILY_PRIMARY, 10, "normal"),
             text_color=_get_color_tuple("text_secondary")
         )
         self.lbl_exe_example.pack(pady=(0, 5), anchor="w")
@@ -94,7 +103,7 @@ class SettingsDialog(BaseDialog):
         self.lbl_system_shortcuts = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_system_shortcuts"),
-            font=("Segoe UI", 12, "bold"),
+            font=(FONT_FAMILY_PRIMARY, 12, "bold"),
             text_color=_get_color_tuple("text")
         )
         self.lbl_system_shortcuts.pack(pady=(4, 8), anchor="w")
@@ -170,7 +179,7 @@ class SettingsDialog(BaseDialog):
             button.configure(
                 corner_radius=12,
                 border_width=1,
-                font=("Segoe UI", 11, "bold"),
+                font=(FONT_FAMILY_PRIMARY, 11, "bold"),
                 fg_color=blue["bg"] if is_selected else _get_color_tuple("bg_dialog"),
                 hover_color=blue["hover"] if is_selected else neutral["hover"],
                 border_color=blue["border"] if is_selected else _get_color_tuple("border_subtle"),
@@ -179,7 +188,7 @@ class SettingsDialog(BaseDialog):
 
     def refresh_texts(self):
         try:
-            self.title(self.parent_view._tr("dlg_settings_title"))
+            self.title(_tr_text(self.parent_view, "dlg_settings_title"))
         except Exception:
             pass
         self.lbl_report_format.configure(text=self.parent_view._tr("lbl_report_format"))
@@ -191,6 +200,8 @@ class SettingsDialog(BaseDialog):
         self.btn_start.configure(text=self.parent_view._tr("btn_shortcut_start"))
         self.btn_taskbar.configure(text=self.parent_view._tr("btn_shortcut_taskbar"))
         self.btn_pin_start.configure(text=self.parent_view._tr("btn_shortcut_pin_start"))
+        self.btn_fmt_txt.configure(text=_tr_text(self.parent_view, "btn_format_txt"))
+        self.btn_fmt_md.configure(text=_tr_text(self.parent_view, "btn_format_md"))
         self.btn_close.configure(text=self.parent_view._tr("btn_ok"))
         self._apply_format_button_styles()
 
@@ -252,5 +263,3 @@ class SettingsDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
-
-

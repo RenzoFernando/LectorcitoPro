@@ -2,7 +2,7 @@ from __future__ import annotations
 import customtkinter as ctk
 from tkinter import Canvas
 import math
-
+from view.ui_constants import PROGRESS_DEFAULT_STOPS, PROGRESS_DEFAULT_TRACK, PROGRESS_DEFAULT_BORDER, NEUTRAL_WHITE
 
 # =============================================================================
 # UTILIDADES DE COLOR
@@ -30,11 +30,7 @@ def _lerp_color(c1: str, c2: str, t: float) -> str:
     return _rgb_to_hex((r, g, b))
 
 
-DEFAULT_STOPS = [
-    (0.00, "#2F6FE4"),
-    (0.50, "#4A7FF1"),
-    (1.00, "#7049FC"),
-]
+DEFAULT_STOPS = list(PROGRESS_DEFAULT_STOPS)
 
 def gradient_color_at(t: float, stops: list[tuple[float, str]] | None = None) -> str:
     stops = list(stops or DEFAULT_STOPS)
@@ -121,8 +117,8 @@ class GradientProgressBar(ctk.CTkFrame):
         self._ind_phase = 0.0
         self._ind_after_id = None
 
-        self._track_color = "#DCE4F2"
-        self._border_color = "#C7D3E8"
+        self._track_color = PROGRESS_DEFAULT_TRACK
+        self._border_color = PROGRESS_DEFAULT_BORDER
         self._gradient_stops = list(DEFAULT_STOPS)
 
         self._canvas = Canvas(self, height=self._h, highlightthickness=0, bd=0, relief="flat")
@@ -180,7 +176,7 @@ class GradientProgressBar(ctk.CTkFrame):
                     return color
         except Exception:
             pass
-        return self.cget("fg_color") if isinstance(self.cget("fg_color"), str) and self.cget("fg_color") not in ("", "transparent") else "#FFFFFF"
+        return self.cget("fg_color") if isinstance(self.cget("fg_color"), str) and self.cget("fg_color") not in ("", "transparent") else NEUTRAL_WHITE
 
     def _draw_capsule_polygon(self, x1, y1, x2, y2, fill, outline=""):
         if x2 <= x1 or y2 <= y1:

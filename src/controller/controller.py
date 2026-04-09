@@ -6,10 +6,10 @@ from tkinter import filedialog
 from app_meta import APP_WEBSITE_URL
 import config
 import utils
+from view.translations import translate_default
 from model import processor
 from view.ui import LectorcitoApp
 from controller import handlers
-
 
 # =============================================================================
 # CONTROLADOR PRINCIPAL
@@ -147,7 +147,7 @@ class LectorcitoController:
         self.view.toggle_ui_for_processing(is_active=False, final_status=status)
 
         if status == "success":
-            report_name = os.path.basename(self.last_report_path) if self.last_report_path else "Reporte"
+            report_name = os.path.basename(self.last_report_path) if self.last_report_path else self.view._tr("default_report_name") if hasattr(self.view, "_tr") else translate_default("default_report_name")
             self.view.show_message("info_title", "msg_done", report_name)
         else:
             message_map = {

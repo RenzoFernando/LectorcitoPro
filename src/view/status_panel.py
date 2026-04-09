@@ -1,15 +1,23 @@
 from __future__ import annotations
-
 import time
 import customtkinter as ctk
 
 from view.gradient_progress import GradientProgressBar
-from view.ui_constants import COLORS, get_theme_tokens, get_button_tokens
+from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_theme_tokens, get_button_tokens
+from view.translations import translate_default
 
 
 # =============================================================================
 # PANEL DE ESTADO Y PROGRESO
 # =============================================================================
+
+def _translate_status(tr_callable, key: str):
+    if callable(tr_callable):
+        try:
+            return tr_callable(key)
+        except Exception:
+            pass
+    return translate_default(key)
 
 class StatusPanel(ctk.CTkFrame):
     def __init__(self, parent, *, min_visible_seconds: float = 2.0):
@@ -44,12 +52,12 @@ class StatusPanel(ctk.CTkFrame):
         top_row.grid_columnconfigure(2, weight=0)
 
         self.lbl_status = ctk.CTkLabel(
-            top_row, text="", font=("Segoe UI", 11, "normal"), anchor="w"
+            top_row, text="", font=(FONT_FAMILY_PRIMARY, 11, "normal"), anchor="w"
         )
         self.lbl_status.grid(row=0, column=0, sticky="w")
 
         self.lbl_percent = ctk.CTkLabel(
-            top_row, text="0%", font=("Segoe UI", 11, "bold"), anchor="e"
+            top_row, text="0%", font=(FONT_FAMILY_PRIMARY, 11, "bold"), anchor="e"
         )
         self.lbl_percent.grid(row=0, column=1, sticky="e", padx=(0, 8))
 
@@ -65,7 +73,7 @@ class StatusPanel(ctk.CTkFrame):
             border_width=1,
             border_color=red_btn["border"],
             text_color=red_btn["text"],
-            font=("Segoe UI", 13, "bold"),
+            font=(FONT_FAMILY_PRIMARY, 13, "bold"),
         )
         self.btn_cancel.grid(row=0, column=2, sticky="e")
         self.btn_cancel.grid_remove()
@@ -79,14 +87,14 @@ class StatusPanel(ctk.CTkFrame):
         self.file_row.grid_columnconfigure(1, weight=1)
 
         self.lbl_processing_prefix = ctk.CTkLabel(
-            self.file_row, text="", font=("Segoe UI", 9, "bold"), anchor="w"
+            self.file_row, text="", font=(FONT_FAMILY_PRIMARY, 9, "bold"), anchor="w"
         )
         self.lbl_processing_prefix.grid(row=0, column=0, sticky="w", padx=(0, 6))
 
         self.lbl_current_file = ctk.CTkLabel(
             self.file_row,
             text="",
-            font=("Segoe UI", 9, "normal"),
+            font=(FONT_FAMILY_PRIMARY, 9, "normal"),
             anchor="w",
             justify="left",
             wraplength=460,
@@ -108,7 +116,7 @@ class StatusPanel(ctk.CTkFrame):
         self.lbl_processing_prefix.configure(text="")
         self.lbl_current_file.configure(text="")
         self._mode = "idle"
-        self._set_status("Esperando lectura", with_dots=True)
+        self._set_status("", with_dots=True)
         self.apply_theme(self._current_theme)
 
     def set_translator(self, tr_callable):
@@ -300,8 +308,7 @@ class StatusPanel(ctk.CTkFrame):
             path_txt = self._ellipsize_middle(str(file_context), max_len=140)
             self.lbl_current_file.configure(text=path_txt)
 
-            prefix = self._processing_label_text or (
-                self._tr(self._key_processing_label) if self._tr else "Procesando:")
+            prefix = self._processing_label_text or _translate_status(self._tr, self._key_processing_label)
             self.lbl_processing_prefix.configure(text=prefix)
 
     def set_active(
@@ -326,7 +333,7 @@ class StatusPanel(ctk.CTkFrame):
                 self.lbl_percent.configure(text="")
                 self.progress_bar.start_indeterminate()
 
-                base = text or (self._tr("progress_processing_text") if self._tr else "Procesando")
+                base = text or _translate_status(self._tr, "progress_processing_text")
                 self._set_status(base, with_dots=True)
             else:
                 self._mode = "processing"
@@ -337,7 +344,7 @@ class StatusPanel(ctk.CTkFrame):
                 self.progress_bar.set(0.0)
                 self.lbl_percent.configure(text="0%")
 
-                base = self._tr(self._key_status_reading) if self._tr else "Haciendo lectura"
+                base = _translate_status(self._tr, self._key_status_reading)
                 self._set_status(base, with_dots=True)
 
             self.btn_cancel.grid()
@@ -348,7 +355,7 @@ class StatusPanel(ctk.CTkFrame):
 
         if final_status == "success":
             self._mode = "done"
-            base = self._tr(self._key_status_done) if self._tr else "¡Completado!"
+            base = _translate_status(self._tr, self._key_status_done)
             self._set_status(base, with_dots=False)
 
             self.current_progress = 100.0
@@ -374,7 +381,7 @@ class StatusPanel(ctk.CTkFrame):
         self.progress_bar.set(0.0)
         self.lbl_percent.configure(text="0%")
 
-        base = self._tr(self._key_status_waiting) if self._tr else "Esperando lectura"
+        base = _translate_status(self._tr, self._key_status_waiting)
         self._set_status(base, with_dots=True)
 
         try:

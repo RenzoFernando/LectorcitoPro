@@ -1,9 +1,8 @@
 import customtkinter as ctk
 from tkinter import Canvas
 from PIL import Image, ImageDraw, ImageTk
-from view.ui_constants import COLORS, get_theme_tokens, get_button_tokens, SIDEBAR_WIDTH, BTN_H_ICON
+from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_theme_tokens, get_button_tokens, SIDEBAR_WIDTH, BTN_H_ICON, NEUTRAL_WHITE, NEUTRAL_BLACK
 from view.tooltip import CustomTooltip
-
 
 # =============================================================================
 # UTILIDADES DE COLOR
@@ -34,14 +33,14 @@ def _mix(a: str, b: str, t: float) -> str:
 def _auto_border(fill: str) -> str:
     # Genera un borde automatico basado en la luminosidad del relleno
     if _luma(fill) < 140:
-        return _mix(fill, "#FFFFFF", 0.2)
-    return _mix(fill, "#000000", 0.15)
+        return _mix(fill, NEUTRAL_WHITE, 0.2)
+    return _mix(fill, NEUTRAL_BLACK, 0.15)
 
 
 def _gradient_color(stops: list[tuple[float, str]], t: float) -> str:
     t = max(0.0, min(1.0, float(t)))
     if not stops:
-        return "#000000"
+        return NEUTRAL_BLACK
     if len(stops) == 1:
         return stops[0][1]
     for i in range(len(stops) - 1):
@@ -150,9 +149,9 @@ class LeftSidebar(ctk.CTkFrame):
         self._text_color = theme["sidebar_text"]
 
         if _luma(self._pill_bg) < 140:
-            self._border_color = _mix(self._pill_bg_end, "#FFFFFF", 0.18)
+            self._border_color = _mix(self._pill_bg_end, NEUTRAL_WHITE, 0.18)
         else:
-            self._border_color = _mix(self._pill_bg_end, "#000000", 0.18)
+            self._border_color = _mix(self._pill_bg_end, NEUTRAL_BLACK, 0.18)
 
         self._canvas.configure(bg=self._outside_bg)
         self._paint_signature = None
@@ -223,7 +222,7 @@ class LeftSidebar(ctk.CTkFrame):
                 w / 2, h / 2,
                 text=self._text,
                 angle=90,
-                font=("Segoe UI", 10, "bold"),
+                font=(FONT_FAMILY_PRIMARY, 10, "bold"),
                 fill=text_fill
             )
             self._paint_signature = paint_signature
@@ -255,7 +254,7 @@ class LeftSidebar(ctk.CTkFrame):
             w / 2, h / 2,
             text=self._text,
             angle=90,
-            font=("Segoe UI", 10, "bold"),
+            font=(FONT_FAMILY_PRIMARY, 10, "bold"),
             fill=text_fill
         )
         self._paint_signature = paint_signature
@@ -623,8 +622,8 @@ class PillTextButton(ctk.CTkFrame):
             hover_gradient_start: str | None = None,
             hover_gradient_mid: str | None = None,
             hover_gradient_end: str | None = None,
-            text_color: str = "#FFFFFF",
-            font=("Segoe UI", 11, "bold"),
+            text_color: str = COLORS["light"]["text_on_accent"],
+            font=(FONT_FAMILY_PRIMARY, 11, "bold"),
             command=None
     ):
         super().__init__(parent, width=width, height=height, fg_color="transparent")
@@ -992,4 +991,3 @@ class RightSidebar(ctk.CTkFrame):
             if key == "theme_icon":
                 kwargs["image"] = self.icons.get("moon") if is_light else self.icons.get("sun")
             btn.configure(**kwargs)
-

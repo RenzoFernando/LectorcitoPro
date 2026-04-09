@@ -1,16 +1,25 @@
 import customtkinter as ctk
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry, _style_scrollable, ConfirmDialog
-from view.ui_constants import COLORS
-
+from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS
+from view.translations import translate_default
 
 # =============================================================================
 # DIALOGO DE GESTION DE PERFILES
 # =============================================================================
 
+def _tr_text(parent, key: str, *args):
+    tr_callable = getattr(parent, "_tr", None)
+    if callable(tr_callable):
+        try:
+            return tr_callable(key, *args)
+        except Exception:
+            pass
+    return translate_default(key, *args)
+
 class ProfilesDialog(BaseDialog):
     def __init__(self, parent, profiles_meta: dict | None = None, active_id: str = "default", on_save_callback=None,
                  persistent: bool = False, defer_show: bool = False):
-        title = parent._tr("dlg_profiles_title") if hasattr(parent, "_tr") else "Perfiles"
+        title = _tr_text(parent, "dlg_profiles_title")
         super().__init__(parent, title, persistent=persistent, defer_show=defer_show)
 
         self.profiles = {}
@@ -38,9 +47,8 @@ class ProfilesDialog(BaseDialog):
 
         self.lbl_select_profile = ctk.CTkLabel(
             self.main_frame,
-            text=self.parent_view._tr("lbl_select_profile") if hasattr(self.parent_view,
-                                                                       "_tr") else "Seleccione un Perfil",
-            font=("Segoe UI", 14, "bold"),
+            text=_tr_text(self.parent_view, "lbl_select_profile"),
+            font=(FONT_FAMILY_PRIMARY, 14, "bold"),
             text_color=self.colors["text"]
         )
         self.lbl_select_profile.pack(pady=(20, 10))
@@ -58,8 +66,7 @@ class ProfilesDialog(BaseDialog):
 
         self.entry_new = ctk.CTkEntry(
             self.bottom_frame,
-            placeholder_text=self.parent_view._tr("ph_new_profile") if hasattr(self.parent_view,
-                                                                               "_tr") else "Nombre nuevo perfil..."
+            placeholder_text=_tr_text(self.parent_view, "ph_new_profile")
         )
         _style_entry(self.entry_new)
         self.entry_new.pack(side="left", fill="x", expand=True, padx=(0, 10))
@@ -81,7 +88,7 @@ class ProfilesDialog(BaseDialog):
         except Exception:
             pass
         self.lbl_select_profile.configure(
-            text=self.parent_view._tr("lbl_select_profile") if hasattr(self.parent_view, "_tr") else "Seleccione un Perfil"
+            text=_tr_text(self.parent_view, "lbl_select_profile")
         )
         self._redraw_list()
 
@@ -133,7 +140,7 @@ class ProfilesDialog(BaseDialog):
         lbl = ctk.CTkLabel(
             item_frame,
             text=f"  {display_name}{suffix}",
-            font=("Segoe UI", 12, "bold" if is_active else "normal"),
+            font=(FONT_FAMILY_PRIMARY, 12, "bold" if is_active else "normal"),
             text_color=COLORS["light"]["text_on_accent"] if is_active else self.colors["text"]
         )
         lbl.pack(side="left", padx=10, pady=8)

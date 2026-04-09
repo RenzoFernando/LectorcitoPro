@@ -1,15 +1,24 @@
-
 import customtkinter as ctk
 import copy
 import os
 from tkinter import filedialog
 from file_rules import file_rules_conflict, matches_file_rule, normalize_file_rule, normalize_file_tag_list
 from view.dialogs import BaseDialog, _get_color_tuple, _style_button, _style_checkbox, _style_entry, _style_scrollable
-from view.ui_constants import COLORS, mix_color
+from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, mix_color, NEUTRAL_WHITE
+from view.translations import translate_default
 
 # =============================================================================
 # DIALOGO DE CONFIGURACION DE ETIQUETAS
 # ============================================================================= 
+
+def _tr_text(parent, key: str, *args):
+    tr_callable = getattr(parent, "_tr", None)
+    if callable(tr_callable):
+        try:
+            return tr_callable(key, *args)
+        except Exception:
+            pass
+    return translate_default(key, *args)
 
 class TagsConfigDialog(BaseDialog):
 
@@ -50,7 +59,7 @@ class TagsConfigDialog(BaseDialog):
 
         self.tag_colors = self._build_tag_colors()
 
-        self.tag_font = ctk.CTkFont(family="Segoe UI", size=11)
+        self.tag_font = ctk.CTkFont(family=FONT_FAMILY_PRIMARY, size=11)
 
         self.geometry("600x550")
         self.main_frame = self._create_card_frame()
@@ -99,8 +108,8 @@ class TagsConfigDialog(BaseDialog):
         button_frame.grid(row=button_row, column=0, pady=(15, 10), sticky="ew")
         button_frame.grid_columnconfigure((0, 1), weight=1)
 
-        txt_ok = self._parent._tr("btn_ok") if hasattr(self._parent, "_tr") else "Aceptar"
-        txt_cancel = self._parent._tr("btn_cancel_simple") if hasattr(self._parent, "_tr") else "Cancelar"
+        txt_ok = _tr_text(self._parent, "btn_ok")
+        txt_cancel = _tr_text(self._parent, "btn_cancel_simple")
 
         self.ok_button = ctk.CTkButton(button_frame, text=txt_ok, command=self._on_ok)
         _style_button(self.ok_button, "green")
@@ -122,7 +131,7 @@ class TagsConfigDialog(BaseDialog):
             self.title(self.current_title)
         except Exception:
             pass
-        ph_text = self._parent._tr("placeholder_tags") if hasattr(self._parent, "_tr") else "Escribir..."
+        ph_text = _tr_text(self._parent, "placeholder_tags")
         if self.lbl_folders_prompt is not None:
             self.lbl_folders_prompt.configure(text=self.folders_prompt)
         if self.lbl_files_prompt is not None:
@@ -132,11 +141,11 @@ class TagsConfigDialog(BaseDialog):
         if self.files_entry is not None:
             self.files_entry.configure(placeholder_text=ph_text)
         if self.btn_auto is not None:
-            self.btn_auto.configure(text=self._parent._tr("btn_autodetect") if hasattr(self._parent, "_tr") else "Autodetectar")
+            self.btn_auto.configure(text=_tr_text(self._parent, "btn_autodetect"))
         if self.extra_checkbox is not None:
             self.extra_checkbox.configure(text=self.extra_checkbox_text or "")
-        self.ok_button.configure(text=self._parent._tr("btn_ok") if hasattr(self._parent, "_tr") else "Aceptar")
-        self.cancel_button.configure(text=self._parent._tr("btn_cancel_simple") if hasattr(self._parent, "_tr") else "Cancelar")
+        self.ok_button.configure(text=_tr_text(self._parent, "btn_ok"))
+        self.cancel_button.configure(text=_tr_text(self._parent, "btn_cancel_simple"))
 
     def load_state(self, title, folders_prompt, initial_folders, files_prompt, initial_files,
                    allow_autodetect=False, excluded_folders=None, excluded_files=None, media_extensions=None,
@@ -271,15 +280,15 @@ class TagsConfigDialog(BaseDialog):
 
         inactive_fg = (
             mix_color(bg_panel[0], text_secondary[0], 0.12),
-            mix_color(bg_panel[1], "#FFFFFF", 0.08)
+            mix_color(bg_panel[1], NEUTRAL_WHITE, 0.08)
         )
         inactive_border = (
             mix_color(border_subtle[0], text_secondary[0], 0.30),
-            mix_color(border_subtle[1], "#FFFFFF", 0.22)
+            mix_color(border_subtle[1], NEUTRAL_WHITE, 0.22)
         )
         inactive_hover = (
             mix_color(inactive_fg[0], text_secondary[0], 0.12),
-            mix_color(inactive_fg[1], "#FFFFFF", 0.10)
+            mix_color(inactive_fg[1], NEUTRAL_WHITE, 0.10)
         )
 
         return {
@@ -301,7 +310,7 @@ class TagsConfigDialog(BaseDialog):
 
     def _create_tag_section(self, section_index, prompt, section_id, text_color):
         base_row = section_index * 3
-        label = ctk.CTkLabel(self.main_frame, text=prompt, font=("Segoe UI", 12, "bold"), text_color=text_color)
+        label = ctk.CTkLabel(self.main_frame, text=prompt, font=(FONT_FAMILY_PRIMARY, 12, "bold"), text_color=text_color)
         label.grid(
             row=base_row, column=0,
             sticky="w", pady=(10, 2), padx=20)
@@ -323,7 +332,7 @@ class TagsConfigDialog(BaseDialog):
         input_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         input_container.grid(row=base_row + 2, column=0, sticky="ew", pady=(5, 0), padx=20)
 
-        ph_text = self._parent._tr("placeholder_tags") if hasattr(self._parent, "_tr") else "Escribir..."
+        ph_text = _tr_text(self._parent, "placeholder_tags")
 
         entry = ctk.CTkEntry(input_container, placeholder_text=ph_text)
         _style_entry(entry)
@@ -339,7 +348,7 @@ class TagsConfigDialog(BaseDialog):
             entry.bind("<Return>", lambda event: self._add_tag(entry, self.files_list, is_folder=False))
 
             if self.allow_autodetect:
-                txt_auto = self._parent._tr("btn_autodetect") if hasattr(self._parent, "_tr") else "Autodetectar"
+                txt_auto = _tr_text(self._parent, "btn_autodetect")
                 btn_auto = ctk.CTkButton(
                     input_container,
                     text=txt_auto,

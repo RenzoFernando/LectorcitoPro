@@ -1,8 +1,7 @@
-
 import sys
 import customtkinter as ctk
 from tkinter import TclError
-from view.ui_constants import get_theme_tokens, get_button_tokens
+from view.ui_constants import FONT_FAMILY_PRIMARY, get_theme_tokens, get_button_tokens, TOOLTIP_TRANSPARENT_COLOR
 
 TOOLTIP_AUTOHIDE_SECONDS = 2.5
 
@@ -107,7 +106,7 @@ class _SharedTooltipWindow:
         self._fade_after_id = None
         self._visible = False
 
-        self._transparent_color = "#E532F1"
+        self._transparent_color = TOOLTIP_TRANSPARENT_COLOR
         try:
             self._window.configure(fg_color=self._transparent_color)
             self._window.wm_attributes("-transparentcolor", self._transparent_color)
@@ -124,7 +123,7 @@ class _SharedTooltipWindow:
         self._label = ctk.CTkLabel(
             self._frame,
             text="",
-            font=("Segoe UI", 10, "normal"),
+            font=(FONT_FAMILY_PRIMARY, 10, "normal"),
             wraplength=260,
             justify="left",
         )
@@ -565,3 +564,5 @@ class CustomTooltip:
             return x0 <= px <= x1 and y0 <= py <= y1
         except Exception:
             return False
+
+

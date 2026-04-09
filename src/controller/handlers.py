@@ -14,8 +14,8 @@ from view.dialogs import ConfirmDialog, ChoiceDialog, ExternalLinkDialog, Messag
 from view.tags_dialog import TagsConfigDialog
 from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
+from view.translations import translate_default
 from view.ui_constants import PROFILE_SWITCH_FADE_DELAY_MS, RESTORE_FADE_DELAY_MS
-
 
 INSTALL_MARKER_FILE = ".lectorcito_installed"
 
@@ -510,7 +510,7 @@ def _show_msg_safe(parent, title_key, msg_key, *args):
             msg = tr_func(msg_key, *args)
             MessageDialog(parent, title, msg)
         else:
-            MessageDialog(parent, title_key, msg_key)
+            MessageDialog(parent, translate_default(title_key), translate_default(msg_key, *args))
     except Exception:
         try:
             if hasattr(parent, "restore_ui_from_modal"):
@@ -544,8 +544,8 @@ def open_external_link_with_confirmation(parent, url, title_key, message_key, ta
     try:
         title = _resolve_translation(parent, title_key)
         message = _resolve_translation(parent, message_key)
-        continue_text = _resolve_translation(parent, continue_key or "btn_continue_external") or "Continue"
-        cancel_text = _resolve_translation(parent, cancel_key or "btn_cancel_simple") or "Cancel"
+        continue_text = _resolve_translation(parent, continue_key or "btn_continue_external") or translate_default(continue_key or "btn_continue_external")
+        cancel_text = _resolve_translation(parent, cancel_key or "btn_cancel_simple") or translate_default(cancel_key or "btn_cancel_simple")
         should_open = ExternalLinkDialog.ask(
             parent=parent,
             title=title,
