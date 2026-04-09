@@ -37,6 +37,7 @@ TRANSLATIONS = {
         "btn_cancel_simple": "Cancelar",
         "btn_restore_defaults": "Restaurar Ajustes",
         "btn_autodetect": "Autodetectar",
+        "btn_continue_external": "Continuar",
 
         # --- DIALOGOS TAGS ---
         "dlg_ver_title": "Configurar qué Ver",
@@ -92,6 +93,9 @@ TRANSLATIONS = {
         "confirm_restore_title": "Confirmar Restauración",
         "confirm_restore_prompt": "¿Está seguro de que desea restaurar todos los ajustes a sus valores por defecto?\n\nEsto eliminará sus configuraciones guardadas.",
         "msg_restore_success": "¡Ajustes restaurados a los valores por defecto!",
+        "dlg_external_link_title": "Abrir enlace externo",
+        "msg_open_repository_confirm": "Se abrirá el navegador para abrir el repositorio. ¿Desea continuar?",
+        "msg_open_manual_confirm": "Se abrirá el navegador para abrir el manual/documentación. ¿Desea continuar?",
 
         # --- PERFILES ---
         "dlg_profiles_title": "Gestión de Perfiles",
@@ -191,6 +195,7 @@ TRANSLATIONS = {
         "btn_cancel_simple": "Cancel",
         "btn_restore_defaults": "Restore Defaults",
         "btn_autodetect": "Auto-detect",
+        "btn_continue_external": "Continue",
 
         # --- DIALOGS ---
         "dlg_ver_title": "Configure what to View",
@@ -246,6 +251,9 @@ TRANSLATIONS = {
         "confirm_restore_title": "Confirm Restore",
         "confirm_restore_prompt": "Are you sure you want to restore all settings to their default values?\n\nThis will delete your saved configurations.",
         "msg_restore_success": "Settings have been restored to default!",
+        "dlg_external_link_title": "Open external link",
+        "msg_open_repository_confirm": "The browser will open to access the repository. Do you want to continue?",
+        "msg_open_manual_confirm": "The browser will open to access the manual/documentation. Do you want to continue?",
 
         # --- PROFILES ---
         "dlg_profiles_title": "Profile Management",

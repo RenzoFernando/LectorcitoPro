@@ -284,6 +284,7 @@ class TagsConfigDialog(BaseDialog):
             border_width=1,
             border_color=_get_color_tuple("card_border")
         )
+        _style_scrollable(scroll_frame)
         scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew", padx=20)
 
         input_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")

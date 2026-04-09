@@ -1,3 +1,4 @@
+
 import customtkinter as ctk
 import os
 from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
@@ -91,13 +92,12 @@ def _style_checkbox(widget):
 
 
 def _style_scrollable(widget):
-    blue = get_button_tokens("blue")
     widget.configure(
-        fg_color=_get_color_tuple("bg_panel"),
+        fg_color=_get_color_tuple("bg_card"),
         border_width=1,
-        border_color=_get_color_tuple("border_subtle"),
-        scrollbar_button_color=blue["bg"],
-        scrollbar_button_hover_color=blue["hover"]
+        border_color=get_color_pair("card_border"),
+        scrollbar_button_color=get_color_pair("accent_blue"),
+        scrollbar_button_hover_color=get_color_pair("accent_blue_hover")
     )
 
 
@@ -572,6 +572,84 @@ class ConfirmDialog(BaseDialog):
                     pass
 
 
+class ExternalLinkDialog(BaseDialog):
+    def __init__(self, parent, title, message, target_label=None, continue_text=None, cancel_text=None):
+        super().__init__(parent, title)
+        self.result = False
+        self.geometry("430x240")
+
+        card = self._create_card_frame()
+
+        ctk.CTkLabel(
+            card,
+            text=message,
+            wraplength=360,
+            justify="center",
+            font=("Segoe UI", 13),
+            text_color=_get_color_tuple("text")
+        ).pack(fill="x", padx=20, pady=(24, 14))
+
+        if target_label:
+            target_box = ctk.CTkFrame(
+                card,
+                fg_color=_get_color_tuple("bg_panel"),
+                border_color=_get_color_tuple("border_subtle"),
+                border_width=1,
+                corner_radius=14
+            )
+            target_box.pack(fill="x", padx=20, pady=(0, 18))
+
+            ctk.CTkLabel(
+                target_box,
+                text=target_label,
+                wraplength=330,
+                justify="center",
+                font=("Segoe UI", 11),
+                text_color=_get_color_tuple("text_secondary")
+            ).pack(fill="x", padx=12, pady=10)
+
+        button_frame = ctk.CTkFrame(card, fg_color="transparent")
+        button_frame.pack(pady=(0, 20))
+
+        if continue_text is None:
+            continue_text = parent._tr("btn_continue_external") if hasattr(parent, "_tr") else "Continue"
+        if cancel_text is None:
+            cancel_text = parent._tr("btn_cancel_simple") if hasattr(parent, "_tr") else "Cancel"
+
+        btn_continue = ctk.CTkButton(button_frame, text=continue_text, width=126, command=self._on_continue)
+        _style_button(btn_continue, "blue")
+        btn_continue.pack(side="left", padx=8)
+
+        btn_cancel = ctk.CTkButton(button_frame, text=cancel_text, width=126, command=self._on_cancel)
+        _style_button(btn_cancel, "red")
+        btn_cancel.pack(side="left", padx=8)
+        btn_continue.focus_set()
+
+        self.bind("<Return>", self._on_continue)
+
+    def _on_continue(self, event=None): self.result = True; self._close_with_fade_out()
+
+    def _on_cancel(self, event=None): self.result = False; self._close_with_fade_out()
+
+    @classmethod
+    def ask(cls, parent, title, message, target_label=None, continue_text=None, cancel_text=None):
+        dialog = None
+        try:
+            dialog = cls(parent, title, message, target_label, continue_text, cancel_text)
+            parent.wait_window(dialog)
+            return dialog.result
+        except Exception:
+            _restore_parent_modal_state(parent)
+            return False
+        finally:
+            if dialog is not None:
+                try:
+                    if dialog.winfo_exists():
+                        dialog.destroy()
+                except Exception:
+                    pass
+
+
 class ChoiceDialog(BaseDialog):
     def __init__(self, parent, title, message, option1_text, option2_text, option1_value, option2_value):
         super().__init__(parent, title)
@@ -618,3 +696,7 @@ class ChoiceDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
+
+
+
+

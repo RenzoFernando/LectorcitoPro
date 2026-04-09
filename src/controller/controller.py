@@ -3,6 +3,7 @@ import threading
 import webbrowser
 from tkinter import filedialog
 
+from app_meta import APP_WEBSITE_URL
 import config
 import utils
 from model import processor
@@ -43,9 +44,31 @@ class LectorcitoController:
         self.view.sidebar_buttons["traducir"].configure(command=lambda: handlers.toggle_language(self))
         self.view.sidebar_buttons["restaurar"].configure(command=lambda: handlers.restore_default_settings(self))
         self.view.sidebar_buttons["perfil"].configure(command=lambda: handlers.manage_profiles(self))
-        self.view.sidebar_buttons["github"].configure(command=lambda: webbrowser.open_new(self.view.REPO_URL))
-        self.view.sidebar_buttons["info"].configure(command=self.view.show_app_info)
+        self.view.sidebar_buttons["github"].configure(command=self.open_repository_link)
+        self.view.sidebar_buttons["info"].configure(command=self.open_manual_link)
         self.view.sidebar_buttons["ajustes"].configure(command=lambda: handlers.show_settings_dialog(self))
+
+    def open_repository_link(self):
+        handlers.open_external_link_with_confirmation(
+            parent=self.view,
+            url=self.view.REPO_URL,
+            title_key="dlg_external_link_title",
+            message_key="msg_open_repository_confirm",
+            target_label=self.view.REPO_URL,
+            continue_key="btn_continue_external",
+            cancel_key="btn_cancel_simple"
+        )
+
+    def open_manual_link(self):
+        handlers.open_external_link_with_confirmation(
+            parent=self.view,
+            url=APP_WEBSITE_URL,
+            title_key="dlg_external_link_title",
+            message_key="msg_open_manual_confirm",
+            target_label=APP_WEBSITE_URL,
+            continue_key="btn_continue_external",
+            cancel_key="btn_cancel_simple"
+        )
 
     def run(self):
         self.view.mainloop()

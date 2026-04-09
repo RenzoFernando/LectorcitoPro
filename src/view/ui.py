@@ -726,5 +726,7 @@ class LectorcitoApp(ctk.CTk):
             self.restore_ui_from_modal()
 
     def show_app_info(self):
-        webbrowser.open(APP_WEBSITE_URL)
-
+        if self.controller and hasattr(self.controller, "open_manual_link"):
+            self.controller.open_manual_link()
+        else:
+            webbrowser.open(APP_WEBSITE_URL)

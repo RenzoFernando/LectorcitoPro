@@ -10,7 +10,7 @@ import win32com.client
 import config
 from app_meta import APP_DISPLAY_NAME, APP_NAME_INTERNAL
 from file_rules import canonical_file_rule, normalize_file_rule_list, normalize_file_tag_list
-from view.dialogs import ConfirmDialog, ChoiceDialog, MessageDialog
+from view.dialogs import ConfirmDialog, ChoiceDialog, ExternalLinkDialog, MessageDialog
 from view.tags_dialog import TagsConfigDialog
 from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
@@ -517,6 +517,54 @@ def _show_msg_safe(parent, title_key, msg_key, *args):
                 parent.restore_ui_from_modal()
         except Exception:
             pass
+
+
+def _resolve_translation(parent, key_or_text, *args):
+    if key_or_text is None:
+        return None
+    tr_func = getattr(parent, "_tr", None)
+    if tr_func:
+        try:
+            translated = tr_func(key_or_text, *args)
+            if translated != f"<{key_or_text}>":
+                return translated
+        except Exception:
+            pass
+    if args:
+        try:
+            return str(key_or_text).format(*args)
+        except Exception:
+            pass
+    return str(key_or_text)
+
+
+def open_external_link_with_confirmation(parent, url, title_key, message_key, target_label=None, continue_key=None, cancel_key=None):
+    if not url:
+        return False
+    try:
+        title = _resolve_translation(parent, title_key)
+        message = _resolve_translation(parent, message_key)
+        continue_text = _resolve_translation(parent, continue_key or "btn_continue_external") or "Continue"
+        cancel_text = _resolve_translation(parent, cancel_key or "btn_cancel_simple") or "Cancel"
+        should_open = ExternalLinkDialog.ask(
+            parent=parent,
+            title=title,
+            message=message,
+            target_label=target_label,
+            continue_text=continue_text,
+            cancel_text=cancel_text
+        )
+        if not should_open:
+            return False
+        webbrowser.open_new(url)
+        return True
+    except Exception:
+        try:
+            if hasattr(parent, "restore_ui_from_modal"):
+                parent.restore_ui_from_modal()
+        except Exception:
+            pass
+        return False
 
 
 # =============================================================================
