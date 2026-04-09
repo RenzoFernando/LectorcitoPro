@@ -1,10 +1,11 @@
+
 import customtkinter as ctk
 import copy
 import os
 from tkinter import filedialog
 from file_rules import file_rules_conflict, matches_file_rule, normalize_file_rule, normalize_file_tag_list
 from view.dialogs import BaseDialog, _get_color_tuple, _style_button, _style_checkbox, _style_entry, _style_scrollable
-from view.ui_constants import COLORS
+from view.ui_constants import COLORS, mix_color
 
 # =============================================================================
 # DIALOGO DE CONFIGURACION DE ETIQUETAS
@@ -47,11 +48,7 @@ class TagsConfigDialog(BaseDialog):
         self._last_window_size = None
         self._last_layout_widths = None
 
-        blue_btn = COLORS['button']['blue']
-        self.tag_colors = {
-            "activo": {"fg": blue_btn["bg"], "hover": blue_btn["hover"], "text": COLORS["light"]["text_on_accent"]},
-            "inactivo": {"fg": _get_color_tuple("bg_panel"), "hover": COLORS["button"]["neutral"]["hover"], "text": _get_color_tuple("text_secondary")}
-        }
+        self.tag_colors = self._build_tag_colors()
 
         self.tag_font = ctk.CTkFont(family="Segoe UI", size=11)
 
@@ -266,6 +263,42 @@ class TagsConfigDialog(BaseDialog):
             self._layout_retry_count += 1
             self._schedule_layout_refresh(delay=40)
 
+    def _build_tag_colors(self):
+        blue_btn = COLORS['button']['blue']
+        bg_panel = _get_color_tuple("bg_panel")
+        border_subtle = _get_color_tuple("border_subtle")
+        text_secondary = _get_color_tuple("text_secondary")
+
+        inactive_fg = (
+            mix_color(bg_panel[0], text_secondary[0], 0.12),
+            mix_color(bg_panel[1], "#FFFFFF", 0.08)
+        )
+        inactive_border = (
+            mix_color(border_subtle[0], text_secondary[0], 0.30),
+            mix_color(border_subtle[1], "#FFFFFF", 0.22)
+        )
+        inactive_hover = (
+            mix_color(inactive_fg[0], text_secondary[0], 0.12),
+            mix_color(inactive_fg[1], "#FFFFFF", 0.10)
+        )
+
+        return {
+            "activo": {
+                "fg": blue_btn["bg"],
+                "hover": blue_btn["hover"],
+                "text": COLORS["light"]["text_on_accent"],
+                "border": blue_btn["bg"],
+                "border_width": 0
+            },
+            "inactivo": {
+                "fg": inactive_fg,
+                "hover": inactive_hover,
+                "text": text_secondary,
+                "border": inactive_border,
+                "border_width": 1
+            }
+        }
+
     def _create_tag_section(self, section_index, prompt, section_id, text_color):
         base_row = section_index * 3
         label = ctk.CTkLabel(self.main_frame, text=prompt, font=("Segoe UI", 12, "bold"), text_color=text_color)
@@ -442,7 +475,7 @@ class TagsConfigDialog(BaseDialog):
         tag_name, tag_state = tag_data["nombre"], tag_data["estado"]
         colors = self.tag_colors[tag_state]
 
-        pill_frame = ctk.CTkFrame(parent, fg_color=colors["fg"], border_width=0, corner_radius=14)
+        pill_frame = ctk.CTkFrame(parent, fg_color=colors["fg"], border_color=colors.get("border", colors["fg"]), border_width=colors.get("border_width", 0), corner_radius=14)
 
         label = ctk.CTkLabel(pill_frame, text=tag_name, text_color=colors["text"], font=self.tag_font)
         label.pack(side="left", padx=(10, 4), pady=2)

@@ -32,8 +32,8 @@ def _lerp_color(c1: str, c2: str, t: float) -> str:
 
 DEFAULT_STOPS = [
     (0.00, "#2F6FE4"),
-    (0.55, "#4A7FF1"),
-    (1.00, "#6E63DA"),
+    (0.50, "#4A7FF1"),
+    (1.00, "#7049FC"),
 ]
 
 def gradient_color_at(t: float, stops: list[tuple[float, str]] | None = None) -> str:
