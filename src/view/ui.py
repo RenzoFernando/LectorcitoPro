@@ -73,7 +73,7 @@ class LectorcitoApp(ctk.CTk):
         safe_set_window_icon(self)
 
         self.icons = load_sidebar_icons()
-        self.logo_image = load_logo(target_width=150)
+        self.logo_image = load_logo(target_width=165)
 
         self._build_ui()
         self.update_ui_texts()

@@ -35,7 +35,7 @@ def load_sidebar_icons(size=(30, 30)) -> dict:
     return icons
 
 
-def load_logo(target_width=150) -> ctk.CTkImage | None:
+def load_logo(target_width=165) -> ctk.CTkImage | None:
     try:
         logo_light = Image.open(resource_path(os.path.join("branding", "logo_oscuro.png")))
         logo_dark = Image.open(resource_path(os.path.join("branding", "logo_claro.png")))
