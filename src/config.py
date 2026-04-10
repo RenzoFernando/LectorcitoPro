@@ -1,8 +1,9 @@
 import os
 import json
 import copy
+from datetime import datetime
 from appdirs import user_config_dir
-from app_meta import APP_NAME_INTERNAL, APP_VENDOR_NAME
+from app_meta import APP_NAME_INTERNAL, APP_VENDOR_NAME, APP_VERSION
 from file_rules import normalize_file_rule_list, normalize_file_tag_list
 
 PROFILE_CONFIG_KEYS = (
@@ -38,6 +39,9 @@ os.makedirs(_config_dir, exist_ok=True)
 CONFIG_FILE_PATH = os.path.join(_config_dir, CFG_NAME)
 LOG_FILE_PATH = os.path.join(_config_dir, LOG_NAME)
 DEFAULT_LECTURAS_PATH = os.path.join(_config_dir, "Lecturas")
+EXPORT_FILE_EXTENSION = ".json"
+EXPORT_FORMAT_NAME = "lectorcito-pro-config"
+EXPORT_SCHEMA_VERSION = 1
 
 os.makedirs(DEFAULT_LECTURAS_PATH, exist_ok=True)
 
@@ -56,9 +60,7 @@ def _normalize_profile_file_rules(profile: dict) -> dict:
     normalized_profile["theme"] = "Dark" if str(normalized_profile.get("theme", "Light")).lower() == "dark" else "Light"
     normalized_profile["language"] = "en" if str(normalized_profile.get("language", "es")).lower() == "en" else "es"
     normalized_profile["report_extension"] = ".md" if str(normalized_profile.get("report_extension", ".txt")).lower() == ".md" else ".txt"
-    normalized_profile["use_gitignore_exclusions"] = bool(
-        normalized_profile.get("use_gitignore_exclusions", False)
-    )
+    normalized_profile["use_gitignore_exclusions"] = bool(normalized_profile.get("use_gitignore_exclusions", False))
     normalized_profile["etiquetas_carpetas_importantes"] = normalize_file_tag_list(
         normalized_profile.get("etiquetas_carpetas_importantes", [])
     )
@@ -234,16 +236,89 @@ def load_config() -> dict:
     )
 
 
+def build_persisted_config_payload(runtime_config: dict | None) -> dict:
+    active_id = "default"
+    if isinstance(runtime_config, dict):
+        active_id = runtime_config.get("_active_profile_id", "default")
+    profiles = clone_profiles_meta(runtime_config.get("_profiles_meta", {}) if isinstance(runtime_config, dict) else {})
+    if isinstance(runtime_config, dict):
+        profiles[active_id] = extract_profile_from_runtime_config(runtime_config, active_id)
+    if active_id not in profiles:
+        active_id = "default"
+    return {
+        "active_profile_id": active_id,
+        "profiles": clone_profiles_meta(profiles)
+    }
+
+
+def build_export_config_package(runtime_config: dict | None) -> dict:
+    return {
+        "format": EXPORT_FORMAT_NAME,
+        "schema_version": EXPORT_SCHEMA_VERSION,
+        "app_name": APP_NAME_INTERNAL,
+        "exported_from_version": APP_VERSION,
+        "exported_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "data": build_persisted_config_payload(runtime_config)
+    }
+
+
+def export_config_to_file(file_path: str, runtime_config: dict | None):
+    clean_path = str(file_path or "").strip()
+    if not clean_path:
+        raise ValueError("Ruta de exportación inválida.")
+    package = build_export_config_package(runtime_config)
+    output_dir = os.path.dirname(clean_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+    with open(clean_path, 'w', encoding="utf-8") as f:
+        json.dump(package, f, indent=4, ensure_ascii=False)
+    return clean_path
+
+
+def _extract_import_payload(raw_data: dict | None) -> dict:
+    if not isinstance(raw_data, dict):
+        raise ValueError("El archivo no contiene una estructura JSON válida.")
+
+    if raw_data.get("format") == EXPORT_FORMAT_NAME:
+        payload = raw_data.get("data")
+    elif "data" in raw_data and isinstance(raw_data.get("data"), dict) and "profiles" in raw_data.get("data", {}):
+        payload = raw_data.get("data")
+    else:
+        payload = raw_data
+
+    if not isinstance(payload, dict):
+        raise ValueError("La configuración importada no contiene datos válidos.")
+
+    profiles = payload.get("profiles")
+    if not isinstance(profiles, dict) or not profiles:
+        raise ValueError("La configuración importada no contiene perfiles válidos.")
+
+    active_id = payload.get("active_profile_id", "default")
+    if not isinstance(active_id, str) or not active_id.strip():
+        active_id = "default"
+
+    return {
+        "active_profile_id": active_id.strip(),
+        "profiles": clone_profiles_meta(profiles)
+    }
+
+
+def import_config_from_file(file_path: str) -> dict:
+    clean_path = str(file_path or "").strip()
+    if not clean_path:
+        raise ValueError("Ruta de importación inválida.")
+    with open(clean_path, 'r', encoding="utf-8") as f:
+        raw_data = json.load(f)
+    payload = _extract_import_payload(raw_data)
+    return build_runtime_config(
+        profiles=payload.get("profiles", {}),
+        active_id=payload.get("active_profile_id", "default")
+    )
+
+
 def save_config(config: dict):
     try:
-        active_id = config.get("_active_profile_id", "default")
-        profiles = clone_profiles_meta(config.get("_profiles_meta", {"default": copy.deepcopy(DEFAULT_CONFIG_VALUES)}))
-        profiles[active_id] = extract_profile_from_runtime_config(config, active_id)
-
-        final_json = {
-            "active_profile_id": active_id if active_id in profiles else "default",
-            "profiles": clone_profiles_meta(profiles)
-        }
+        final_json = build_persisted_config_payload(config)
 
         with open(CONFIG_FILE_PATH, 'w', encoding="utf-8") as f:
             json.dump(final_json, f, indent=4, ensure_ascii=False)

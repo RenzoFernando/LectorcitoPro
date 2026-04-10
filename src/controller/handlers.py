@@ -330,15 +330,106 @@ def show_settings_dialog(controller):
     def on_shortcut(mode, exe_path_input, parent_window=None):
         _create_system_shortcut(controller, mode, exe_path_input, parent_window)
 
+    def on_export(parent_window=None):
+        _export_app_configuration(controller, parent_window)
+
+    def on_import(parent_window=None):
+        _import_app_configuration(controller, parent_window)
+
     dialog = controller.view.get_settings_dialog()
     dialog.load_state(
         current_extension=current_ext,
         current_exe_path=current_exe,
         on_save_callback=on_save,
-        on_shortcut_callback=on_shortcut
+        on_shortcut_callback=on_shortcut,
+        on_export_callback=on_export,
+        on_import_callback=on_import
     )
     dialog.present()
     dialog.wait_result()
+
+
+def _export_app_configuration(controller, parent_window=None):
+    suggested_name = f"{APP_NAME_INTERNAL}-config{config.EXPORT_FILE_EXTENSION}"
+    file_path = filedialog.asksaveasfilename(
+        parent=parent_window if parent_window and parent_window.winfo_exists() else controller.view,
+        title=controller.view._tr("dlg_export_config_title"),
+        defaultextension=config.EXPORT_FILE_EXTENSION,
+        initialfile=suggested_name,
+        filetypes=[
+            (controller.view._tr("filetype_config_json"), f"*{config.EXPORT_FILE_EXTENSION}"),
+            (controller.view._tr("filetype_json"), "*.json"),
+            (controller.view._tr("filetype_all"), "*.*")
+        ]
+    )
+    if not file_path:
+        return
+    try:
+        config.export_config_to_file(file_path, controller.config)
+        msg_parent = parent_window if parent_window and parent_window.winfo_exists() else controller.view
+        msg_parent.after(120, lambda: _show_msg_safe(msg_parent, "info_title", "msg_export_success", file_path))
+    except Exception as e:
+        msg_parent = parent_window if parent_window and parent_window.winfo_exists() else controller.view
+        msg_parent.after(120, lambda: _show_msg_safe(msg_parent, "error_title", "msg_export_error", str(e)))
+
+
+def _import_app_configuration(controller, parent_window=None):
+    file_path = filedialog.askopenfilename(
+        parent=parent_window if parent_window and parent_window.winfo_exists() else controller.view,
+        title=controller.view._tr("dlg_import_config_title"),
+        filetypes=[
+            (controller.view._tr("filetype_config_json"), f"*{config.EXPORT_FILE_EXTENSION}"),
+            (controller.view._tr("filetype_json"), "*.json"),
+            (controller.view._tr("filetype_all"), "*.*")
+        ]
+    )
+    if not file_path:
+        return
+
+    try:
+        runtime_config = config.import_config_from_file(file_path)
+    except Exception as e:
+        msg_parent = parent_window if parent_window and parent_window.winfo_exists() else controller.view
+        msg_parent.after(120, lambda: _show_msg_safe(msg_parent, "error_title", "msg_import_error", str(e)))
+        return
+
+    confirmed = ConfirmDialog.ask(
+        controller.view,
+        controller.view._tr("confirm_import_config_title"),
+        controller.view._tr("confirm_import_config_prompt")
+    )
+    if not confirmed:
+        return
+
+    if parent_window and parent_window.winfo_exists():
+        try:
+            parent_window._close_with_fade_out()
+        except Exception:
+            pass
+
+    controller.view.prepare_soft_refresh()
+    controller.view.after(RESTORE_FADE_DELAY_MS, lambda: _execute_import_config(controller, runtime_config, file_path))
+
+
+def _execute_import_config(controller, runtime_config, file_path):
+    try:
+        _apply_runtime_config(controller, runtime_config)
+        controller._update_active_lecturas_path()
+        controller.last_report_path = None
+
+        controller.view.lang = controller.config["language"]
+        controller.view.current_theme = controller.config["theme"]
+        customtkinter.set_appearance_mode(controller.view.current_theme)
+        controller.view.update_ui_texts()
+        controller.view.apply_theme()
+        save_preferences_silent(controller)
+    except Exception as e:
+        controller.view.complete_soft_refresh()
+        controller.view.after(120, lambda: controller.view.show_message("error_title", "msg_import_error", str(e)))
+        return
+
+    controller.view.after(180, controller.view.complete_soft_refresh)
+    controller.view.after(320, lambda: controller.view.show_message("info_title", "msg_import_success", file_path))
 
 
 def _update_settings_values(controller, new_ext, new_exe_path):

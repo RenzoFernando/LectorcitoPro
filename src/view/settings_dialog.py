@@ -1,12 +1,13 @@
 import customtkinter as ctk
 from app_meta import APP_EXECUTABLE_NAME
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry
-from view.ui_constants import FONT_FAMILY_PRIMARY, get_button_tokens, SETTINGS_DIALOG_WIDTH, SETTINGS_DIALOG_HEIGHT, SETTINGS_DIALOG_MAIN_PADX, SETTINGS_DIALOG_MAIN_PADY, SETTINGS_DIALOG_CONTENT_PADX, SETTINGS_DIALOG_CONTENT_PADY, SETTINGS_DIALOG_SECTION_FONT_SIZE, SETTINGS_DIALOG_SECTION_PADY, SETTINGS_DIALOG_FORMAT_SHELL_BORDER_WIDTH, SETTINGS_DIALOG_FORMAT_SHELL_RADIUS, SETTINGS_DIALOG_FORMAT_SHELL_PADY, SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH, SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT, SETTINGS_DIALOG_FORMAT_BUTTON_PAD, SETTINGS_DIALOG_EXE_LABEL_PADY, SETTINGS_DIALOG_EXAMPLE_FONT_SIZE, SETTINGS_DIALOG_EXAMPLE_PADY, SETTINGS_DIALOG_ENTRY_PADY, SETTINGS_DIALOG_SEPARATOR_HEIGHT, SETTINGS_DIALOG_SEPARATOR_PADY, SETTINGS_DIALOG_SHORTCUTS_LABEL_PADY, SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, SETTINGS_DIALOG_FOOTER_BORDER_WIDTH, SETTINGS_DIALOG_FOOTER_RADIUS, SETTINGS_DIALOG_FOOTER_HEIGHT, SETTINGS_DIALOG_FOOTER_PADX, SETTINGS_DIALOG_FOOTER_PADY, SETTINGS_DIALOG_CLOSE_BUTTON_WIDTH, SETTINGS_DIALOG_CLOSE_BUTTON_HEIGHT, SETTINGS_DIALOG_CLOSE_BUTTON_PADY, SETTINGS_DIALOG_TOGGLE_RADIUS, SETTINGS_DIALOG_TOGGLE_BORDER_WIDTH, SETTINGS_DIALOG_TOGGLE_FONT_SIZE
+from view.ui_constants import FONT_FAMILY_PRIMARY, get_button_tokens, SETTINGS_DIALOG_WIDTH, SETTINGS_DIALOG_HEIGHT, SETTINGS_DIALOG_MAIN_PADX, SETTINGS_DIALOG_MAIN_PADY, SETTINGS_DIALOG_CONTENT_PADX, SETTINGS_DIALOG_CONTENT_PADY, SETTINGS_DIALOG_SECTION_FONT_SIZE, SETTINGS_DIALOG_SECTION_PADY, SETTINGS_DIALOG_FORMAT_SHELL_BORDER_WIDTH, SETTINGS_DIALOG_FORMAT_SHELL_RADIUS, SETTINGS_DIALOG_FORMAT_SHELL_PADY, SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH, SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT, SETTINGS_DIALOG_FORMAT_BUTTON_PAD, SETTINGS_DIALOG_EXE_LABEL_PADY, SETTINGS_DIALOG_EXAMPLE_FONT_SIZE, SETTINGS_DIALOG_EXAMPLE_PADY, SETTINGS_DIALOG_ENTRY_PADY, SETTINGS_DIALOG_SEPARATOR_HEIGHT, SETTINGS_DIALOG_SEPARATOR_PADY, SETTINGS_DIALOG_SHORTCUTS_LABEL_PADY, SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, SETTINGS_DIALOG_TRANSFER_LABEL_PADY, SETTINGS_DIALOG_TRANSFER_BUTTON_PADY, SETTINGS_DIALOG_TRANSFER_LAST_BUTTON_PADY, SETTINGS_DIALOG_TOGGLE_RADIUS, SETTINGS_DIALOG_TOGGLE_BORDER_WIDTH, SETTINGS_DIALOG_TOGGLE_FONT_SIZE
 from view.translations import translate_default
 
 # =============================================================================
 # DIALOGO DE CONFIGURACION GENERAL
 # =============================================================================
+
 
 def _tr_text(parent, key: str, *args):
     tr_callable = getattr(parent, "_tr", None)
@@ -17,9 +18,10 @@ def _tr_text(parent, key: str, *args):
             pass
     return translate_default(key, *args)
 
+
 class SettingsDialog(BaseDialog):
     def __init__(self, parent, current_extension: str = ".txt", current_exe_path: str = "", on_save_callback=None,
-                 on_shortcut_callback=None, persistent: bool = False, defer_show: bool = False):
+                 on_shortcut_callback=None, on_export_callback=None, on_import_callback=None, persistent: bool = False, defer_show: bool = False):
         title = _tr_text(parent, "dlg_settings_title")
         super().__init__(parent, title, persistent=persistent, defer_show=defer_show)
 
@@ -28,6 +30,8 @@ class SettingsDialog(BaseDialog):
         self.current_exe_path = current_exe_path or ""
         self.on_save_callback = on_save_callback
         self.on_shortcut_callback = on_shortcut_callback
+        self.on_export_callback = on_export_callback
+        self.on_import_callback = on_import_callback
         self.result = None
 
         self.geometry(f"{SETTINGS_DIALOG_WIDTH}x{SETTINGS_DIALOG_HEIGHT}")
@@ -143,26 +147,37 @@ class SettingsDialog(BaseDialog):
         _style_button(self.btn_pin_start, "blue")
         self.btn_pin_start.pack(pady=SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, fill="x")
 
-        self.footer_frame = ctk.CTkFrame(
-            self.main_frame,
-            fg_color=_get_color_tuple("bg_panel"),
-            border_width=SETTINGS_DIALOG_FOOTER_BORDER_WIDTH,
-            border_color=_get_color_tuple("border_subtle"),
-            corner_radius=SETTINGS_DIALOG_FOOTER_RADIUS,
-            height=SETTINGS_DIALOG_FOOTER_HEIGHT
-        )
-        self.footer_frame.pack(fill="x", padx=SETTINGS_DIALOG_FOOTER_PADX, pady=SETTINGS_DIALOG_FOOTER_PADY, side="bottom")
-        self.footer_frame.pack_propagate(False)
+        ctk.CTkFrame(self.content_frame, height=SETTINGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line")).pack(fill="x", pady=SETTINGS_DIALOG_SEPARATOR_PADY)
 
-        self.btn_close = ctk.CTkButton(
-            self.footer_frame,
-            text=self.parent_view._tr("btn_ok"),
-            command=self._on_ok,
-            width=SETTINGS_DIALOG_CLOSE_BUTTON_WIDTH,
-            height=SETTINGS_DIALOG_CLOSE_BUTTON_HEIGHT
+        self.lbl_config_transfer = ctk.CTkLabel(
+            self.content_frame,
+            text=self.parent_view._tr("lbl_config_transfer"),
+            font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "bold"),
+            text_color=_get_color_tuple("text")
         )
-        _style_button(self.btn_close, "green")
-        self.btn_close.pack(pady=SETTINGS_DIALOG_CLOSE_BUTTON_PADY)
+        self.lbl_config_transfer.pack(pady=SETTINGS_DIALOG_TRANSFER_LABEL_PADY, anchor="w")
+
+        self.transfer_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        self.transfer_frame.pack(fill="x")
+
+        self.btn_export_config = ctk.CTkButton(
+            self.transfer_frame,
+            text=self.parent_view._tr("btn_export_config"),
+            command=self._trigger_export
+        )
+        _style_button(self.btn_export_config, "blue")
+        self.btn_export_config.pack(pady=SETTINGS_DIALOG_TRANSFER_BUTTON_PADY, fill="x")
+        action_button_height = int(self.btn_export_config.cget("height"))
+
+        self.btn_import_config = ctk.CTkButton(
+            self.transfer_frame,
+            text=self.parent_view._tr("btn_import_config"),
+            command=self._trigger_import,
+            height=action_button_height
+        )
+        _style_button(self.btn_import_config, "green")
+        self.btn_import_config.configure(height=action_button_height)
+        self.btn_import_config.pack(pady=SETTINGS_DIALOG_TRANSFER_LAST_BUTTON_PADY, fill="x")
 
         self._apply_format_button_styles()
 
@@ -200,16 +215,20 @@ class SettingsDialog(BaseDialog):
         self.btn_start.configure(text=self.parent_view._tr("btn_shortcut_start"))
         self.btn_taskbar.configure(text=self.parent_view._tr("btn_shortcut_taskbar"))
         self.btn_pin_start.configure(text=self.parent_view._tr("btn_shortcut_pin_start"))
+        self.lbl_config_transfer.configure(text=self.parent_view._tr("lbl_config_transfer"))
+        self.btn_export_config.configure(text=self.parent_view._tr("btn_export_config"))
+        self.btn_import_config.configure(text=self.parent_view._tr("btn_import_config"))
         self.btn_fmt_txt.configure(text=_tr_text(self.parent_view, "btn_format_txt"))
         self.btn_fmt_md.configure(text=_tr_text(self.parent_view, "btn_format_md"))
-        self.btn_close.configure(text=self.parent_view._tr("btn_ok"))
         self._apply_format_button_styles()
 
-    def load_state(self, current_extension: str, current_exe_path: str, on_save_callback=None, on_shortcut_callback=None):
+    def load_state(self, current_extension: str, current_exe_path: str, on_save_callback=None, on_shortcut_callback=None, on_export_callback=None, on_import_callback=None):
         self.selected_extension = current_extension
         self.current_exe_path = current_exe_path or ""
         self.on_save_callback = on_save_callback
         self.on_shortcut_callback = on_shortcut_callback
+        self.on_export_callback = on_export_callback
+        self.on_import_callback = on_import_callback
         self.result = None
         self.fmt_var.set(self.selected_extension)
         self.entry_exe.delete(0, "end")
@@ -234,6 +253,14 @@ class SettingsDialog(BaseDialog):
         if self.on_shortcut_callback:
             self.on_shortcut_callback(shortcut_type, current_path_input, parent_window=self)
 
+    def _trigger_export(self):
+        if self.on_export_callback:
+            self.on_export_callback(parent_window=self)
+
+    def _trigger_import(self):
+        if self.on_import_callback:
+            self.on_import_callback(parent_window=self)
+
     def _on_ok(self):
         final_ext = self.fmt_var.get()
         final_path = self.entry_exe.get().strip().replace('"', '')
@@ -243,10 +270,10 @@ class SettingsDialog(BaseDialog):
         self._close_with_fade_out()
 
     @classmethod
-    def ask(cls, parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback):
+    def ask(cls, parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback, on_export_callback=None, on_import_callback=None):
         dialog = None
         try:
-            dialog = cls(parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback)
+            dialog = cls(parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback, on_export_callback, on_import_callback)
             parent.wait_window(dialog)
             return dialog.result
         except Exception:
