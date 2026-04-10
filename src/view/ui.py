@@ -61,6 +61,9 @@ class LectorcitoApp(ctk.CTk):
         self._dialog_cache = {}
         self._reveal_target_y = None
         self._is_theme_switching = False
+        self._is_profile_switching = False
+        self._profile_switch_apply_callback = None
+        self._profile_switch_complete_callback = None
         self._background_after_id = None
         self._background_photo = None
 
@@ -500,6 +503,73 @@ class LectorcitoApp(ctk.CTk):
             self.after(MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS, self._fade_in_after_switch)
         else:
             self._is_theme_switching = False
+
+    def switch_profile_animated(self, apply_callback, complete_callback=None):
+        if self._is_theme_switching or self._is_profile_switching:
+            return
+        self._is_profile_switching = True
+        self._profile_switch_apply_callback = apply_callback
+        self._profile_switch_complete_callback = complete_callback
+        self._reveal_target_y = None
+        CustomTooltip.hide_global()
+        self._fade_out_for_profile_switch()
+
+    def _fade_out_for_profile_switch(self):
+        try:
+            alpha = float(self.attributes("-alpha"))
+            if alpha > 0.0:
+                self.attributes("-alpha", max(alpha - MAIN_WINDOW_SWITCH_FADE_OUT_STEP, 0.0))
+                self.after(MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS, self._fade_out_for_profile_switch)
+            else:
+                self.after(MAIN_WINDOW_SWITCH_HOLD_MS, self._apply_profile_after_switch)
+        except Exception:
+            self._finish_profile_switch_immediately()
+
+    def _apply_profile_after_switch(self):
+        try:
+            if callable(self._profile_switch_apply_callback):
+                self._profile_switch_apply_callback()
+            self.update_idletasks()
+            self._restore_window_stack_after_theme_switch()
+            self.attributes("-alpha", 0.0)
+            self._fade_in_after_profile_switch()
+        except Exception:
+            self._finish_profile_switch_immediately()
+
+    def _fade_in_after_profile_switch(self):
+        try:
+            alpha = float(self.attributes("-alpha"))
+        except Exception:
+            alpha = 1.0
+
+        if alpha < 1.0:
+            self.attributes("-alpha", min(alpha + MAIN_WINDOW_SWITCH_FADE_IN_STEP, 1.0))
+            self.after(MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS, self._fade_in_after_profile_switch)
+        else:
+            self._is_profile_switching = False
+            callback = self._profile_switch_complete_callback
+            self._profile_switch_apply_callback = None
+            self._profile_switch_complete_callback = None
+            if callable(callback):
+                self.after(100, callback)
+
+    def _finish_profile_switch_immediately(self):
+        self._is_profile_switching = False
+        apply_callback = self._profile_switch_apply_callback
+        complete_callback = self._profile_switch_complete_callback
+        self._profile_switch_apply_callback = None
+        self._profile_switch_complete_callback = None
+        try:
+            if callable(apply_callback):
+                apply_callback()
+        except Exception:
+            pass
+        try:
+            self.attributes("-alpha", 1.0)
+        except Exception:
+            pass
+        if callable(complete_callback):
+            self.after(100, complete_callback)
 
     def prepare_soft_refresh(self):
         CustomTooltip.hide_global()

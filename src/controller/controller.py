@@ -88,7 +88,7 @@ class LectorcitoController:
 
         if path:
             self.config["last_read_folder"] = path
-            config.save_config(self.config)
+            handlers.save_preferences_silent(self)
             self.start_processing(path)
 
     def start_processing(self, folder_path: str):

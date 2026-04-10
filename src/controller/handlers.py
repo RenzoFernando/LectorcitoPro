@@ -575,12 +575,32 @@ def manage_profiles(controller):
     _open_profiles_dialog_safe(controller)
 
 
-def _save_meta_immediate(controller, profiles_snapshot):
-    clean_meta = profiles_snapshot.copy()
-    for pid, data in clean_meta.items():
+def _apply_runtime_config(controller, runtime_config):
+    controller.config = runtime_config
+    try:
+        controller.view.config = controller.config
+    except Exception:
+        pass
+
+
+def _save_meta_immediate(controller, profiles_snapshot, active_id=None):
+    clean_meta = {}
+    for pid, data in (profiles_snapshot or {}).items():
         if data == "NEW":
             clean_meta[pid] = config.get_blank_profile()
-    controller.config["_profiles_meta"] = clean_meta
+        elif isinstance(data, dict):
+            clean_meta[pid] = config.build_profile_config(data, pid)
+
+    if "default" not in clean_meta:
+        clean_meta["default"] = config.build_profile_config(config.DEFAULT_CONFIG_VALUES, "default")
+
+    current_active_id = controller.config.get("_active_profile_id", "default")
+    if current_active_id in clean_meta:
+        clean_meta[current_active_id] = config.extract_profile_from_runtime_config(controller.config, current_active_id)
+
+    target_active_id = active_id if active_id in clean_meta else current_active_id if current_active_id in clean_meta else "default"
+    runtime_config = config.build_runtime_config(clean_meta, target_active_id)
+    _apply_runtime_config(controller, runtime_config)
     save_preferences_silent(controller)
 
 
@@ -589,13 +609,13 @@ def _open_profiles_dialog_safe(controller):
     active_id = controller.config.get("_active_profile_id", "default")
 
     if not profiles:
-        profiles = {"default": config.DEFAULT_CONFIG_VALUES.copy()}
+        profiles = {"default": config.build_profile_config(config.DEFAULT_CONFIG_VALUES, "default")}
 
     dialog = controller.view.get_profiles_dialog()
     dialog.load_state(
         profiles_meta=profiles,
         active_id=active_id,
-        on_save_callback=lambda p: _save_meta_immediate(controller, p)
+        on_save_callback=lambda p, a: _save_meta_immediate(controller, p, a)
     )
     dialog.present()
     result = dialog.wait_result()
@@ -606,23 +626,21 @@ def _open_profiles_dialog_safe(controller):
 
 
 def _switch_profile_sequence(controller, new_active_id, new_profiles_meta):
-    controller.view.prepare_soft_refresh()
-    controller.view.after(PROFILE_SWITCH_FADE_DELAY_MS, lambda: _load_profile_data(controller, new_active_id, new_profiles_meta))
+    controller.view.switch_profile_animated(
+        apply_callback=lambda: _load_profile_data(controller, new_active_id, new_profiles_meta),
+        complete_callback=lambda: _show_app_after_switch(controller, new_active_id)
+    )
 
 
 def _load_profile_data(controller, new_active_id, new_profiles_meta):
     try:
-        if new_active_id in new_profiles_meta and new_profiles_meta[new_active_id] == "NEW":
-            selected_profile_data = config.get_blank_profile()
-            new_profiles_meta[new_active_id] = selected_profile_data
-        else:
-            selected_profile_data = new_profiles_meta[new_active_id]
+        merged_profiles = config.clone_profiles_meta(new_profiles_meta)
+        current_active_id = controller.config.get("_active_profile_id", "default")
+        if current_active_id in merged_profiles:
+            merged_profiles[current_active_id] = config.extract_profile_from_runtime_config(controller.config, current_active_id)
 
-        controller.config = selected_profile_data.copy()
-        controller.config["_profiles_meta"] = new_profiles_meta
-        controller.config["_active_profile_id"] = new_active_id
-
-        save_preferences_silent(controller)
+        runtime_config = config.build_runtime_config(merged_profiles, new_active_id)
+        _apply_runtime_config(controller, runtime_config)
         controller._update_active_lecturas_path()
 
         controller.view.lang = controller.config["language"]
@@ -632,18 +650,14 @@ def _load_profile_data(controller, new_active_id, new_profiles_meta):
         controller.view.current_theme = new_theme
         customtkinter.set_appearance_mode(new_theme)
         controller.view.apply_theme()
+        save_preferences_silent(controller)
 
     except Exception as e:
         print(f"Error cargando perfil: {e}")
 
-    controller.view.after(300, lambda: _show_app_after_switch(controller, new_active_id))
-
 
 def _show_app_after_switch(controller, new_active_id):
-    controller.view.complete_soft_refresh()
-    controller.view.after(100, lambda:
     controller.view.show_message("info_title", "msg_profile_changed", new_active_id.capitalize())
-                          )
 
 
 # =============================================================================
@@ -660,13 +674,8 @@ def restore_default_settings(controller):
 def _execute_restore(controller):
     try:
         config.delete_config_file()
-        default_profile = config.DEFAULT_CONFIG_VALUES.copy()
-
-        controller.config = default_profile.copy()
-        controller.config["_profiles_meta"] = {"default": default_profile.copy()}
-        controller.config["_active_profile_id"] = "default"
-
-        save_preferences_silent(controller)
+        runtime_config = config.build_runtime_config({"default": config.DEFAULT_CONFIG_VALUES}, "default")
+        _apply_runtime_config(controller, runtime_config)
         controller._update_active_lecturas_path()
 
         controller.view.lang = controller.config["language"]
@@ -676,6 +685,7 @@ def _execute_restore(controller):
         controller.view.current_theme = new_theme
         customtkinter.set_appearance_mode(new_theme)
         controller.view.apply_theme()
+        save_preferences_silent(controller)
     except Exception as e:
         print(f"Error restaurando: {e}")
 
@@ -690,6 +700,11 @@ def _finish_restore(controller):
 
 
 def save_preferences_silent(controller):
+    active_id = controller.config.get("_active_profile_id", "default")
+    profiles = config.clone_profiles_meta(controller.config.get("_profiles_meta", {}))
+    profiles[active_id] = config.extract_profile_from_runtime_config(controller.config, active_id)
+    runtime_config = config.build_runtime_config(profiles, active_id)
+    _apply_runtime_config(controller, runtime_config)
     config.save_config(controller.config)
 
 

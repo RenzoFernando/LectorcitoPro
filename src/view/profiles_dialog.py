@@ -1,3 +1,4 @@
+import copy
 import customtkinter as ctk
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry, _style_scrollable, ConfirmDialog
 from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, PROFILES_DIALOG_WIDTH, PROFILES_DIALOG_HEIGHT, PROFILES_DIALOG_TITLE_FONT_SIZE, PROFILES_DIALOG_TITLE_PADY, PROFILES_DIALOG_SCROLL_HEIGHT, PROFILES_DIALOG_SCROLL_PADX, PROFILES_DIALOG_SCROLL_PADY, PROFILES_DIALOG_BOTTOM_PADX, PROFILES_DIALOG_BOTTOM_PADY, PROFILES_DIALOG_ENTRY_PADX, PROFILES_DIALOG_ADD_BUTTON_WIDTH, PROFILE_ITEM_BORDER_WIDTH, PROFILE_ITEM_RADIUS, PROFILE_ITEM_PADY, PROFILE_ITEM_FONT_SIZE, PROFILE_ITEM_LABEL_PADX, PROFILE_ITEM_LABEL_PADY, PROFILE_ITEM_DELETE_BUTTON_SIZE, PROFILE_ITEM_DELETE_PADX
@@ -93,7 +94,7 @@ class ProfilesDialog(BaseDialog):
         self._redraw_list()
 
     def load_state(self, profiles_meta: dict, active_id: str, on_save_callback=None):
-        self.profiles = profiles_meta.copy() if profiles_meta else {"default": {}}
+        self.profiles = copy.deepcopy(profiles_meta) if profiles_meta else {"default": {}}
         self.active_id = active_id if active_id in self.profiles else "default"
         self.on_save_callback = on_save_callback
         self.result = None
@@ -175,7 +176,7 @@ class ProfilesDialog(BaseDialog):
         self.entry_new.delete(0, "end")
 
         if self.on_save_callback:
-            self.on_save_callback(self.profiles)
+            self.on_save_callback(copy.deepcopy(self.profiles), self.active_id)
 
         self._redraw_list()
 
@@ -189,7 +190,7 @@ class ProfilesDialog(BaseDialog):
                 self.active_id = "default"
 
             if self.on_save_callback:
-                self.on_save_callback(self.profiles)
+                self.on_save_callback(copy.deepcopy(self.profiles), self.active_id)
 
             self._redraw_list()
 
@@ -207,7 +208,7 @@ class ProfilesDialog(BaseDialog):
             pass
 
     def _on_ok(self, event=None):
-        self.result = (self.active_id, self.profiles)
+        self.result = (self.active_id, copy.deepcopy(self.profiles))
         self._close_with_fade_out()
 
     @classmethod
