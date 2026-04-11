@@ -1,26 +1,25 @@
 <div align="center">
   <h1>Lectorcito Pro</h1>
   
-  <img src="https://raw.githubusercontent.com/RenzoFernando/LectorcitoPro/main/resources/branding/lector.png" alt="Logo de Lectorcito Pro" width="200">
-
+  <img src="https://raw.githubusercontent.com/RenzoFernando/LectorcitoPro/main/resources/branding/lector.png" alt="Logo de Lectorcito Pro" width="175">
   <br>
-  <br>
-  
   <p>
-    <a href="https://renzofernando.github.io/LectorcitoPro/">
-      <img src="https://img.shields.io/badge/ABRIR%20PÁGINA%20OFICIAL-2F6FE4?style=for-the-badge" alt="Abrir página oficial">
-    </a>
     <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest">
       <img src="https://img.shields.io/github/v/release/RenzoFernando/LectorcitoPro?style=for-the-badge&label=VERSION%20Actual&color=blue" alt="Release Actual">
     </a>
     <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest">
-      <img src="https://img.shields.io/badge/VER%20DESCARGAS%20Y%20RELEASES-2E9D46?style=for-the-badge" alt="Ver descargas y releases">
+      <img src="https://img.shields.io/badge/VER%20RELEASES-2E9D46?style=for-the-badge" alt="Ver descargas y releases">
     </a>
+    <a href="https://renzofernando.github.io/LectorcitoPro/">
+      <img src="https://img.shields.io/badge/VER%20PÁGINA%20Y%20DESCARGAR-2F6FE4?style=for-the-badge" alt="Abrir página oficial">
+    </a>
+    <br>
+    <br>
+    <strong>
+      Herramienta de escritorio profesional para auditoría de código, documentación técnica y consolidación de contextos para Inteligencia Artificial.
+    </strong>
   </p>
 
-  <p>
-    <strong>Herramienta de escritorio profesional para auditoría de código, documentación técnica y consolidación de contextos para Inteligencia Artificial.</strong>
-  </p>
 </div>
 
 ---

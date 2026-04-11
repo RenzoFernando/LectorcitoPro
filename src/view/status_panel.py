@@ -1,5 +1,6 @@
 from __future__ import annotations
 import time
+import tkinter as tk
 import customtkinter as ctk
 
 from view.gradient_progress import GradientProgressBar
@@ -19,9 +20,9 @@ def _translate_status(tr_callable, key: str):
             pass
     return translate_default(key)
 
-class StatusPanel(ctk.CTkFrame):
+class StatusPanel(tk.Frame):
     def __init__(self, parent, *, min_visible_seconds: float = STATUS_PANEL_DEFAULT_MIN_VISIBLE_SECONDS):
-        super().__init__(parent, fg_color="transparent")
+        super().__init__(parent, bg=get_theme_tokens("Light")["bg_base"], bd=0, highlightthickness=0)
         self.grid_columnconfigure(0, weight=1)
 
         self._min_visible_s = float(min_visible_seconds)
@@ -41,23 +42,38 @@ class StatusPanel(ctk.CTkFrame):
         self._current_theme = "Light"
 
         # --- Construccion UI ---
-        self.status_panel = ctk.CTkFrame(self, corner_radius=STATUS_PANEL_CORNER_RADIUS, border_width=STATUS_PANEL_BORDER_WIDTH)
+        self.status_panel = ctk.CTkFrame(
+            self,
+            corner_radius=STATUS_PANEL_CORNER_RADIUS,
+            border_width=STATUS_PANEL_BORDER_WIDTH,
+            bg_color="transparent"
+        )
         self.status_panel.grid(row=0, column=0, padx=STATUS_PANEL_PADX, pady=STATUS_PANEL_PADY, sticky="ew")
         self.status_panel.grid_columnconfigure(0, weight=1)
 
-        top_row = ctk.CTkFrame(self.status_panel, fg_color="transparent")
+        top_row = ctk.CTkFrame(self.status_panel, fg_color="transparent", bg_color="transparent")
         top_row.grid(row=0, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_TOP_ROW_PADY, sticky="ew")
         top_row.grid_columnconfigure(0, weight=1)
         top_row.grid_columnconfigure(1, weight=0)
         top_row.grid_columnconfigure(2, weight=0)
 
         self.lbl_status = ctk.CTkLabel(
-            top_row, text="", font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_STATUS_FONT_SIZE, "normal"), anchor="w"
+            top_row,
+            text="",
+            font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_STATUS_FONT_SIZE, "normal"),
+            anchor="w",
+            fg_color="transparent",
+            bg_color="transparent"
         )
         self.lbl_status.grid(row=0, column=0, sticky="w")
 
         self.lbl_percent = ctk.CTkLabel(
-            top_row, text="0%", font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_PERCENT_FONT_SIZE, "bold"), anchor="e"
+            top_row,
+            text="0%",
+            font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_PERCENT_FONT_SIZE, "bold"),
+            anchor="e",
+            fg_color="transparent",
+            bg_color="transparent"
         )
         self.lbl_percent.grid(row=0, column=1, sticky="e", padx=STATUS_PANEL_PERCENT_PADX)
 
@@ -82,12 +98,17 @@ class StatusPanel(ctk.CTkFrame):
         self.progress_bar.grid(row=1, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_PROGRESS_PADY, sticky="ew")
         self.progress_bar.set(0.0)
 
-        self.file_row = ctk.CTkFrame(self.status_panel, fg_color="transparent")
+        self.file_row = ctk.CTkFrame(self.status_panel, fg_color="transparent", bg_color="transparent")
         self.file_row.grid(row=2, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_FILE_ROW_PADY, sticky="ew")
         self.file_row.grid_columnconfigure(1, weight=1)
 
         self.lbl_processing_prefix = ctk.CTkLabel(
-            self.file_row, text="", font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_FILE_PREFIX_FONT_SIZE, "bold"), anchor="w"
+            self.file_row,
+            text="",
+            font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_FILE_PREFIX_FONT_SIZE, "bold"),
+            anchor="w",
+            fg_color="transparent",
+            bg_color="transparent"
         )
         self.lbl_processing_prefix.grid(row=0, column=0, sticky="w", padx=(0, STATUS_PANEL_PREFIX_GAP))
 
@@ -98,6 +119,8 @@ class StatusPanel(ctk.CTkFrame):
             anchor="w",
             justify="left",
             wraplength=STATUS_PANEL_FILE_WRAP_DEFAULT,
+            fg_color="transparent",
+            bg_color="transparent"
         )
         self.lbl_current_file.grid(row=0, column=1, sticky="ew")
 
@@ -145,20 +168,40 @@ class StatusPanel(ctk.CTkFrame):
         if self._dots_after_id is None:
             self.lbl_status.configure(text=self._status_base)
 
+    def set_backdrop_color(self, color: str):
+        try:
+            self.configure(bg=color)
+        except Exception:
+            pass
+        try:
+            self.status_panel.configure(bg_color=color)
+        except Exception:
+            pass
+
     def apply_theme(self, theme_name: str):
         self._current_theme = theme_name
         theme = get_theme_tokens(theme_name)
         red_btn = get_button_tokens("red")
 
+        self.configure(bg=theme["bg_base"])
+
         try:
-            self.status_panel.configure(fg_color=theme["bg_card"], border_color=theme["border_subtle"], border_width=STATUS_PANEL_BORDER_WIDTH)
+            self.status_panel.configure(bg_color="transparent", fg_color=theme["bg_card"], border_color=theme["border_subtle"], border_width=STATUS_PANEL_BORDER_WIDTH)
         except Exception:
             self.status_panel.configure(fg_color=theme["bg_card"])
 
-        self.lbl_status.configure(text_color=theme["text_primary"])
-        self.lbl_percent.configure(text_color=theme["text_primary"])
-        self.lbl_processing_prefix.configure(text_color=theme["accent_blue"])
-        self.lbl_current_file.configure(text_color=theme["text_secondary"])
+        try:
+            self.file_row.configure(bg_color="transparent")
+            top_row = self.lbl_status.master
+            if top_row is not None:
+                top_row.configure(bg_color="transparent")
+        except Exception:
+            pass
+
+        self.lbl_percent.configure(bg_color="transparent", text_color=theme["text_primary"])
+        self.lbl_processing_prefix.configure(bg_color="transparent", text_color=theme["accent_blue"])
+        self.lbl_current_file.configure(bg_color="transparent", text_color=theme["text_secondary"])
+        self.lbl_status.configure(bg_color="transparent", text_color=theme["text_primary"])
         self.btn_cancel.configure(
             fg_color=red_btn["bg"],
             hover_color=red_btn["hover"],

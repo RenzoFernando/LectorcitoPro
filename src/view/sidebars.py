@@ -1,4 +1,6 @@
+
 import customtkinter as ctk
+import tkinter as tk
 from tkinter import Canvas
 from PIL import Image, ImageDraw, ImageTk
 from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_theme_tokens, get_button_tokens, SIDEBAR_WIDTH, BTN_H_ICON, NEUTRAL_WHITE, NEUTRAL_BLACK, LEFT_SIDEBAR_HEIGHT, SIDEBAR_REPAINT_DELAY_MS, LEFT_SIDEBAR_FONT_SIZE, SIDEBAR_CLICK_LOCK_DELAY_MS, PILL_TEXT_BUTTON_FONT_SIZE, PILL_TEXT_HORIZONTAL_INSET, RIGHT_SIDEBAR_BUTTON_SPACING, RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH
@@ -90,12 +92,31 @@ def _trim_render_cache(cache: dict, limit: int = 12):
             break
 
 
+def _build_surface_image(widget, backdrop_provider, width: int, height: int, outside_bg: str, scale: int = 4):
+    target_size = (max(1, int(width * scale)), max(1, int(height * scale)))
+    signature = None
+
+    if callable(backdrop_provider):
+        try:
+            patch, signature = backdrop_provider(widget, width, height)
+        except Exception:
+            patch, signature = None, None
+        if isinstance(patch, Image.Image):
+            patch = patch.convert("RGBA")
+            if patch.size != target_size:
+                resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
+                patch = patch.resize(target_size, resample)
+            return patch.copy(), signature
+
+    return Image.new("RGBA", target_size, (*_hex_to_rgb(outside_bg), 255)), signature
+
+
 # =============================================================================
 # BARRA LATERAL IZQUIERDA (VERTICAL)
 # =============================================================================
 
 class LeftSidebar(ctk.CTkFrame):
-    def __init__(self, parent, text: str, height: int = 415):
+    def __init__(self, parent, text: str, height: int = 415, backdrop_provider=None):
         super().__init__(parent, width=SIDEBAR_WIDTH, height=height, fg_color="transparent")
         self.pack_propagate(False)
 
@@ -110,6 +131,7 @@ class LeftSidebar(ctk.CTkFrame):
 
         self._border_w = 2
         self._border_color = None
+        self._backdrop_provider = backdrop_provider
 
         self._canvas = Canvas(self, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
         self._canvas.pack(fill="both", expand=True)
@@ -127,6 +149,10 @@ class LeftSidebar(ctk.CTkFrame):
         if cnf:
             kwargs.update(cnf)
 
+        if "backdrop_provider" in kwargs:
+            self._backdrop_provider = kwargs.pop("backdrop_provider")
+            self._render_cache.clear()
+
         if "state" in kwargs:
             self._state = kwargs.pop("state")
         self._paint_signature = None
@@ -138,6 +164,11 @@ class LeftSidebar(ctk.CTkFrame):
         self._text = text
         self._paint_signature = None
         self._schedule_paint()
+
+    def refresh_backdrop(self):
+        self._paint_signature = None
+        self._render_cache.clear()
+        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
 
     def apply_theme(self, theme_name: str):
         theme = get_theme_tokens(theme_name)
@@ -197,8 +228,6 @@ class LeftSidebar(ctk.CTkFrame):
         scale = 4
         W, H = w * scale, h * scale
 
-        outside_rgb = _hex_to_rgb(self._outside_bg)
-
         pill_fill = self._pill_bg
         text_fill = self._text_color
         border_fill = self._border_color
@@ -209,7 +238,9 @@ class LeftSidebar(ctk.CTkFrame):
             if border_fill:
                 border_fill = _mix(border_fill, self._outside_bg, 0.35)
 
-        paint_signature = (w, h, self._outside_bg, pill_fill, self._pill_bg_mid, self._pill_bg_end, text_fill, border_fill, self._state, self._text)
+        img, backdrop_signature = _build_surface_image(self._canvas, self._backdrop_provider, w, h, self._outside_bg, scale)
+
+        paint_signature = (w, h, self._outside_bg, pill_fill, self._pill_bg_mid, self._pill_bg_end, text_fill, border_fill, self._state, self._text, backdrop_signature)
         if paint_signature == self._paint_signature and self._canvas.find_all():
             return
 
@@ -229,8 +260,6 @@ class LeftSidebar(ctk.CTkFrame):
             return
 
         border_rgb = _hex_to_rgb(border_fill) if border_fill else None
-
-        img = Image.new("RGBA", (W, H), outside_rgb)
 
         pad = 2 * scale
         x1, y1 = pad, pad
@@ -283,7 +312,8 @@ class PillIconButton(ctk.CTkFrame):
             hover_gradient_start: str | None = None,
             hover_gradient_mid: str | None = None,
             hover_gradient_end: str | None = None,
-            command=None
+            command=None,
+            backdrop_provider=None
     ):
         super().__init__(parent, width=width, height=height, fg_color="transparent")
         self.pack_propagate(False)
@@ -301,6 +331,7 @@ class PillIconButton(ctk.CTkFrame):
 
         self._hovered = False
         self._state = "normal"
+        self._backdrop_provider = backdrop_provider
         self._explicit_border = border_color
         self._border_color = border_color if border_color else _auto_border(self._fg_color)
         self._hover_border_color = _auto_border(self._hover_color)
@@ -344,6 +375,10 @@ class PillIconButton(ctk.CTkFrame):
                 self._canvas.configure(bg=self._outside_bg)
             except Exception:
                 pass
+
+        if "backdrop_provider" in kwargs:
+            self._backdrop_provider = kwargs.pop("backdrop_provider")
+            self._render_cache.clear()
 
         if "fg_color" in kwargs:
             self._fg_color = kwargs.pop("fg_color")
@@ -412,6 +447,11 @@ class PillIconButton(ctk.CTkFrame):
         if callable(self._command):
             return self._command()
         return None
+
+    def refresh_backdrop(self):
+        self._paint_signature = None
+        self._render_cache.clear()
+        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
 
     def _on_enter(self, event=None):
         if self._state == "disabled":
@@ -537,7 +577,9 @@ class PillIconButton(ctk.CTkFrame):
             border = _mix(border, self._outside_bg, 0.35)
             active_stops = _mix_stops(active_stops, self._outside_bg, 0.35)
 
-        paint_signature = (w, h, self._outside_bg, fill, border, tuple(active_stops or []), self._state, self._hovered, self._border_w, bool(self._image))
+        img, backdrop_signature = _build_surface_image(self._canvas, self._backdrop_provider, w, h, self._outside_bg, scale)
+
+        paint_signature = (w, h, self._outside_bg, fill, border, tuple(active_stops or []), self._state, self._hovered, self._border_w, bool(self._image), backdrop_signature)
         if paint_signature == self._paint_signature and self._canvas.find_all():
             return
 
@@ -549,10 +591,7 @@ class PillIconButton(ctk.CTkFrame):
             self._paint_signature = paint_signature
             return
 
-        outside_rgb = _hex_to_rgb(self._outside_bg)
         border_rgb = _hex_to_rgb(border) if border else None
-
-        img = Image.new("RGBA", (W, H), outside_rgb)
 
         pad = 2 * scale
         x1, y1 = pad, pad
@@ -915,16 +954,17 @@ class PillTextButton(ctk.CTkFrame):
 # BARRA LATERAL DERECHA (ICONOS)
 # =============================================================================
 
-class RightSidebar(ctk.CTkFrame):
-    def __init__(self, parent, icons: dict, current_theme: str):
+class RightSidebar(tk.Frame):
+    def __init__(self, parent, icons: dict, current_theme: str, backdrop_provider=None):
         bg = get_theme_tokens(current_theme)["bg_base"]
-        super().__init__(parent, fg_color="transparent")
+        super().__init__(parent, bg=bg, bd=0, highlightthickness=0)
         self.pack(expand=True, anchor="center")
 
         self.icons = icons
         self.buttons: dict[str, PillIconButton] = {}
+        self._backdrop_provider = backdrop_provider
 
-        self._button_container = ctk.CTkFrame(self, fg_color="transparent")
+        self._button_container = tk.Frame(self, bg=bg, bd=0, highlightthickness=0)
         self._button_container.pack(expand=True, anchor="center")
 
         keys = ["ver", "nover", "etiqueta", "theme_icon", "traducir", "restaurar", "perfil", "github", "info",
@@ -960,8 +1000,16 @@ class RightSidebar(ctk.CTkFrame):
             hover_gradient_mid=theme_keys.get("sidebar_pill_hover_mid", _mix(theme_keys["sidebar_pill_hover_start"], theme_keys["sidebar_pill_hover_end"], 0.48)),
             hover_gradient_end=theme_keys["sidebar_pill_hover_end"],
             border_color=theme_keys["border_strong"],
-            border_width=RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH
+            border_width=RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH,
+            backdrop_provider=self._backdrop_provider
         )
+
+    def refresh_backdrop(self):
+        for btn in self.buttons.values():
+            try:
+                btn.refresh_backdrop()
+            except Exception:
+                pass
 
     def apply_theme(self, theme_name: str):
         is_light = theme_name == "Light"
@@ -969,8 +1017,8 @@ class RightSidebar(ctk.CTkFrame):
 
         bg = theme_keys["bg_base"]
         try:
-            self.configure(fg_color="transparent")
-            self._button_container.configure(fg_color="transparent")
+            self.configure(bg=bg)
+            self._button_container.configure(bg=bg)
         except Exception:
             pass
 

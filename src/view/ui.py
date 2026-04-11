@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import customtkinter as ctk
@@ -7,7 +8,7 @@ import os
 import random
 import webbrowser
 
-from PIL import Image, ImageDraw, ImageFilter, ImageTk
+from PIL import Image, ImageDraw, ImageFilter, ImageTk, ImageStat
 
 from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
 from view.translations import TRANSLATIONS, translate_default
@@ -66,6 +67,10 @@ class LectorcitoApp(ctk.CTk):
         self._profile_switch_complete_callback = None
         self._background_after_id = None
         self._background_photo = None
+        self._background_image = None
+        self._background_cache_key = None
+        self._background_revision = 0
+        self._surface_backdrops = {}
 
         self.title(APP_DISPLAY_NAME)
         self._app_w = MAIN_WINDOW_WIDTH
@@ -184,6 +189,182 @@ class LectorcitoApp(ctk.CTk):
             return random.choice(entry).format(*args)
         return entry.format(*args)
 
+    def _build_atmosphere_image(self, size: tuple[int, int], theme: dict):
+        width, height = size
+        width = max(1, int(width))
+        height = max(1, int(height))
+        scale = 2
+        W, H = width * scale, height * scale
+        resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
+        canvas = Image.new("RGBA", (W, H), with_alpha(theme["bg_base"], 255))
+        is_light = self.current_theme == "Light"
+
+        def add_ellipse(bounds, color, alpha, blur):
+            layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            ImageDraw.Draw(layer).ellipse(bounds, fill=with_alpha(color, alpha))
+            layer = layer.filter(ImageFilter.GaussianBlur(max(1, int(blur))))
+            canvas.alpha_composite(layer)
+
+        def add_band(bounds, color, alpha, blur):
+            layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            radius = max(1, int((bounds[3] - bounds[1]) * 0.52))
+            ImageDraw.Draw(layer).rounded_rectangle(bounds, radius=radius, fill=with_alpha(color, alpha))
+            layer = layer.filter(ImageFilter.GaussianBlur(max(1, int(blur))))
+            canvas.alpha_composite(layer)
+
+        top_color = theme["bg_elevated"] if is_light else theme["accent_blue"]
+        bottom_color = theme["shadow_soft"] if is_light else theme["shadow_strong"]
+        top_rgb = hex_to_rgb(top_color)
+        bottom_rgb = hex_to_rgb(bottom_color)
+        depth = Image.new("RGBA", (1, H), (0, 0, 0, 0))
+        depth_pixels = depth.load()
+        top_limit = 0.52 if is_light else 0.48
+        bottom_start = 0.42 if is_light else 0.40
+        top_alpha_strength = 6 if is_light else 5
+        bottom_alpha_strength = 4 if is_light else 6
+
+        for y in range(H):
+            t = y / max(1, H - 1)
+            top_alpha = int(max(0.0, 1.0 - (t / top_limit)) * top_alpha_strength) if t <= top_limit else 0
+            bottom_alpha = int(max(0.0, (t - bottom_start) / max(0.001, 1.0 - bottom_start)) * bottom_alpha_strength) if t >= bottom_start else 0
+            if bottom_alpha > top_alpha:
+                depth_pixels[0, y] = (*bottom_rgb, bottom_alpha)
+            else:
+                depth_pixels[0, y] = (*top_rgb, top_alpha)
+
+        canvas.alpha_composite(depth.resize((W, H), resample))
+
+        if is_light:
+            add_ellipse((int(W * 0.42), -int(H * 0.20), int(W * 1.10), int(H * 0.32)), theme["accent_blue"], 9, int(H * 0.20))
+            add_ellipse((int(W * 0.56), -int(H * 0.22), int(W * 1.18), int(H * 0.30)), theme["accent_purple"], 8, int(H * 0.21))
+            add_ellipse((-int(W * 0.22), int(H * 0.70), int(W * 0.44), int(H * 1.12)), theme["glow_blue_soft"], 10, int(H * 0.24))
+            add_ellipse((-int(W * 0.12), int(H * 0.80), int(W * 0.36), int(H * 1.14)), theme["bg_elevated"], 6, int(H * 0.20))
+        else:
+            add_ellipse((int(W * 0.40), -int(H * 0.22), int(W * 1.10), int(H * 0.30)), theme["accent_blue"], 7, int(H * 0.22))
+            add_ellipse((int(W * 0.58), -int(H * 0.20), int(W * 1.18), int(H * 0.28)), theme["accent_purple"], 6, int(H * 0.20))
+            add_ellipse((-int(W * 0.24), int(H * 0.68), int(W * 0.46), int(H * 1.14)), theme["glow_purple_soft"], 9, int(H * 0.26))
+            add_ellipse((-int(W * 0.18), int(H * 0.74), int(W * 0.36), int(H * 1.10)), theme["glow_blue_soft"], 6, int(H * 0.22))
+
+        return canvas.resize((width, height), resample)
+
+    def _register_surface_backdrop(self, widget):
+        try:
+            label = tk.Label(widget, bd=0, highlightthickness=0)
+            label.place(x=0, y=0, relwidth=1.0, relheight=1.0)
+            label.lower()
+            widget.bind("<Configure>", lambda event: self._schedule_background_refresh(), add="+")
+            self._surface_backdrops[widget] = {"label": label, "photo": None}
+        except Exception:
+            pass
+
+    def _refresh_surface_backdrops(self):
+        theme = get_theme_tokens(self.current_theme)
+        stale_widgets = []
+        for widget, payload in self._surface_backdrops.items():
+            try:
+                label = payload.get("label")
+                if not widget.winfo_exists() or label is None or not label.winfo_exists():
+                    stale_widgets.append(widget)
+                    continue
+                patch, _ = self.get_backdrop_patch(widget)
+                if patch is None:
+                    payload["photo"] = None
+                    label.configure(image="", bg=theme["bg_base"])
+                else:
+                    photo = ImageTk.PhotoImage(patch)
+                    payload["photo"] = photo
+                    label.configure(image=photo, bg=theme["bg_base"])
+                label.place(x=0, y=0, relwidth=1.0, relheight=1.0)
+                label.lower()
+            except Exception:
+                pass
+        for widget in stale_widgets:
+            self._surface_backdrops.pop(widget, None)
+
+    def _refresh_background_dependents(self):
+        try:
+            if hasattr(self, "left_sidebar") and self.left_sidebar.winfo_exists():
+                self.left_sidebar.refresh_backdrop()
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "right_sidebar") and self.right_sidebar.winfo_exists():
+                self.right_sidebar.refresh_backdrop()
+        except Exception:
+            pass
+
+    def _mean_hex_from_patch(self, patch):
+        try:
+            theme = get_theme_tokens(self.current_theme)
+            base = Image.new("RGBA", patch.size, with_alpha(theme["bg_base"], 255))
+            merged = Image.alpha_composite(base, patch).convert("RGB")
+            stat = ImageStat.Stat(merged)
+            r, g, b = [max(0, min(255, int(round(x)))) for x in stat.mean[:3]]
+            return f"#{r:02X}{g:02X}{b:02X}"
+        except Exception:
+            return get_theme_tokens(self.current_theme)["bg_base"]
+
+    def _sample_backdrop_color(self, widget, *, width=None, height=None):
+        patch, _ = self.get_backdrop_patch(widget, width=width, height=height)
+        if patch is None:
+            return get_theme_tokens(self.current_theme)["bg_base"]
+        return self._mean_hex_from_patch(patch)
+
+    def _refresh_local_surface_colors(self):
+        theme = get_theme_tokens(self.current_theme)
+
+        try:
+            if hasattr(self, "main_menu_frame") and self.main_menu_frame.winfo_exists():
+                menu_bg = self._sample_backdrop_color(self.main_menu_frame)
+                self.main_menu_frame.configure(bg_color=menu_bg, fg_color=theme["bg_panel"], border_color=theme["border_subtle"])
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "status_panel") and self.status_panel.winfo_exists():
+                status_target = getattr(self.status_panel, "status_panel", self.status_panel)
+                status_bg = self._sample_backdrop_color(status_target)
+                self.status_panel.set_backdrop_color(status_bg)
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "header_frame") and self.header_frame.winfo_exists():
+                header_bg = self._sample_backdrop_color(self.header_frame)
+                self.header_frame.configure(bg=header_bg)
+                if hasattr(self, "lbl_title") and self.lbl_title.winfo_exists():
+                    self.lbl_title.configure(bg_color="transparent", fg_color="transparent")
+                if hasattr(self, "lbl_greet") and self.lbl_greet.winfo_exists():
+                    self.lbl_greet.configure(bg_color="transparent", fg_color="transparent", text_color=theme["text_primary"])
+        except Exception:
+            pass
+
+    def get_backdrop_patch(self, widget, width=None, height=None):
+        if self._background_image is None:
+            return None, None
+        try:
+            patch_width = max(1, int(width if width is not None else widget.winfo_width()))
+            patch_height = max(1, int(height if height is not None else widget.winfo_height()))
+            origin_x = int(widget.winfo_rootx() - self._background_canvas.winfo_rootx())
+            origin_y = int(widget.winfo_rooty() - self._background_canvas.winfo_rooty())
+        except Exception:
+            return None, None
+
+        patch = Image.new("RGBA", (patch_width, patch_height), with_alpha(get_theme_tokens(self.current_theme)["bg_base"], 255))
+        source = self._background_image
+        left = max(0, origin_x)
+        top = max(0, origin_y)
+        right = min(source.width, origin_x + patch_width)
+        bottom = min(source.height, origin_y + patch_height)
+
+        if right > left and bottom > top:
+            crop = source.crop((left, top, right, bottom))
+            paste_x = max(0, -origin_x)
+            paste_y = max(0, -origin_y)
+            patch.paste(crop, (paste_x, paste_y), crop)
+
+        return patch, (self._background_revision, origin_x, origin_y, patch_width, patch_height)
+
     # =========================================================================
     # CONSTRUCCION DE UI
     # =========================================================================
@@ -216,11 +397,38 @@ class LectorcitoApp(ctk.CTk):
             return
 
         theme = get_theme_tokens(self.current_theme)
-        self._background_photo = None
+        cache_key = (width, height, self.current_theme)
+        background_changed = False
+
+        try:
+            if cache_key != self._background_cache_key or self._background_image is None or self._background_photo is None:
+                self._background_image = self._build_atmosphere_image((width, height), theme)
+                self._background_photo = ImageTk.PhotoImage(self._background_image)
+                self._background_cache_key = cache_key
+                self._background_revision += 1
+                background_changed = True
+        except Exception:
+            self._background_image = None
+            self._background_photo = None
+            self._background_cache_key = None
+            background_changed = True
+
         self._background_canvas.configure(bg=theme["bg_base"])
         self._background_canvas.delete("all")
-        self._background_canvas.create_rectangle(0, 0, width + 1, height + 1, outline="", fill=theme["bg_base"])
+        if self._background_photo is not None:
+            self._background_canvas.create_image(0, 0, image=self._background_photo, anchor="nw")
+        else:
+            self._background_canvas.create_rectangle(0, 0, width + 1, height + 1, outline="", fill=theme["bg_base"])
         self.tk.call("lower", self._background_canvas._w)
+        self._refresh_surface_backdrops()
+        self._refresh_local_surface_colors()
+        if background_changed:
+            self._refresh_background_dependents()
+        try:
+            if hasattr(self, "footer_frame") and self.footer_frame.winfo_exists():
+                self.footer_frame.lift()
+        except Exception:
+            pass
 
     def _build_ui(self):
         self._create_atmosphere_background()
@@ -228,35 +436,57 @@ class LectorcitoApp(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        self.left_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.left_container.grid(row=0, column=0, sticky="ns", padx=MAIN_WINDOW_SIDE_PADX, pady=MAIN_WINDOW_LEFT_PADY)
+        footer_clearance = max(0, MAIN_WINDOW_FOOTER_HEIGHT - 35)
 
-        self.right_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.right_container.grid(row=0, column=2, sticky="ns", padx=MAIN_WINDOW_SIDE_PADX, pady=MAIN_WINDOW_RIGHT_PADY)
+        self.left_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
+        self.left_container.grid(row=0, column=0, sticky="ns", padx=MAIN_WINDOW_SIDE_PADX, pady=(MAIN_WINDOW_LEFT_PADY[0], MAIN_WINDOW_LEFT_PADY[1] + footer_clearance))
+        self._register_surface_backdrop(self.left_container)
 
-        self.center_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.center_container.grid(row=0, column=1, sticky="nsew", pady=MAIN_WINDOW_CENTER_PADY)
+        self.right_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
+        self.right_container.grid(row=0, column=2, sticky="ns", padx=MAIN_WINDOW_SIDE_PADX, pady=(MAIN_WINDOW_RIGHT_PADY[0], MAIN_WINDOW_RIGHT_PADY[1] + footer_clearance))
+        self._register_surface_backdrop(self.right_container)
+
+        self.center_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
+        self.center_container.grid(row=0, column=1, sticky="nsew", pady=(MAIN_WINDOW_CENTER_PADY[0], MAIN_WINDOW_CENTER_PADY[1] + footer_clearance))
         self.center_container.grid_columnconfigure(0, weight=1)
         self.center_container.grid_rowconfigure(2, weight=1)
+        self._register_surface_backdrop(self.center_container)
 
         self._create_header(self.center_container)
         self._create_main_buttons(self.center_container)
         self._create_status_area(self.center_container)
 
-        self.left_sidebar = LeftSidebar(self.left_container, text=f"{APP_DISPLAY_NAME} v{VERSION}")
-        self.right_sidebar = RightSidebar(self.right_container, icons=self.icons, current_theme=self.current_theme)
+        self.left_sidebar = LeftSidebar(self.left_container, text=f"{APP_DISPLAY_NAME} v{VERSION}", backdrop_provider=self.get_backdrop_patch)
+        self.right_sidebar = RightSidebar(self.right_container, icons=self.icons, current_theme=self.current_theme, backdrop_provider=self.get_backdrop_patch)
+        self._register_surface_backdrop(self.right_sidebar)
+        self._register_surface_backdrop(self.right_sidebar._button_container)
+        self._register_surface_backdrop(self.status_panel)
         self.sidebar_buttons = self.right_sidebar.buttons
 
         self._create_footer()
 
     def _create_header(self, parent):
-        self.header_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        theme_keys = get_theme_tokens(self.current_theme)
+        self.header_frame = tk.Frame(parent, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
         self.header_frame.grid(row=0, column=0, sticky="ew", pady=MAIN_WINDOW_HEADER_PADY)
+        self._register_surface_backdrop(self.header_frame)
 
-        self.lbl_title = ctk.CTkLabel(self.header_frame, text="", image=self.logo_image)
+        self.lbl_title = ctk.CTkLabel(
+            self.header_frame,
+            text="",
+            image=self.logo_image,
+            fg_color="transparent",
+            bg_color="transparent"
+        )
         self.lbl_title.pack()
 
-        self.lbl_greet = ctk.CTkLabel(self.header_frame, font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_GREETING_FONT_SIZE))
+        self.lbl_greet = ctk.CTkLabel(
+            self.header_frame,
+            font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_GREETING_FONT_SIZE),
+            fg_color="transparent",
+            bg_color="transparent",
+            text_color=theme_keys["text_primary"]
+        )
         self.lbl_greet.pack()
 
     def _create_main_buttons(self, parent):
@@ -264,14 +494,16 @@ class LectorcitoApp(ctk.CTk):
 
         self.main_menu_frame = ctk.CTkFrame(
             parent,
+            bg_color="transparent",
             fg_color=theme_keys["bg_panel"],
             corner_radius=MAIN_WINDOW_MAIN_MENU_RADIUS,
             border_width=MAIN_WINDOW_MAIN_MENU_BORDER_WIDTH,
             border_color=theme_keys["border_subtle"]
         )
         self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=(0, MAIN_WINDOW_MAIN_MENU_BOTTOM_GAP))
+        self._register_surface_backdrop(self.main_menu_frame)
 
-        self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame, fg_color="transparent")
+        self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame, fg_color="transparent", bg_color="transparent")
         self.main_buttons_frame.pack(pady=MAIN_WINDOW_MAIN_MENU_PAD, padx=MAIN_WINDOW_MAIN_MENU_PAD)
 
         outside_bg = theme_keys["bg_panel"]
@@ -315,29 +547,35 @@ class LectorcitoApp(ctk.CTk):
             btn.pack(pady=BTN_SPACING, anchor="center")
 
     def _create_status_area(self, parent):
-        self.progress_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        theme_keys = get_theme_tokens(self.current_theme)
+        self.progress_frame = tk.Frame(parent, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
         self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=MAIN_WINDOW_STATUS_AREA_PADY)
         self.progress_frame.grid_columnconfigure(0, weight=1)
+        self._register_surface_backdrop(self.progress_frame)
 
         self.status_panel = StatusPanel(self.progress_frame, min_visible_seconds=MAIN_WINDOW_STATUS_MIN_VISIBLE_SECONDS)
         self.status_panel.grid(row=0, column=0, sticky="ew")
+        self._register_surface_backdrop(self.status_panel.status_panel)
 
         self.btn_cancel = self.status_panel.btn_cancel
 
     def _create_footer(self):
-        self.footer_frame = ctk.CTkFrame(self, height=MAIN_WINDOW_FOOTER_HEIGHT, corner_radius=0)
+        theme_keys = get_theme_tokens(self.current_theme)
+        self.footer_frame = tk.Frame(self, height=MAIN_WINDOW_FOOTER_HEIGHT, bg=theme_keys["bg_footer"], bd=0, highlightthickness=0)
         self.footer_frame.pack_propagate(False)
 
         self.footer_frame.place(relx=0.0, rely=1.0, anchor="sw", relwidth=1.0)
         self.footer_frame.lift()
 
-        self.footer_line = ctk.CTkFrame(self.footer_frame, height=MAIN_WINDOW_FOOTER_LINE_HEIGHT, corner_radius=0)
+        self.footer_line = ctk.CTkFrame(self.footer_frame, height=MAIN_WINDOW_FOOTER_LINE_HEIGHT, corner_radius=0, bg_color=theme_keys["bg_footer"])
         self.footer_line.pack(side="top", fill="x")
 
         self.lbl_copyright = ctk.CTkLabel(
             self.footer_frame,
             text="",
-            font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_FOOTER_FONT_SIZE)
+            font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_FOOTER_FONT_SIZE),
+            fg_color="transparent",
+            bg_color=theme_keys["bg_footer"]
         )
         self.lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -401,25 +639,30 @@ class LectorcitoApp(ctk.CTk):
         except Exception:
             pass
 
+        try:
+            self._refresh_local_surface_colors()
+        except Exception:
+            pass
+
     def apply_theme(self):
         ctk.set_appearance_mode(self.current_theme)
 
         theme_keys = get_theme_tokens(self.current_theme)
 
         self.configure(fg_color=theme_keys["bg_base"])
-        self._refresh_background_canvas()
 
         self.left_sidebar.apply_theme(self.current_theme)
         self.right_sidebar.apply_theme(self.current_theme)
         self.status_panel.apply_theme(self.current_theme)
 
         try:
-            self.left_container.configure(fg_color="transparent")
-            self.right_container.configure(fg_color="transparent")
-            self.center_container.configure(fg_color="transparent")
-            self.header_frame.configure(fg_color="transparent")
-            self.progress_frame.configure(fg_color="transparent")
-            self.main_menu_frame.configure(fg_color=theme_keys["bg_panel"], border_color=theme_keys["border_subtle"])
+            self.left_container.configure(bg=theme_keys["bg_base"])
+            self.right_container.configure(bg=theme_keys["bg_base"])
+            self.center_container.configure(bg=theme_keys["bg_base"])
+            self.header_frame.configure(bg=theme_keys["bg_base"])
+            self.progress_frame.configure(bg=theme_keys["bg_base"])
+            self.main_menu_frame.configure(bg_color="transparent", fg_color=theme_keys["bg_panel"], border_color=theme_keys["border_subtle"])
+            self.main_buttons_frame.configure(bg_color="transparent")
         except Exception:
             pass
 
@@ -430,13 +673,15 @@ class LectorcitoApp(ctk.CTk):
                 pass
 
         try:
-            self.footer_frame.configure(fg_color=theme_keys["bg_footer"])
-            self.footer_line.configure(fg_color=theme_keys["separator_line"])
-            self.lbl_greet.configure(text_color=theme_keys["text_primary"])
-            self.lbl_title.configure(fg_color="transparent")
-            self.lbl_copyright.configure(text_color=theme_keys["text_secondary"])
+            self.footer_frame.configure(bg=theme_keys["bg_footer"])
+            self.footer_line.configure(bg_color=theme_keys["bg_footer"], fg_color=theme_keys["separator_line"])
+            self.lbl_greet.configure(bg_color="transparent", fg_color="transparent", text_color=theme_keys["text_primary"])
+            self.lbl_title.configure(bg_color="transparent", fg_color="transparent")
+            self.lbl_copyright.configure(bg_color=theme_keys["bg_footer"], fg_color="transparent", text_color=theme_keys["text_secondary"])
         except Exception:
             pass
+
+        self._refresh_background_canvas()
 
     def switch_theme_animated(self, new_theme: str):
         if new_theme == self.current_theme or self._is_theme_switching:
