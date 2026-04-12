@@ -144,4 +144,4 @@
 7.  Implementada la importación y exportación de configuración desde los ajustes generales para facilitar respaldo, migración y reutilización de preferencias.
 8.  Mejorada la gestión de perfiles, afinando su comportamiento, organización y consistencia dentro del flujo general de configuración.
 9.  Refinados mensajes informativos, confirmaciones de lectura y feedback visual del sistema, incluyendo ajustes sobre la barra de progreso y estados relacionados.
-10. Corregidos bugs visuales, optimizados detalles de renderizado y reforzada la estabilidad general de la experiencia de usuario en toda la aplicación.
+10. Corregidos bugs visuales, optimizados detalles de renderizado y reforzada la estabilidad general de la experiencia de usuario en toda la aplicación. 
