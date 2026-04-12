@@ -171,12 +171,71 @@ class TagsConfigDialog(BaseDialog):
         step_count = max(1, int(abs(delta) / 120))
         return (-1 if delta > 0 else 1) * step_count * 3
 
-    def _on_mousewheel_scroll(self, event, scroll_frame):
+    def _get_scroll_metrics(self, scroll_frame):
         canvas = self._get_scroll_canvas(scroll_frame)
         if canvas is None:
+            return None, 0, 0, False
+        try:
+            canvas.update_idletasks()
+        except Exception:
+            pass
+        bbox = None
+        try:
+            bbox = canvas.bbox("all")
+        except Exception:
+            bbox = None
+        content_height = 0
+        if bbox is not None:
+            try:
+                content_height = max(0, int(bbox[3]) - int(bbox[1]))
+            except Exception:
+                content_height = 0
+        try:
+            viewport_height = max(0, int(canvas.winfo_height()))
+        except Exception:
+            viewport_height = 0
+        has_overflow = content_height > max(0, viewport_height - 2)
+        return canvas, content_height, viewport_height, has_overflow
+
+    def _clamp_scroll_position(self, scroll_frame, requested_view=None):
+        canvas, _, _, has_overflow = self._get_scroll_metrics(scroll_frame)
+        if canvas is None:
+            return
+        if not has_overflow:
+            try:
+                canvas.yview_moveto(0.0)
+            except Exception:
+                pass
+            return
+        if requested_view is None:
+            try:
+                first, _ = canvas.yview()
+                target_view = float(first)
+            except Exception:
+                target_view = 0.0
+        else:
+            target_view = float(requested_view)
+        try:
+            canvas.yview_moveto(max(0.0, min(1.0, target_view)))
+        except Exception:
+            pass
+
+    def _on_mousewheel_scroll(self, event, scroll_frame):
+        canvas, _, _, has_overflow = self._get_scroll_metrics(scroll_frame)
+        if canvas is None:
             return None
+        if not has_overflow:
+            self._clamp_scroll_position(scroll_frame, 0.0)
+            return "break"
         units = self._normalize_mousewheel_units(event)
         if units == 0:
+            return "break"
+        try:
+            first, last = canvas.yview()
+        except Exception:
+            first, last = 0.0, 1.0
+        if (units < 0 and first <= 0.001) or (units > 0 and last >= 0.999):
+            self._clamp_scroll_position(scroll_frame, first)
             return "break"
         try:
             canvas.yview_scroll(units, "units")
@@ -190,13 +249,15 @@ class TagsConfigDialog(BaseDialog):
         if canvas is None:
             return
         try:
-            canvas.configure(scrollregion=canvas.bbox("all"))
+            bbox = canvas.bbox("all")
+            canvas.configure(scrollregion=bbox if bbox is not None else (0, 0, 0, 0))
         except Exception:
             pass
         try:
             canvas.update_idletasks()
         except Exception:
             pass
+        self._clamp_scroll_position(scroll_frame)
 
     def refresh_texts(self):
         try:
@@ -298,35 +359,74 @@ class TagsConfigDialog(BaseDialog):
             self._resize_after_id = None
 
     def _get_container_width(self, frame):
-        widths = []
+        visible_widths = []
+        fallback_widths = []
         canvas = self._get_scroll_canvas(frame)
         if canvas is not None:
             try:
-                widths.append(int(canvas.winfo_width()) - 12)
+                width = int(canvas.winfo_width()) - 12
+                if width > 0:
+                    visible_widths.append(width)
             except Exception:
                 pass
             try:
-                widths.append(int(canvas.winfo_reqwidth()) - 12)
+                width = int(canvas.winfo_reqwidth()) - 12
+                if width > 0:
+                    fallback_widths.append(width)
             except Exception:
                 pass
         try:
-            widths.append(int(frame.winfo_width()) - 16)
+            width = int(frame.winfo_width()) - 16
+            if width > 0:
+                visible_widths.append(width)
         except Exception:
             pass
         try:
-            widths.append(int(frame.winfo_reqwidth()) - 16)
+            width = int(frame.winfo_reqwidth()) - 16
+            if width > 0:
+                fallback_widths.append(width)
         except Exception:
             pass
         try:
-            widths.append(int(self.main_frame.winfo_width()) - 40)
+            width = int(self.main_frame.winfo_width()) - 40
+            if width > 0:
+                visible_widths.append(width)
         except Exception:
             pass
         try:
-            widths.append(int(self.winfo_width()) - 56)
+            width = int(self.winfo_width()) - 56
+            if width > 0:
+                visible_widths.append(width)
         except Exception:
             pass
-        widths = [w for w in widths if w > 0]
-        return max(widths) if widths else 0
+        if visible_widths:
+            return min(visible_widths)
+        if fallback_widths:
+            return min(fallback_widths)
+        return 0
+
+    def _get_horizontal_padding_total(self, padding_value):
+        if isinstance(padding_value, (tuple, list)):
+            total = 0
+            for item in padding_value[:2]:
+                try:
+                    total += int(item)
+                except Exception:
+                    pass
+            return total
+        try:
+            return int(padding_value) * 2
+        except Exception:
+            return 0
+
+    def _estimate_pill_width(self, tag_name):
+        try:
+            label_width = int(self.tag_font.measure(str(tag_name)))
+        except Exception:
+            label_width = max(8, int(len(str(tag_name)) * TAGS_DIALOG_TAG_FONT_SIZE * 0.72))
+        label_width += self._get_horizontal_padding_total(TAGS_DIALOG_PILL_LABEL_PADX)
+        close_width = TAGS_DIALOG_PILL_CLOSE_SIZE + self._get_horizontal_padding_total(TAGS_DIALOG_PILL_CLOSE_PADX)
+        return label_width + close_width + 6
 
     def _refresh_layout_when_ready(self):
         self._layout_retry_after_id = None
@@ -546,27 +646,22 @@ class TagsConfigDialog(BaseDialog):
         current_row_width = 0
 
         space_between_pills = TAGS_DIALOG_PILL_SPACING
-        wrap_safety_px = max(4, min(TAGS_DIALOG_WRAP_SAFETY_PX, space_between_pills + 2))
+        wrap_safety_px = max(4, TAGS_DIALOG_WRAP_SAFETY_PX)
 
         for index, tag_data in enumerate(tag_list):
+            estimated_pill_width = self._estimate_pill_width(tag_data["nombre"])
+            projected_width = current_row_width + ((space_between_pills + wrap_safety_px) if current_row_width > 0 else 0) + estimated_pill_width
+
+            if current_row_width > 0 and projected_width > container_width:
+                current_row = ctk.CTkFrame(row_container, fg_color="transparent")
+                current_row.pack(fill="x", anchor="w", pady=TAGS_DIALOG_ROW_PADY)
+                current_row_width = 0
+
             pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
             pill_frame.pack(side="left", padx=(0, space_between_pills))
             pill_frame.update_idletasks()
 
-            pill_width = max(pill_frame.winfo_reqwidth(), pill_frame.winfo_width())
-            projected_width = current_row_width + ((space_between_pills + wrap_safety_px) if current_row_width > 0 else 0) + pill_width
-
-            if current_row_width > 0 and projected_width > container_width:
-                pill_frame.destroy()
-                current_row = ctk.CTkFrame(row_container, fg_color="transparent")
-                current_row.pack(fill="x", anchor="w", pady=TAGS_DIALOG_ROW_PADY)
-
-                pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
-                pill_frame.pack(side="left", padx=(0, space_between_pills))
-                pill_frame.update_idletasks()
-                pill_width = max(pill_frame.winfo_reqwidth(), pill_frame.winfo_width())
-                current_row_width = 0
-
+            pill_width = max(estimated_pill_width, pill_frame.winfo_reqwidth(), pill_frame.winfo_width())
             current_row_width += (space_between_pills if current_row_width > 0 else 0) + pill_width
 
         self._configure_mousewheel_for_scrollable(frame)
@@ -576,13 +671,11 @@ class TagsConfigDialog(BaseDialog):
             pass
         if canvas is not None:
             try:
-                canvas.configure(scrollregion=canvas.bbox("all"))
+                bbox = canvas.bbox("all")
+                canvas.configure(scrollregion=bbox if bbox is not None else (0, 0, 0, 0))
             except Exception:
                 pass
-            try:
-                canvas.yview_moveto(max(0.0, min(1.0, current_view)))
-            except Exception:
-                pass
+            self._clamp_scroll_position(frame, current_view)
             self.after_idle(lambda sf=frame: self._refresh_scroll_visuals(sf))
 
     def _create_pill_frame(self, parent, tag_data, index, tag_list):
@@ -684,5 +777,3 @@ class TagsConfigDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
-
-

@@ -22,10 +22,10 @@ from view.ui_constants import (
     COLORS, BTN_W_MAIN, BTN_H_MAIN,
     get_theme_tokens, get_button_tokens, hex_to_rgb, with_alpha,
     MAIN_WINDOW_SHOW_DELAY_MS, MAIN_WINDOW_CENTER_RETRY_DELAY_MS, MAIN_WINDOW_CENTER_MAX_ATTEMPTS,
-    MAIN_WINDOW_INITIAL_ALPHA, MAIN_WINDOW_REVEAL_OFFSET_Y, MAIN_WINDOW_REVEAL_STEP_PX,
-    MAIN_WINDOW_FADE_IN_STEP, MAIN_WINDOW_FADE_IN_INTERVAL_MS, MAIN_WINDOW_FADE_OUT_STEP, MAIN_WINDOW_FADE_OUT_INTERVAL_MS,
+    MAIN_WINDOW_INITIAL_ALPHA, MAIN_WINDOW_REVEAL_DELAY_MS, MAIN_WINDOW_REVEAL_OFFSET_Y, MAIN_WINDOW_REVEAL_STEP_PX,
+    MAIN_WINDOW_HIDDEN_PARK_OFFSET_PX, MAIN_WINDOW_FADE_IN_STEP, MAIN_WINDOW_FADE_IN_INTERVAL_MS, MAIN_WINDOW_FADE_OUT_STEP, MAIN_WINDOW_FADE_OUT_INTERVAL_MS,
     MAIN_WINDOW_SOFT_REFRESH_ALPHA, MAIN_WINDOW_SWITCH_FADE_OUT_STEP, MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS,
-    MAIN_WINDOW_SWITCH_HOLD_MS, MAIN_WINDOW_SWITCH_FADE_IN_STEP, MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS
+    MAIN_WINDOW_SWITCH_HOLD_MS, MAIN_WINDOW_SWITCH_REBUILD_DELAY_MS, MAIN_WINDOW_SWITCH_FADE_IN_STEP, MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS
 )
 from view.ui_assets import load_sidebar_icons, load_logo, safe_set_window_icon
 from view.sidebars import LeftSidebar, RightSidebar, PillTextButton, BlendedRoundedFrame
@@ -196,12 +196,19 @@ class LectorcitoApp(ctk.CTk):
     def get_real_window_rect(self):
         return _get_widget_window_rect(self)
 
+    def _get_hidden_window_position(self, target_rect):
+        left, top, right, bottom = target_rect
+        area_h = max(1, int(bottom - top))
+        x = int(right + MAIN_WINDOW_HIDDEN_PARK_OFFSET_PX)
+        y = int(top + max(0, (area_h - int(self._app_h)) / 2))
+        return x, y
+
     def _precise_center_and_show(self):
         try:
             self.update_idletasks()
             self._startup_target_rect = _get_widget_workarea(self)
-            x, y = _get_centered_position(self._startup_target_rect, self._app_w, self._app_h)
-            self.geometry(f"{self._app_w}x{self._app_h}+{x}+{y}")
+            hidden_x, hidden_y = self._get_hidden_window_position(self._startup_target_rect)
+            self.geometry(f"{self._app_w}x{self._app_h}+{hidden_x}+{hidden_y}")
 
             self.attributes("-alpha", 0.0)
             self.deiconify()
@@ -233,7 +240,7 @@ class LectorcitoApp(ctk.CTk):
         except Exception:
             self._reveal_target_y = None
         self.attributes("-alpha", MAIN_WINDOW_INITIAL_ALPHA)
-        self._fade_in()
+        self.after(MAIN_WINDOW_REVEAL_DELAY_MS, self._fade_in)
 
     def _fade_in(self):
         try:
@@ -806,6 +813,10 @@ class LectorcitoApp(ctk.CTk):
                 self.attributes("-alpha", max(alpha - MAIN_WINDOW_SWITCH_FADE_OUT_STEP, 0.0))
                 self.after(MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS, self._fade_out_for_switch)
             else:
+                try:
+                    self.withdraw()
+                except Exception:
+                    pass
                 self.after(MAIN_WINDOW_SWITCH_HOLD_MS, self._apply_theme_after_switch)
         except Exception:
             self._is_theme_switching = False
@@ -818,6 +829,18 @@ class LectorcitoApp(ctk.CTk):
             self.current_theme = self._pending_new_theme
             self.apply_theme()
             self.update_idletasks()
+            self.attributes("-alpha", 0.0)
+            self.after(MAIN_WINDOW_SWITCH_REBUILD_DELAY_MS, self._reveal_after_theme_switch)
+        except Exception:
+            self._is_theme_switching = False
+            try:
+                self.deiconify()
+            except Exception:
+                pass
+            self.attributes("-alpha", 1.0)
+
+    def _reveal_after_theme_switch(self):
+        try:
             self._restore_window_stack_after_theme_switch()
             self.attributes("-alpha", 0.0)
             self._fade_in_after_switch()
@@ -1160,3 +1183,5 @@ class LectorcitoApp(ctk.CTk):
             self.controller.open_manual_link()
         else:
             webbrowser.open(APP_WEBSITE_URL)
+
+
