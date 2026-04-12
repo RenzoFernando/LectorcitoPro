@@ -1,4 +1,3 @@
-
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import Canvas
@@ -109,6 +108,208 @@ def _build_surface_image(widget, backdrop_provider, width: int, height: int, out
             return patch.copy(), signature
 
     return Image.new("RGBA", target_size, (*_hex_to_rgb(outside_bg), 255)), signature
+
+
+class BlendedRoundedFrame(tk.Frame):
+    def __init__(
+            self,
+            parent,
+            *,
+            outside_bg: str = COLORS["light"]["bg_base"],
+            fill_color: str = COLORS["light"]["bg_card"],
+            border_color: str | None = None,
+            border_width: int = 1,
+            corner_radius: int = 18,
+            content_inset: int | None = None,
+            backdrop_provider=None
+    ):
+        super().__init__(parent, bg=outside_bg, bd=0, highlightthickness=0)
+
+        self._outside_bg = outside_bg
+        self._fill_color = fill_color
+        self._border_color = border_color
+        self._border_w = int(border_width)
+        self._corner_radius = int(corner_radius)
+        self._content_inset = int(content_inset if content_inset is not None else max(6, self._corner_radius // 2))
+        self._backdrop_provider = backdrop_provider
+
+        self._canvas = Canvas(self, width=1, height=1, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
+        self._canvas.pack(fill="both", expand=True)
+
+        self.content_frame = tk.Frame(self._canvas, bg=self._fill_color, bd=0, highlightthickness=0)
+        self._content_window_id = self._canvas.create_window(0, 0, window=self.content_frame, anchor="nw")
+
+        self._surface_photo = None
+        self._paint_job = None
+        self._paint_signature = None
+        self._last_size = None
+        self._render_cache = {}
+
+        self.bind("<Configure>", self._on_configure, add="+")
+        self._canvas.bind("<Configure>", self._on_configure, add="+")
+        self.content_frame.bind("<Configure>", self._on_content_configure, add="+")
+        self._sync_requested_size()
+        self._schedule_paint()
+
+    def configure(self, cnf=None, **kwargs):
+        if cnf and isinstance(cnf, dict):
+            kwargs = {**cnf, **kwargs}
+
+        if "outside_bg" in kwargs:
+            self._outside_bg = kwargs.pop("outside_bg")
+            try:
+                super().configure(bg=self._outside_bg)
+                self._canvas.configure(bg=self._outside_bg)
+            except Exception:
+                pass
+
+        if "fill_color" in kwargs:
+            self._fill_color = kwargs.pop("fill_color")
+            try:
+                self.content_frame.configure(bg=self._fill_color)
+            except Exception:
+                pass
+
+        if "fg_color" in kwargs:
+            self._fill_color = kwargs.pop("fg_color")
+            try:
+                self.content_frame.configure(bg=self._fill_color)
+            except Exception:
+                pass
+
+        if "border_color" in kwargs:
+            self._border_color = kwargs.pop("border_color")
+
+        if "border_width" in kwargs:
+            self._border_w = int(kwargs.pop("border_width"))
+
+        if "corner_radius" in kwargs:
+            self._corner_radius = int(kwargs.pop("corner_radius"))
+
+        if "content_inset" in kwargs:
+            self._content_inset = int(kwargs.pop("content_inset"))
+
+        if "backdrop_provider" in kwargs:
+            self._backdrop_provider = kwargs.pop("backdrop_provider")
+
+        self._paint_signature = None
+        self._schedule_paint()
+
+        if kwargs:
+            super().configure(**kwargs)
+
+    config = configure
+
+    def refresh_backdrop(self):
+        self._paint_signature = None
+        self._render_cache.clear()
+        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
+
+    def _sync_requested_size(self):
+        inset = max(0, int(self._content_inset))
+        try:
+            req_w = max(1, int(self.content_frame.winfo_reqwidth()) + (inset * 2))
+        except Exception:
+            req_w = max(1, inset * 2)
+        try:
+            req_h = max(1, int(self.content_frame.winfo_reqheight()) + (inset * 2))
+        except Exception:
+            req_h = max(1, inset * 2)
+        try:
+            self._canvas.configure(width=req_w, height=req_h)
+        except Exception:
+            pass
+
+    def _on_content_configure(self, event=None):
+        self._sync_requested_size()
+        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
+
+    def _sync_content_window(self, width: int, height: int):
+        inset = max(0, int(self._content_inset))
+        inner_w = max(1, int(width - (inset * 2)))
+        inner_h = max(1, int(height - (inset * 2)))
+        try:
+            self._canvas.coords(self._content_window_id, inset, inset)
+            self._canvas.itemconfigure(self._content_window_id, width=inner_w, height=inner_h)
+        except Exception:
+            pass
+
+    def _on_configure(self, event=None):
+        if event is not None and getattr(event, "widget", None) not in (self, self._canvas):
+            return
+        try:
+            size = (
+                max(1, int(getattr(event, "width", self._canvas.winfo_width()))),
+                max(1, int(getattr(event, "height", self._canvas.winfo_height())))
+            )
+        except Exception:
+            size = (max(1, int(self._canvas.winfo_width())), max(1, int(self._canvas.winfo_height())))
+        self._sync_content_window(*size)
+        if size == self._last_size:
+            return
+        self._last_size = size
+        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
+
+    def _schedule_paint(self, delay=0):
+        if self._paint_job is not None:
+            try:
+                self.after_cancel(self._paint_job)
+            except Exception:
+                pass
+            self._paint_job = None
+        try:
+            self._paint_job = self.after(max(1, int(delay)), self._paint)
+        except Exception:
+            self._paint_job = None
+
+    def _paint(self, event=None):
+        self._paint_job = None
+        w = max(1, int(self._canvas.winfo_width()))
+        h = max(1, int(self._canvas.winfo_height()))
+        if w <= 2 or h <= 2:
+            return
+
+        self._last_size = (w, h)
+        self._sync_content_window(w, h)
+
+        scale = 4
+        W, H = w * scale, h * scale
+        img, backdrop_signature = _build_surface_image(self._canvas, self._backdrop_provider, w, h, self._outside_bg, scale)
+
+        paint_signature = (w, h, self._outside_bg, self._fill_color, self._border_color, self._border_w, self._corner_radius, self._content_inset, backdrop_signature)
+        if paint_signature == self._paint_signature and self._canvas.find_all():
+            return
+
+        cached = self._render_cache.get(paint_signature)
+        if cached is not None:
+            self._surface_photo = cached
+            self._canvas.delete("all")
+            self._canvas.create_image(0, 0, image=self._surface_photo, anchor="nw")
+            self._content_window_id = self._canvas.create_window(0, 0, window=self.content_frame, anchor="nw")
+            self._sync_content_window(w, h)
+            self._paint_signature = paint_signature
+            return
+
+        border_rgb = _hex_to_rgb(self._border_color) if self._border_color else None
+        fill_rgba = (*_hex_to_rgb(self._fill_color), 255)
+
+        pad = max(1, int(scale))
+        x1, y1 = pad, pad
+        x2, y2 = W - pad - 1, H - pad - 1
+        radius = max(1, min((x2 - x1) // 2, (y2 - y1) // 2, int(self._corner_radius * scale)))
+        bw = max(1, int(self._border_w * scale))
+
+        ImageDraw.Draw(img).rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=fill_rgba, outline=border_rgb, width=bw)
+
+        img_small = img.resize((w, h), Image.LANCZOS)
+        self._surface_photo = ImageTk.PhotoImage(img_small)
+        self._render_cache[paint_signature] = self._surface_photo
+        _trim_render_cache(self._render_cache)
+        self._canvas.delete("all")
+        self._canvas.create_image(0, 0, image=self._surface_photo, anchor="nw")
+        self._content_window_id = self._canvas.create_window(0, 0, window=self.content_frame, anchor="nw")
+        self._sync_content_window(w, h)
+        self._paint_signature = paint_signature
 
 
 # =============================================================================
@@ -228,19 +429,25 @@ class LeftSidebar(ctk.CTkFrame):
         scale = 4
         W, H = w * scale, h * scale
 
+        outside_fill = self._outside_bg
         pill_fill = self._pill_bg
+        pill_mid_fill = self._pill_bg_mid
+        pill_end_fill = self._pill_bg_end
         text_fill = self._text_color
         border_fill = self._border_color
 
         if self._state == "disabled":
-            pill_fill = _mix(pill_fill, self._outside_bg, 0.35)
-            text_fill = _mix(text_fill, self._outside_bg, 0.55)
+            outside_fill = _mix(self._outside_bg, self._pill_bg, 0.16)
+            pill_fill = _mix(pill_fill, outside_fill, 0.35)
+            pill_mid_fill = _mix(pill_mid_fill, outside_fill, 0.35)
+            pill_end_fill = _mix(pill_end_fill, outside_fill, 0.35)
+            text_fill = _mix(text_fill, outside_fill, 0.55)
             if border_fill:
-                border_fill = _mix(border_fill, self._outside_bg, 0.35)
+                border_fill = _mix(border_fill, outside_fill, 0.35)
 
-        img, backdrop_signature = _build_surface_image(self._canvas, self._backdrop_provider, w, h, self._outside_bg, scale)
+        img, backdrop_signature = _build_surface_image(self._canvas, self._backdrop_provider, w, h, outside_fill, scale)
 
-        paint_signature = (w, h, self._outside_bg, pill_fill, self._pill_bg_mid, self._pill_bg_end, text_fill, border_fill, self._state, self._text, backdrop_signature)
+        paint_signature = (w, h, outside_fill, pill_fill, pill_mid_fill, pill_end_fill, text_fill, border_fill, self._state, self._text, backdrop_signature)
         if paint_signature == self._paint_signature and self._canvas.find_all():
             return
 
@@ -268,7 +475,7 @@ class LeftSidebar(ctk.CTkFrame):
         usable_w = max(10 * scale, (x2 - x1))
         radius = usable_w // 2
         bw = max(1, int(self._border_w * scale))
-        stops = _build_stops(pill_fill, self._pill_bg_end, self._pill_bg_mid)
+        stops = _build_stops(pill_fill, pill_end_fill, pill_mid_fill)
 
         _draw_gradient_capsule(img, x1, y1, x2, y2, radius, stops, border_rgb=border_rgb, border_width=bw)
 

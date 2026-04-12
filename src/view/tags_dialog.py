@@ -56,6 +56,7 @@ class TagsConfigDialog(BaseDialog):
         self._resize_after_id = None
         self._last_window_size = None
         self._last_layout_widths = None
+        self._mousewheel_targets = {}
 
         self.tag_colors = self._build_tag_colors()
 
@@ -125,6 +126,77 @@ class TagsConfigDialog(BaseDialog):
 
         self.update_idletasks()
         self._schedule_layout_refresh(reset=True)
+
+    def _get_scroll_canvas(self, scroll_frame):
+        try:
+            return getattr(scroll_frame, "_parent_canvas", None)
+        except Exception:
+            return None
+
+    def _bind_mousewheel_recursive(self, widget, scroll_frame):
+        if widget is None:
+            return
+        try:
+            widget.bind("<MouseWheel>", lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf), add="+")
+        except Exception:
+            pass
+        try:
+            widget.bind("<Button-4>", lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf), add="+")
+            widget.bind("<Button-5>", lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf), add="+")
+        except Exception:
+            pass
+        try:
+            for child in widget.winfo_children():
+                self._bind_mousewheel_recursive(child, scroll_frame)
+        except Exception:
+            pass
+
+    def _configure_mousewheel_for_scrollable(self, scroll_frame):
+        if scroll_frame is None:
+            return
+        self._bind_mousewheel_recursive(scroll_frame, scroll_frame)
+        canvas = self._get_scroll_canvas(scroll_frame)
+        if canvas is not None:
+            self._bind_mousewheel_recursive(canvas, scroll_frame)
+
+    def _normalize_mousewheel_units(self, event):
+        num = getattr(event, "num", None)
+        if num == 4:
+            return -3
+        if num == 5:
+            return 3
+        delta = int(getattr(event, "delta", 0) or 0)
+        if delta == 0:
+            return 0
+        step_count = max(1, int(abs(delta) / 120))
+        return (-1 if delta > 0 else 1) * step_count * 3
+
+    def _on_mousewheel_scroll(self, event, scroll_frame):
+        canvas = self._get_scroll_canvas(scroll_frame)
+        if canvas is None:
+            return None
+        units = self._normalize_mousewheel_units(event)
+        if units == 0:
+            return "break"
+        try:
+            canvas.yview_scroll(units, "units")
+            self.after_idle(lambda sf=scroll_frame: self._refresh_scroll_visuals(sf))
+        except Exception:
+            pass
+        return "break"
+
+    def _refresh_scroll_visuals(self, scroll_frame):
+        canvas = self._get_scroll_canvas(scroll_frame)
+        if canvas is None:
+            return
+        try:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        except Exception:
+            pass
+        try:
+            canvas.update_idletasks()
+        except Exception:
+            pass
 
     def refresh_texts(self):
         try:
@@ -227,20 +299,30 @@ class TagsConfigDialog(BaseDialog):
 
     def _get_container_width(self, frame):
         widths = []
+        canvas = self._get_scroll_canvas(frame)
+        if canvas is not None:
+            try:
+                widths.append(int(canvas.winfo_width()) - 12)
+            except Exception:
+                pass
+            try:
+                widths.append(int(canvas.winfo_reqwidth()) - 12)
+            except Exception:
+                pass
         try:
-            widths.append(int(frame.winfo_width()) - 34)
+            widths.append(int(frame.winfo_width()) - 16)
         except Exception:
             pass
         try:
-            widths.append(int(frame.winfo_reqwidth()) - 34)
+            widths.append(int(frame.winfo_reqwidth()) - 16)
         except Exception:
             pass
         try:
-            widths.append(int(self.main_frame.winfo_width()) - 60)
+            widths.append(int(self.main_frame.winfo_width()) - 40)
         except Exception:
             pass
         try:
-            widths.append(int(self.winfo_width()) - 80)
+            widths.append(int(self.winfo_width()) - 56)
         except Exception:
             pass
         widths = [w for w in widths if w > 0]
@@ -328,6 +410,7 @@ class TagsConfigDialog(BaseDialog):
         )
         _style_scrollable(scroll_frame)
         scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew", padx=TAGS_DIALOG_SCROLL_PADX)
+        self._configure_mousewheel_for_scrollable(scroll_frame)
 
         input_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         input_container.grid(row=base_row + 2, column=0, sticky="ew", pady=TAGS_DIALOG_INPUT_PADY, padx=TAGS_DIALOG_INPUT_PADX)
@@ -443,6 +526,11 @@ class TagsConfigDialog(BaseDialog):
         self._redraw_tags_in_frame(self.files_scroll_frame, self.files_list)
 
     def _redraw_tags_in_frame(self, frame, tag_list):
+        canvas = self._get_scroll_canvas(frame)
+        try:
+            current_view = canvas.yview()[0] if canvas is not None else 0.0
+        except Exception:
+            current_view = 0.0
         for widget in frame.winfo_children(): widget.destroy()
         if not frame.winfo_exists(): return
         frame.update_idletasks()
@@ -458,16 +546,17 @@ class TagsConfigDialog(BaseDialog):
         current_row_width = 0
 
         space_between_pills = TAGS_DIALOG_PILL_SPACING
-        wrap_safety_px = TAGS_DIALOG_WRAP_SAFETY_PX
+        wrap_safety_px = max(4, min(TAGS_DIALOG_WRAP_SAFETY_PX, space_between_pills + 2))
 
         for index, tag_data in enumerate(tag_list):
             pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
             pill_frame.pack(side="left", padx=(0, space_between_pills))
             pill_frame.update_idletasks()
 
-            pill_width = max(pill_frame.winfo_reqwidth(), pill_frame.winfo_width()) + wrap_safety_px
+            pill_width = max(pill_frame.winfo_reqwidth(), pill_frame.winfo_width())
+            projected_width = current_row_width + ((space_between_pills + wrap_safety_px) if current_row_width > 0 else 0) + pill_width
 
-            if current_row_width > 0 and (current_row_width + pill_width) > container_width:
+            if current_row_width > 0 and projected_width > container_width:
                 pill_frame.destroy()
                 current_row = ctk.CTkFrame(row_container, fg_color="transparent")
                 current_row.pack(fill="x", anchor="w", pady=TAGS_DIALOG_ROW_PADY)
@@ -475,10 +564,26 @@ class TagsConfigDialog(BaseDialog):
                 pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
                 pill_frame.pack(side="left", padx=(0, space_between_pills))
                 pill_frame.update_idletasks()
-                pill_width = max(pill_frame.winfo_reqwidth(), pill_frame.winfo_width()) + wrap_safety_px
+                pill_width = max(pill_frame.winfo_reqwidth(), pill_frame.winfo_width())
                 current_row_width = 0
 
-            current_row_width += pill_width + space_between_pills
+            current_row_width += (space_between_pills if current_row_width > 0 else 0) + pill_width
+
+        self._configure_mousewheel_for_scrollable(frame)
+        try:
+            frame.update_idletasks()
+        except Exception:
+            pass
+        if canvas is not None:
+            try:
+                canvas.configure(scrollregion=canvas.bbox("all"))
+            except Exception:
+                pass
+            try:
+                canvas.yview_moveto(max(0.0, min(1.0, current_view)))
+            except Exception:
+                pass
+            self.after_idle(lambda sf=frame: self._refresh_scroll_visuals(sf))
 
     def _create_pill_frame(self, parent, tag_data, index, tag_list):
         tag_name, tag_state = tag_data["nombre"], tag_data["estado"]
@@ -579,3 +684,5 @@ class TagsConfigDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
+
+

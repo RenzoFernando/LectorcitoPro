@@ -460,9 +460,11 @@ class BaseDialog(ctk.CTkToplevel):
 # =============================================================================
 
 class MessageDialog(BaseDialog):
-    def __init__(self, parent, title, message):
+    def __init__(self, parent, title, message, on_close=None):
         super().__init__(parent, title)
 
+        self._on_close = on_close
+        self._close_callback_invoked = False
         self._auto_close_after_id = None
         self._schedule_auto_close()
 
@@ -517,6 +519,20 @@ class MessageDialog(BaseDialog):
             return
         self.result = None
         self._close_with_fade_out()
+
+    def _notify_on_close(self):
+        if self._close_callback_invoked:
+            return
+        self._close_callback_invoked = True
+        if callable(self._on_close):
+            try:
+                self._on_close()
+            except Exception:
+                pass
+
+    def _finalize_close(self):
+        self._notify_on_close()
+        super()._finalize_close()
 
     def _close_with_fade_out(self, event=None):
         self._cancel_auto_close()

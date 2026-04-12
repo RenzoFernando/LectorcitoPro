@@ -166,17 +166,26 @@ class GradientProgressBar(ctk.CTkFrame):
         self._ind_after_id = self.after(PROGRESS_CANVAS_TICK_MS, self._tick_indeterminate)
 
     def _get_canvas_bg(self) -> str:
-        try:
-            master = self.master
-            if master is not None:
-                color = master.cget("fg_color")
+        for widget in (self.master, self, getattr(self.master, "master", None)):
+            if widget is None:
+                continue
+            for key in ("fg_color", "bg_color", "bg"):
+                try:
+                    color = widget.cget(key)
+                except Exception:
+                    continue
                 if isinstance(color, (tuple, list)) and color:
-                    return color[0]
+                    color = color[0]
                 if isinstance(color, str) and color and color != "transparent":
                     return color
-        except Exception:
-            pass
-        return self.cget("fg_color") if isinstance(self.cget("fg_color"), str) and self.cget("fg_color") not in ("", "transparent") else NEUTRAL_WHITE
+        if isinstance(self._track_color, str) and self._track_color:
+            return self._track_color
+        color = self.cget("fg_color")
+        if isinstance(color, (tuple, list)) and color:
+            color = color[0]
+        if isinstance(color, str) and color and color != "transparent":
+            return color
+        return NEUTRAL_WHITE
 
     def _draw_capsule_polygon(self, x1, y1, x2, y2, fill, outline=""):
         if x2 <= x1 or y2 <= y1:
@@ -188,6 +197,39 @@ class GradientProgressBar(ctk.CTkFrame):
         # Usar más segmentos para un óvalo extremadamente suave
         points = _capsule_points(x1, y1, x2, y2, r_, segments=PROGRESS_CAPSULE_SEGMENTS)
         self._canvas.create_polygon(points, outline=outline, fill=fill, smooth=True)
+
+    def _draw_gradient_capsule(self, x1: float, y1: float, x2: float, y2: float, t_start: float, t_end: float):
+        if x2 <= x1 or y2 <= y1:
+            return
+
+        h_ = y2 - y1
+        r = h_ / 2.0
+        cy = (y1 + y2) / 2.0
+        width = max(1.0, x2 - x1)
+
+        start_x = int(math.floor(x1))
+        end_x = int(math.ceil(x2))
+
+        for ix in range(start_x, end_x):
+            px = ix + 0.5
+            top = y1
+            bottom = y2
+
+            if px < x1 + r:
+                dx = px - (x1 + r)
+                dy = math.sqrt(max(0.0, (r * r) - (dx * dx)))
+                top = cy - dy
+                bottom = cy + dy
+            elif px > x2 - r:
+                dx = px - (x2 - r)
+                dy = math.sqrt(max(0.0, (r * r) - (dx * dx)))
+                top = cy - dy
+                bottom = cy + dy
+
+            rel = ((px - x1) / width) if width > 0 else 0.0
+            t = t_start + ((t_end - t_start) * rel)
+            color = gradient_color_at(t, self._gradient_stops)
+            self._canvas.create_rectangle(ix, int(math.floor(top)), ix + 2, int(math.ceil(bottom)), outline='', fill=color)
 
     def _draw_track(self, w: int, h: int):
         self._canvas.delete("all")
@@ -208,13 +250,17 @@ class GradientProgressBar(ctk.CTkFrame):
         y2 = h - 2
         usable_w = w - 4
         fill_w = usable_w * self._value
-        x2 = int(x1 + fill_w)
+        x2 = int(math.ceil(x1 + fill_w))
 
         if x2 <= x1:
             return
 
         inner_h = y2 - y1
         if inner_h <= 0 or fill_w <= 0:
+            return
+
+        if fill_w > inner_h:
+            self._draw_gradient_capsule(x1, y1, x1 + fill_w, y2, 0.0, self._value)
             return
 
         r = inner_h / 2.0
@@ -241,14 +287,14 @@ class GradientProgressBar(ctk.CTkFrame):
         # será el único borde visible en las esquinas, solucionando el problema del usuario.
 
         # Casquete izquierdo del relleno degradado
-        self._canvas.create_oval(x1, y1, x1 + 2 * r, y2, outline="", fill=left_color)
+        self._canvas.create_oval(x1, y1, x1 + 2 * r + 1, y2, outline="", fill=left_color)
         # Casquete derecho del relleno degradado
-        self._canvas.create_oval(x2 - 2 * r, y1, x2, y2, outline="", fill=right_color)
+        self._canvas.create_oval(x2 - 2 * r - 1, y1, x2, y2, outline="", fill=right_color)
 
         # Dibujar degradado en el cuerpo rectangular
         # Aseguramos que el cuerpo se alinee perfectamente entre los casquetes.
-        rect_x1 = x1 + r
-        rect_x2 = x2 - r
+        rect_x1 = x1 + r - 1
+        rect_x2 = x2 - r + 1
         mid_w = rect_x2 - rect_x1
 
         if mid_w > 0:
@@ -266,8 +312,10 @@ class GradientProgressBar(ctk.CTkFrame):
                 color = gradient_color_at(t, self._gradient_stops)
 
                 # int(nx + 1) para solapamiento de 1px, necesario para degradado central
-                self._canvas.create_rectangle(int(x), y1, int(nx + 1), y2, outline="", fill=color)
+                self._canvas.create_rectangle(int(x), y1, int(math.ceil(nx + 1)), y2, outline="", fill=color)
                 x = nx
+
+            self._canvas.create_rectangle(int(rect_x2 - 1), y1, x2, y2, outline="", fill=right_color)
 
     def _draw_fill_indeterminate(self, w: int, h: int):
         usable_w = w - 4
@@ -288,10 +336,16 @@ class GradientProgressBar(ctk.CTkFrame):
         if inner_h <= 0 or fill_w <= 0:
             return
 
-        r = inner_h / 2.0
-
         absolute_x1 = x1 + sx
         absolute_x2 = x1 + ex
+
+        if fill_w > inner_h:
+            t_start = sx / max(1.0, float(usable_w))
+            t_end = ex / max(1.0, float(usable_w))
+            self._draw_gradient_capsule(absolute_x1, y1, absolute_x2, y2, t_start, t_end)
+            return
+
+        r = inner_h / 2.0
 
         if fill_w <= inner_h:
             color = gradient_color_at(((sx + ex) / 2.0) / max(1.0, float(usable_w)), self._gradient_stops)
@@ -307,12 +361,12 @@ class GradientProgressBar(ctk.CTkFrame):
         right_color = gradient_color_at(t_end, self._gradient_stops)
 
         # Casquetes ovalados
-        self._canvas.create_oval(absolute_x1, y1, absolute_x1 + 2 * r, y2, outline="", fill=left_color)
-        self._canvas.create_oval(absolute_x2 - 2 * r, y1, absolute_x2, y2, outline="", fill=right_color)
+        self._canvas.create_oval(absolute_x1, y1, absolute_x1 + 2 * r + 1, y2, outline="", fill=left_color)
+        self._canvas.create_oval(absolute_x2 - 2 * r - 1, y1, absolute_x2, y2, outline="", fill=right_color)
 
         # Cuerpo degradado
-        rect_x1 = absolute_x1 + r
-        rect_x2 = absolute_x2 - r
+        rect_x1 = absolute_x1 + r - 1
+        rect_x2 = absolute_x2 - r + 1
         mid_w = rect_x2 - rect_x1
 
         if mid_w > 0:
@@ -328,8 +382,10 @@ class GradientProgressBar(ctk.CTkFrame):
                 t = (mid - 2.0) / max(1.0, float(usable_w))
                 color = gradient_color_at(t, self._gradient_stops)
                 # int(nx + 1) para solapamiento de 1px
-                self._canvas.create_rectangle(int(x), y1, int(nx + 1), y2, outline="", fill=color)
+                self._canvas.create_rectangle(int(x), y1, int(math.ceil(nx + 1)), y2, outline="", fill=color)
                 x = nx
+
+            self._canvas.create_rectangle(int(rect_x2 - 1), y1, absolute_x2, y2, outline="", fill=right_color)
 
     def _redraw(self):
         try:

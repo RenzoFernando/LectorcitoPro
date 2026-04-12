@@ -1,9 +1,11 @@
+
 from __future__ import annotations
 import time
 import tkinter as tk
 import customtkinter as ctk
 
 from view.gradient_progress import GradientProgressBar
+from view.sidebars import BlendedRoundedFrame
 from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_theme_tokens, get_button_tokens, STATUS_PANEL_DEFAULT_MIN_VISIBLE_SECONDS, STATUS_PANEL_CORNER_RADIUS, STATUS_PANEL_BORDER_WIDTH, STATUS_PANEL_PADX, STATUS_PANEL_PADY, STATUS_PANEL_ROW_PADX, STATUS_PANEL_TOP_ROW_PADY, STATUS_PANEL_STATUS_FONT_SIZE, STATUS_PANEL_PERCENT_FONT_SIZE, STATUS_PANEL_PERCENT_PADX, STATUS_PANEL_CANCEL_SIZE, STATUS_PANEL_CANCEL_RADIUS, STATUS_PANEL_CANCEL_FONT_SIZE, STATUS_PANEL_PROGRESS_HEIGHT, STATUS_PANEL_PROGRESS_RADIUS, STATUS_PANEL_PROGRESS_PADY, STATUS_PANEL_FILE_ROW_PADY, STATUS_PANEL_FILE_PREFIX_FONT_SIZE, STATUS_PANEL_FILE_TEXT_FONT_SIZE, STATUS_PANEL_FILE_WRAP_DEFAULT, STATUS_PANEL_MIN_USABLE_WIDTH, STATUS_PANEL_PREFIX_GAP, STATUS_PANEL_MIN_WRAP, STATUS_PANEL_DOTS_INTERVAL_MS, STATUS_PANEL_PROGRESS_TICK_MS, STATUS_PANEL_SUCCESS_RESET_DELAY_MS, STATUS_PANEL_ELLIPSIS_MAX_LEN, STATUS_PANEL_CONTEXT_MAX_LEN
 from view.translations import translate_default
 
@@ -42,16 +44,23 @@ class StatusPanel(tk.Frame):
         self._current_theme = "Light"
 
         # --- Construccion UI ---
-        self.status_panel = ctk.CTkFrame(
+        theme = get_theme_tokens("Light")
+        self.status_panel = BlendedRoundedFrame(
             self,
+            outside_bg=theme["bg_base"],
+            fill_color=theme["bg_card"],
             corner_radius=STATUS_PANEL_CORNER_RADIUS,
             border_width=STATUS_PANEL_BORDER_WIDTH,
-            bg_color="transparent"
+            border_color=theme["border_subtle"],
+            content_inset=max(4, (STATUS_PANEL_CORNER_RADIUS // 2) - 2)
         )
         self.status_panel.grid(row=0, column=0, padx=STATUS_PANEL_PADX, pady=STATUS_PANEL_PADY, sticky="ew")
-        self.status_panel.grid_columnconfigure(0, weight=1)
+        self.status_panel.content_frame.grid_columnconfigure(0, weight=1)
+        self.status_panel.content_frame.grid_rowconfigure(2, weight=0, minsize=0)
+        self._file_row_pady = (0, max(1, STATUS_PANEL_FILE_ROW_PADY[1] - 11))
+        self._progress_row_pady = (STATUS_PANEL_PROGRESS_PADY[0], max(3, STATUS_PANEL_PROGRESS_PADY[1] - 2))
 
-        top_row = ctk.CTkFrame(self.status_panel, fg_color="transparent", bg_color="transparent")
+        top_row = ctk.CTkFrame(self.status_panel.content_frame, fg_color="transparent", bg_color="transparent")
         top_row.grid(row=0, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_TOP_ROW_PADY, sticky="ew")
         top_row.grid_columnconfigure(0, weight=1)
         top_row.grid_columnconfigure(1, weight=0)
@@ -94,12 +103,12 @@ class StatusPanel(tk.Frame):
         self.btn_cancel.grid(row=0, column=2, sticky="e")
         self.btn_cancel.grid_remove()
 
-        self.progress_bar = GradientProgressBar(self.status_panel, height=STATUS_PANEL_PROGRESS_HEIGHT, corner_radius=STATUS_PANEL_PROGRESS_RADIUS)
-        self.progress_bar.grid(row=1, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_PROGRESS_PADY, sticky="ew")
+        self.progress_bar = GradientProgressBar(self.status_panel.content_frame, height=STATUS_PANEL_PROGRESS_HEIGHT, corner_radius=STATUS_PANEL_PROGRESS_RADIUS)
+        self.progress_bar.grid(row=1, column=0, padx=STATUS_PANEL_ROW_PADX, pady=self._progress_row_pady, sticky="ew")
         self.progress_bar.set(0.0)
 
-        self.file_row = ctk.CTkFrame(self.status_panel, fg_color="transparent", bg_color="transparent")
-        self.file_row.grid(row=2, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_FILE_ROW_PADY, sticky="ew")
+        self.file_row = ctk.CTkFrame(self.status_panel.content_frame, fg_color="transparent", bg_color="transparent")
+        self.file_row.grid(row=2, column=0, padx=STATUS_PANEL_ROW_PADX, pady=self._file_row_pady, sticky="ew")
         self.file_row.grid_columnconfigure(1, weight=1)
 
         self.lbl_processing_prefix = ctk.CTkLabel(
@@ -126,6 +135,7 @@ class StatusPanel(tk.Frame):
 
         self.status_panel.bind("<Configure>", self._on_panel_resize)
 
+
         # Estados de traduccion
         self._processing_label_text = ""
         self._btn_cancel_full_text = ""
@@ -137,7 +147,8 @@ class StatusPanel(tk.Frame):
         self._key_btn_cancel = "btn_cancel"
 
         self.lbl_processing_prefix.configure(text="")
-        self.lbl_current_file.configure(text="")
+        self.lbl_current_file.configure(text=" ")
+        self._show_file_row()
         self._mode = "idle"
         self._set_status("", with_dots=True)
         self.apply_theme(self._current_theme)
@@ -153,6 +164,7 @@ class StatusPanel(tk.Frame):
         self._processing_label_text = self._tr(self._key_processing_label)
         if (self.lbl_processing_prefix.cget("text") or "").strip():
             self.lbl_processing_prefix.configure(text=self._processing_label_text)
+            self._show_file_row()
 
         cancel_txt = self._tr(self._key_btn_cancel)
         self._btn_cancel_full_text = cancel_txt
@@ -174,7 +186,19 @@ class StatusPanel(tk.Frame):
         except Exception:
             pass
         try:
-            self.status_panel.configure(bg_color=color)
+            self.status_panel.configure(outside_bg=color)
+        except Exception:
+            pass
+
+    def set_backdrop_provider(self, backdrop_provider):
+        try:
+            self.status_panel.configure(backdrop_provider=backdrop_provider)
+        except Exception:
+            pass
+
+    def refresh_backdrop(self):
+        try:
+            self.status_panel.refresh_backdrop()
         except Exception:
             pass
 
@@ -186,9 +210,9 @@ class StatusPanel(tk.Frame):
         self.configure(bg=theme["bg_base"])
 
         try:
-            self.status_panel.configure(bg_color="transparent", fg_color=theme["bg_card"], border_color=theme["border_subtle"], border_width=STATUS_PANEL_BORDER_WIDTH)
+            self.status_panel.configure(outside_bg=theme["bg_base"], fill_color=theme["bg_card"], border_color=theme["border_subtle"], border_width=STATUS_PANEL_BORDER_WIDTH, backdrop_provider=getattr(self.status_panel, "_backdrop_provider", None))
         except Exception:
-            self.status_panel.configure(fg_color=theme["bg_card"])
+            pass
 
         try:
             self.file_row.configure(bg_color="transparent")
@@ -209,14 +233,15 @@ class StatusPanel(tk.Frame):
             text_color=red_btn["text"]
         )
 
+        progress_stops = [
+            (0.00, "#71B6FF" if theme_name == "Light" else "#5EA8FF"),
+            (0.48, "#4F8FFF" if theme_name == "Light" else "#4D8DFF"),
+            (1.00, "#734EF6" if theme_name == "Light" else "#8A6AFF"),
+        ]
         self.progress_bar.set_colors(
             track=theme["progress_track"],
             border=theme["progress_border"],
-            stops=[
-                (0.00, theme["progress_gradient_start"]),
-                (0.55, theme["progress_gradient_mid"]),
-                (1.00, theme["progress_gradient_end"]),
-            ]
+            stops=progress_stops
         )
         self.progress_bar.set(self.current_progress / 100.0)
 
@@ -237,6 +262,46 @@ class StatusPanel(tk.Frame):
             self.lbl_current_file.configure(wraplength=wrap)
         except Exception:
             pass
+
+    def _refresh_panel_geometry(self):
+        try:
+            self.update_idletasks()
+        except Exception:
+            pass
+        try:
+            self.status_panel._sync_requested_size()
+        except Exception:
+            pass
+        try:
+            self.status_panel._on_configure()
+        except Exception:
+            pass
+
+    def _show_file_row(self):
+        self.file_row.grid_configure(pady=self._file_row_pady)
+        try:
+            if not self.file_row.winfo_ismapped():
+                self.file_row.grid()
+        except Exception:
+            try:
+                self.file_row.grid()
+            except Exception:
+                pass
+        self._refresh_panel_geometry()
+
+    def _hide_file_row(self):
+        self.lbl_processing_prefix.configure(text="")
+        self.lbl_current_file.configure(text=" ")
+        self.file_row.grid_configure(pady=self._file_row_pady)
+        try:
+            if not self.file_row.winfo_ismapped():
+                self.file_row.grid()
+        except Exception:
+            try:
+                self.file_row.grid()
+            except Exception:
+                pass
+        self._refresh_panel_geometry()
 
     def _set_status(self, base_text: str, with_dots: bool):
         self._status_base = base_text or ""
@@ -353,6 +418,7 @@ class StatusPanel(tk.Frame):
 
             prefix = self._processing_label_text or _translate_status(self._tr, self._key_processing_label)
             self.lbl_processing_prefix.configure(text=prefix)
+            self._show_file_row()
 
     def set_active(
             self,
@@ -369,7 +435,8 @@ class StatusPanel(tk.Frame):
             self._forced_end_time = None
 
             self.lbl_processing_prefix.configure(text="")
-            self.lbl_current_file.configure(text="")
+            self.lbl_current_file.configure(text=" ")
+            self._hide_file_row()
 
             if mode == "indeterminate":
                 self._mode = "indeterminate"
@@ -406,9 +473,9 @@ class StatusPanel(tk.Frame):
             self.progress_bar.set(1.0)
             self.lbl_percent.configure(text="100%")
             self.lbl_processing_prefix.configure(text="")
-            self.lbl_current_file.configure(text="")
+            self.lbl_current_file.configure(text=" ")
+            self._hide_file_row()
 
-            self.after(STATUS_PANEL_SUCCESS_RESET_DELAY_MS, self.back_to_idle)
         else:
             self.back_to_idle()
 
@@ -417,7 +484,8 @@ class StatusPanel(tk.Frame):
             return
         self._mode = "idle"
         self.lbl_processing_prefix.configure(text="")
-        self.lbl_current_file.configure(text="")
+        self.lbl_current_file.configure(text=" ")
+        self._hide_file_row()
 
         self.current_progress = 0.0
         self.target_progress = 0.0
