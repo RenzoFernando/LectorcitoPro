@@ -28,9 +28,9 @@
 7.  Realizadas optimizaciones visuales en la paleta de colores, tipografía y distribución de elementos.
 8.  Actualizada la barra de progreso a un modo determinado, mostrando el porcentaje de 0 a 100%.
 9.  Desarrollado un sistema de notificaciones emergentes (pop-ups) para los siguientes estados:
-    * **Éxito:** "¡Listo! El contenido fue guardado correctamente."
-    * **Atención:** "Primero debe generar un archivo para poder abrirlo."
-    * **Error:** "Ocurrió un error durante el análisis. Intente con otra carpeta."
+    * Éxito: "¡Listo! El contenido fue guardado correctamente."
+    * Atención: "Primero debe generar un archivo para poder abrirlo."
+    * Error: "Ocurrió un error durante el análisis. Intente con otra carpeta."
 10. Implementado un pie de página dinámico con información de la aplicación:
     ```
     Lectorcito Pro v*.*
@@ -128,6 +128,20 @@
 5.  Fortalecida la presentación profesional del producto mediante metadata más completa para ejecutable, instalador, publicación y distribución.
 6.  Implementado empaquetado dual de release con artefacto portable y artefacto instalable, dejando una distribución más flexible para distintos tipos de usuario.
 7.  Mejorada la integración con Windows mediante un flujo más confiable de instalación, accesos directos y comportamiento esperado del sistema operativo.
-8.  Actualizada la documentación pública y la landing page para reflejar correctamente la nueva distribución, la release final 8.0.9 y el instalable como opción recomendada.
+8.  Actualizada la documentación pública y la landing page para reflejar correctamente la nueva distribución, y el instalable como opción recomendada.
 9.  Integrada la función de exclusión asistida con `.gitignore` dentro del apartado de Qué No Ver reforzando limpieza, precisión y rendimiento al analizar proyectos.
 10. Consolidado el cierre estable de la versión 8 con una release final enfocada en calidad, estabilidad, optimización y preparación profesional para producción.
+
+---
+
+## Versión 9: Rebranding Visual, Refactor UI y Pulido General
+1.  Refactorizada la interfaz gráfica principal para lograr una estructura visual más limpia, consistente y mantenible.
+2.  Integrados gradientes en botones, superficies y elementos clave de la aplicación para reforzar una identidad visual más moderna.
+3.  Rediseñada la paleta de colores general y ajustada la coherencia entre modo claro y modo oscuro para reducir inconsistencias visuales.
+4.  Aplicado un pequeño rebranding gráfico del producto, refinando recursos visuales y mejorando la presencia del logo e identidad general.
+5.  Centralizada la definición visual en un archivo de constantes más claro y mejor organizado, facilitando mantenimiento, escalabilidad y legibilidad del código.
+6.  Estandarizados nombres de archivos y módulos en inglés para mejorar orden interno, claridad estructural y proyección técnica del proyecto.
+7.  Implementada la importación y exportación de configuración desde los ajustes generales para facilitar respaldo, migración y reutilización de preferencias.
+8.  Mejorada la gestión de perfiles, afinando su comportamiento, organización y consistencia dentro del flujo general de configuración.
+9.  Refinados mensajes informativos, confirmaciones de lectura y feedback visual del sistema, incluyendo ajustes sobre la barra de progreso y estados relacionados.
+10. Corregidos bugs visuales, optimizados detalles de renderizado y reforzada la estabilidad general de la experiencia de usuario en toda la aplicación.

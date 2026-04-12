@@ -1,6 +1,5 @@
 import os
 
-
 def normalize_file_rule(value: str) -> str:
     return (value or "").strip().lower()
 
