@@ -342,20 +342,21 @@ class LectorcitoApp(ctk.CTk):
 
         canvas.alpha_composite(depth.resize((W, H), resample))
 
-        if is_light:
-            add_ellipse((int(W * 0.40), -int(H * 0.22), int(W * 1.14), int(H * 0.34)), theme["accent_blue"], 14, int(H * 0.22))
-            add_ellipse((int(W * 0.56), -int(H * 0.24), int(W * 1.22), int(H * 0.30)), theme["accent_purple"], 15, int(H * 0.23))
-            add_band((int(W * 0.68), -int(H * 0.04), int(W * 1.04), int(H * 0.18)), theme["bg_elevated"], 10, int(H * 0.16))
-            add_ellipse((-int(W * 0.16), int(H * 0.34), int(W * 0.34), int(H * 0.82)), theme["accent_blue"], 8, int(H * 0.20))
-            add_ellipse((-int(W * 0.10), int(H * 0.42), int(W * 0.30), int(H * 0.90)), theme["accent_purple"], 7, int(H * 0.18))
-            add_band((-int(W * 0.02), int(H * 0.46), int(W * 0.18), int(H * 0.76)), theme["bg_elevated"], 7, int(H * 0.14))
-        else:
-            add_ellipse((int(W * 0.38), -int(H * 0.24), int(W * 1.14), int(H * 0.30)), theme["accent_blue"], 11, int(H * 0.24))
-            add_ellipse((int(W * 0.56), -int(H * 0.24), int(W * 1.22), int(H * 0.28)), theme["accent_purple"], 11, int(H * 0.22))
-            add_band((int(W * 0.70), -int(H * 0.02), int(W * 1.04), int(H * 0.18)), theme["glow_blue_soft"], 9, int(H * 0.16))
-            add_ellipse((-int(W * 0.16), int(H * 0.34), int(W * 0.32), int(H * 0.86)), theme["glow_blue_soft"], 10, int(H * 0.24))
-            add_ellipse((-int(W * 0.10), int(H * 0.42), int(W * 0.28), int(H * 0.92)), theme["glow_purple_soft"], 9, int(H * 0.22))
-            add_band((-int(W * 0.02), int(H * 0.46), int(W * 0.18), int(H * 0.80)), theme["accent_blue"], 6, int(H * 0.15))
+        blue_color = theme["accent_blue"]
+        purple_color = theme["accent_purple"]
+        blue_rgb = hex_to_rgb(blue_color)
+        purple_rgb = hex_to_rgb(purple_color)
+        combo_color = "#{:02X}{:02X}{:02X}".format(
+            (blue_rgb[0] + purple_rgb[0]) // 2,
+            (blue_rgb[1] + purple_rgb[1]) // 2,
+            (blue_rgb[2] + purple_rgb[2]) // 2,
+        )
+        aura_alpha = 20 if is_light else 20
+        aura_blur = int(H * 0.18)
+
+        add_ellipse((int(W * 0.54), -int(H * 0.24), int(W * 1.16), int(H * 0.26)), blue_color, aura_alpha, aura_blur)
+        add_ellipse((-int(W * 0.08), int(H * 0.60), int(W * 0.34), int(H * 1.00)), purple_color, aura_alpha, aura_blur)
+        add_ellipse((int(W * 0.82), int(H * 0.72), int(W * 1.10), int(H * 1.02)), combo_color, aura_alpha, aura_blur)
 
         return canvas.resize((width, height), resample)
 
@@ -1183,5 +1184,3 @@ class LectorcitoApp(ctk.CTk):
             self.controller.open_manual_link()
         else:
             webbrowser.open(APP_WEBSITE_URL)
-
-

@@ -374,5 +374,3 @@ def translate(language: str, key: str, *args):
 
 def translate_default(key: str, *args):
     return translate("es", key, *args)
-
-

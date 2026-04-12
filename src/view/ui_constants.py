@@ -583,7 +583,3 @@ def mix_color(color_a: str, color_b: str, ratio: float) -> str:
 def with_alpha(color: str, alpha: int) -> tuple[int, int, int, int]:
     r, g, b = hex_to_rgb(color)
     return r, g, b, max(0, min(255, int(alpha)))
-
-
-
-

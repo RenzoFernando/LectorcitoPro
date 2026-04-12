@@ -5,7 +5,6 @@ from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_button_tokens, ge
 from view.ui_assets import get_app_icon_path
 from view.translations import translate_default
 
-
 def _tr_text(parent, key: str, *args):
     tr_callable = getattr(parent, "_tr", None)
     if callable(tr_callable):
@@ -728,5 +727,3 @@ class ChoiceDialog(BaseDialog):
                         dialog.destroy()
                 except Exception:
                     pass
-
-
