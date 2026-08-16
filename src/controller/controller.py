@@ -10,6 +10,7 @@ from view.translations import translate_default
 from model import processor
 from view.ui import LectorcitoApp
 from controller import handlers
+from platform_services import get_platform_service
 
 # =============================================================================
 # CONTROLADOR PRINCIPAL
@@ -18,6 +19,7 @@ from controller import handlers
 class LectorcitoController:
 
     def __init__(self):
+        self.platform = get_platform_service()
         self.config = config.load_config()
         self.view = LectorcitoApp(self.config, self)
 

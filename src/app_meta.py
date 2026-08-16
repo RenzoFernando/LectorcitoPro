@@ -5,7 +5,7 @@ import os
 
 APP_NAME_INTERNAL = "LectorcitoPro"
 APP_DISPLAY_NAME = "Lectorcito Pro"
-APP_VERSION = "10.0.5"
+APP_VERSION = "10.1.2"
 APP_AUTHOR = "Renzo Fernando Mosquera Daza"
 APP_VENDOR_NAME = "APPS_RenzoFernando"
 APP_COMPANY_NAME = "Renzo Fernando Mosquera Daza"

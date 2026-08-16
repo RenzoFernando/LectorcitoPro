@@ -21,7 +21,7 @@ def _tr_text(parent, key: str, *args):
 
 class SettingsDialog(BaseDialog):
     def __init__(self, parent, current_extension: str = ".txt", current_exe_path: str = "", on_save_callback=None,
-                 on_shortcut_callback=None, on_export_callback=None, on_import_callback=None, persistent: bool = False, defer_show: bool = False):
+                 on_shortcut_callback=None, on_export_callback=None, on_import_callback=None, platform_capabilities=None, persistent: bool = False, defer_show: bool = False):
         title = _tr_text(parent, "dlg_settings_title")
         super().__init__(parent, title, persistent=persistent, defer_show=defer_show)
 
@@ -33,6 +33,7 @@ class SettingsDialog(BaseDialog):
         self.on_export_callback = on_export_callback
         self.on_import_callback = on_import_callback
         self.result = None
+        self.platform_capabilities = self._normalize_platform_capabilities(platform_capabilities)
 
         self.geometry(f"{SETTINGS_DIALOG_WIDTH}x{SETTINGS_DIALOG_HEIGHT}")
 
@@ -102,7 +103,8 @@ class SettingsDialog(BaseDialog):
         self.entry_exe.pack(pady=SETTINGS_DIALOG_ENTRY_PADY, fill="x")
         self.entry_exe.insert(0, self.current_exe_path)
 
-        ctk.CTkFrame(self.content_frame, height=SETTINGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line")).pack(fill="x", pady=SETTINGS_DIALOG_SEPARATOR_PADY)
+        self.system_section_separator = ctk.CTkFrame(self.content_frame, height=SETTINGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line"))
+        self.system_section_separator.pack(fill="x", pady=SETTINGS_DIALOG_SEPARATOR_PADY)
 
         self.lbl_system_shortcuts = ctk.CTkLabel(
             self.content_frame,
@@ -147,7 +149,8 @@ class SettingsDialog(BaseDialog):
         _style_button(self.btn_pin_start, "blue")
         self.btn_pin_start.pack(pady=SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, fill="x")
 
-        ctk.CTkFrame(self.content_frame, height=SETTINGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line")).pack(fill="x", pady=SETTINGS_DIALOG_SEPARATOR_PADY)
+        self.transfer_separator = ctk.CTkFrame(self.content_frame, height=SETTINGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line"))
+        self.transfer_separator.pack(fill="x", pady=SETTINGS_DIALOG_SEPARATOR_PADY)
 
         self.lbl_config_transfer = ctk.CTkLabel(
             self.content_frame,
@@ -180,6 +183,52 @@ class SettingsDialog(BaseDialog):
         self.btn_import_config.pack(pady=SETTINGS_DIALOG_TRANSFER_LAST_BUTTON_PADY, fill="x")
 
         self._apply_format_button_styles()
+        self._apply_platform_capabilities()
+
+    def _normalize_platform_capabilities(self, capabilities):
+        if capabilities is None:
+            return {
+                "platform": "windows",
+                "supports_launcher_configuration": True,
+                "shortcut_modes": ("desktop", "start", "taskbar", "start_pin")
+            }
+        source = capabilities if isinstance(capabilities, dict) else {}
+        shortcut_modes = source.get("shortcut_modes", ())
+        if isinstance(shortcut_modes, str):
+            shortcut_modes = (shortcut_modes,)
+        return {
+            "platform": str(source.get("platform", "generic")),
+            "supports_launcher_configuration": bool(source.get("supports_launcher_configuration", False)),
+            "shortcut_modes": tuple(shortcut_modes or ())
+        }
+
+    def _apply_platform_capabilities(self):
+        supports_launcher = bool(self.platform_capabilities.get("supports_launcher_configuration", False))
+        shortcut_modes = set(self.platform_capabilities.get("shortcut_modes", ()))
+        has_system_integration = supports_launcher or bool(shortcut_modes)
+
+        if not supports_launcher:
+            self.lbl_exe_path.pack_forget()
+            self.lbl_exe_example.pack_forget()
+            self.entry_exe.pack_forget()
+
+        button_modes = {
+            "desktop": self.btn_desktop,
+            "start": self.btn_start,
+            "taskbar": self.btn_taskbar,
+            "start_pin": self.btn_pin_start
+        }
+        for mode, button in button_modes.items():
+            if mode not in shortcut_modes:
+                button.pack_forget()
+
+        if not shortcut_modes:
+            self.lbl_system_shortcuts.pack_forget()
+            self.shortcuts_frame.pack_forget()
+
+        if not has_system_integration:
+            self.system_section_separator.pack_forget()
+            self.transfer_separator.pack_forget()
 
     def _apply_format_button_styles(self):
         blue = get_button_tokens("blue")
@@ -222,24 +271,30 @@ class SettingsDialog(BaseDialog):
         self.btn_fmt_md.configure(text=_tr_text(self.parent_view, "btn_format_md"))
         self._apply_format_button_styles()
 
-    def load_state(self, current_extension: str, current_exe_path: str, on_save_callback=None, on_shortcut_callback=None, on_export_callback=None, on_import_callback=None):
+    def load_state(self, current_extension: str, current_exe_path: str, on_save_callback=None, on_shortcut_callback=None, on_export_callback=None, on_import_callback=None, platform_capabilities=None):
         self.selected_extension = current_extension
         self.current_exe_path = current_exe_path or ""
         self.on_save_callback = on_save_callback
         self.on_shortcut_callback = on_shortcut_callback
         self.on_export_callback = on_export_callback
         self.on_import_callback = on_import_callback
+        if platform_capabilities is not None:
+            self.platform_capabilities = self._normalize_platform_capabilities(platform_capabilities)
         self.result = None
         self.fmt_var.set(self.selected_extension)
         self.entry_exe.delete(0, "end")
         self.entry_exe.insert(0, self.current_exe_path)
         self._apply_format_button_styles()
+        self._apply_platform_capabilities()
         self.refresh_texts()
 
     def present(self):
         super().present()
         try:
-            self.entry_exe.focus_set()
+            if self.platform_capabilities.get("supports_launcher_configuration", False):
+                self.entry_exe.focus_set()
+            else:
+                self.btn_fmt_txt.focus_set()
         except Exception:
             pass
 
@@ -249,6 +304,8 @@ class SettingsDialog(BaseDialog):
         self._apply_format_button_styles()
 
     def _trigger_shortcut(self, shortcut_type):
+        if shortcut_type not in self.platform_capabilities.get("shortcut_modes", ()):
+            return
         current_path_input = self.entry_exe.get().strip().replace('"', '')
         if self.on_shortcut_callback:
             self.on_shortcut_callback(shortcut_type, current_path_input, parent_window=self)
@@ -263,17 +320,17 @@ class SettingsDialog(BaseDialog):
 
     def _on_ok(self):
         final_ext = self.fmt_var.get()
-        final_path = self.entry_exe.get().strip().replace('"', '')
+        final_path = self.entry_exe.get().strip().replace('"', '') if self.platform_capabilities.get("supports_launcher_configuration", False) else self.current_exe_path
         self.result = (final_ext, final_path)
         if self.on_save_callback:
             self.on_save_callback(final_ext, final_path)
         self._close_with_fade_out()
 
     @classmethod
-    def ask(cls, parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback, on_export_callback=None, on_import_callback=None):
+    def ask(cls, parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback, on_export_callback=None, on_import_callback=None, platform_capabilities=None):
         dialog = None
         try:
-            dialog = cls(parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback, on_export_callback, on_import_callback)
+            dialog = cls(parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback, on_export_callback, on_import_callback, platform_capabilities)
             parent.wait_window(dialog)
             return dialog.result
         except Exception:

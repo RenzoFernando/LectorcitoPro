@@ -7,7 +7,7 @@ TRANSLATIONS = {
     # --- GENERAL ---
     "title": "LECTORCITO PRO",
     "welcome": ", por favor seleccione una opción.",
-    "footer_copyright": "Copyright © {} - {} - Todos los derechos reservados.",
+    "footer_copyright": "Copyright © {} - {}",
     "manual_title": "Manual de Usuario",
     "info_title": "Información",
     "error_title": "Error",
@@ -146,8 +146,8 @@ TRANSLATIONS = {
     "msg_shortcut_taskbar_ok": "¡Se intentó anclar a la Barra de Tareas!",
     "msg_shortcut_pin_start_ok": "¡Se intentó anclar a Inicio!",
 
-    "msg_shortcut_manual_taskbar": "No se pudo anclar autom.\nSe abrió la carpeta: Arrastre el archivo a la barra.",
-    "msg_shortcut_manual_start": "No se pudo anclar autom.\nSe abrió la carpeta: Click derecho > Anclar a inicio.",
+    "msg_shortcut_manual_taskbar": "No se pudo anclar automáticamente.\nSe abrió la carpeta: Arrastre el archivo a la barra.",
+    "msg_shortcut_manual_start": "No se pudo anclar automáticamente.\nSe abrió la carpeta: Click derecho > Anclar a inicio.",
     "lnk_name_taskbar": "ARRASTRAME_A_BARRA_DE_TAREAS",
     "lnk_name_start": "CLICK_DERECHO_ANCLAR_A_INICIO",
 
@@ -186,7 +186,7 @@ TRANSLATIONS = {
     # --- GENERAL ---
     "title": "LECTORCITO PRO",
     "welcome": ", please select an option.",
-    "footer_copyright": "Copyright © {} - {} - All Rights Reserved.",
+    "footer_copyright": "Copyright © {} - {}",
     "manual_title": "User Manual",
     "info_title": "Information",
     "error_title": "Error",
