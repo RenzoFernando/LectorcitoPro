@@ -4,6 +4,7 @@ from tkinter import Canvas
 from PIL import Image, ImageDraw, ImageTk
 from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_theme_tokens, get_button_tokens, SIDEBAR_WIDTH, BTN_H_ICON, NEUTRAL_WHITE, NEUTRAL_BLACK, LEFT_SIDEBAR_HEIGHT, SIDEBAR_REPAINT_DELAY_MS, LEFT_SIDEBAR_FONT_SIZE, SIDEBAR_CLICK_LOCK_DELAY_MS, PILL_TEXT_BUTTON_FONT_SIZE, PILL_TEXT_HORIZONTAL_INSET, RIGHT_SIDEBAR_BUTTON_SPACING, RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH
 from view.tooltip import CustomTooltip
+from view.ui_scaling import canvas_font, scale_tk_value
 
 # =============================================================================
 # UTILIDADES DE COLOR
@@ -206,7 +207,7 @@ class BlendedRoundedFrame(tk.Frame):
         self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
 
     def _sync_requested_size(self):
-        inset = max(0, int(self._content_inset))
+        inset = max(0, int(scale_tk_value(self, self._content_inset)))
         try:
             req_w = max(1, int(self.content_frame.winfo_reqwidth()) + (inset * 2))
         except Exception:
@@ -225,7 +226,7 @@ class BlendedRoundedFrame(tk.Frame):
         self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
 
     def _sync_content_window(self, width: int, height: int):
-        inset = max(0, int(self._content_inset))
+        inset = max(0, int(scale_tk_value(self, self._content_inset)))
         inner_w = max(1, int(width - (inset * 2)))
         inner_h = max(1, int(height - (inset * 2)))
         try:
@@ -296,8 +297,8 @@ class BlendedRoundedFrame(tk.Frame):
         pad = max(1, int(scale))
         x1, y1 = pad, pad
         x2, y2 = W - pad - 1, H - pad - 1
-        radius = max(1, min((x2 - x1) // 2, (y2 - y1) // 2, int(self._corner_radius * scale)))
-        bw = max(1, int(self._border_w * scale))
+        radius = max(1, min((x2 - x1) // 2, (y2 - y1) // 2, int(scale_tk_value(self, self._corner_radius) * scale)))
+        bw = max(1, int(scale_tk_value(self, self._border_w) * scale))
 
         ImageDraw.Draw(img).rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=fill_rgba, outline=border_rgb, width=bw)
 
@@ -460,7 +461,7 @@ class LeftSidebar(ctk.CTkFrame):
                 w / 2, h / 2,
                 text=self._text,
                 angle=90,
-                font=(FONT_FAMILY_PRIMARY, LEFT_SIDEBAR_FONT_SIZE, "bold"),
+                font=canvas_font(self, FONT_FAMILY_PRIMARY, LEFT_SIDEBAR_FONT_SIZE, "bold"),
                 fill=text_fill
             )
             self._paint_signature = paint_signature
@@ -474,7 +475,7 @@ class LeftSidebar(ctk.CTkFrame):
 
         usable_w = max(10 * scale, (x2 - x1))
         radius = usable_w // 2
-        bw = max(1, int(self._border_w * scale))
+        bw = max(1, int(scale_tk_value(self, self._border_w) * scale))
         stops = _build_stops(pill_fill, pill_end_fill, pill_mid_fill)
 
         _draw_gradient_capsule(img, x1, y1, x2, y2, radius, stops, border_rgb=border_rgb, border_width=bw)
@@ -490,7 +491,7 @@ class LeftSidebar(ctk.CTkFrame):
             w / 2, h / 2,
             text=self._text,
             angle=90,
-            font=(FONT_FAMILY_PRIMARY, LEFT_SIDEBAR_FONT_SIZE, "bold"),
+            font=canvas_font(self, FONT_FAMILY_PRIMARY, LEFT_SIDEBAR_FONT_SIZE, "bold"),
             fill=text_fill
         )
         self._paint_signature = paint_signature
@@ -807,7 +808,7 @@ class PillIconButton(ctk.CTkFrame):
         usable_w = max(10 * scale, (x2 - x1))
         usable_h = max(10 * scale, (y2 - y1))
         radius = min(usable_w, usable_h) // 2
-        bw = max(1, int(self._border_w * scale))
+        bw = max(1, int(scale_tk_value(self, self._border_w) * scale))
 
         if active_stops:
             _draw_gradient_capsule(img, x1, y1, x2, y2, radius, active_stops, border_rgb=border_rgb, border_width=bw)
@@ -980,6 +981,14 @@ class PillTextButton(ctk.CTkFrame):
         if "command" in kwargs:
             self._command = kwargs.pop("command")
 
+        frame_kwargs = {}
+        if "width" in kwargs:
+            frame_kwargs["width"] = kwargs.pop("width")
+        if "height" in kwargs:
+            frame_kwargs["height"] = kwargs.pop("height")
+        if frame_kwargs:
+            super().configure(**frame_kwargs)
+
         self._paint_signature = None
         self._schedule_paint()
 
@@ -1098,7 +1107,19 @@ class PillTextButton(ctk.CTkFrame):
                 pass
             active_stops = _mix_stops(active_stops, self._outside_bg, 0.35)
 
-        paint_signature = (w, h, self._outside_bg, fill, border, text_color, self._text, str(self._font), self._state, self._hovered, self._border_w, tuple(active_stops or []))
+        render_font = self._font
+        try:
+            if isinstance(render_font, (tuple, list)) and len(render_font) >= 2 and int(render_font[1]) > 0:
+                render_font = canvas_font(
+                    self,
+                    str(render_font[0]),
+                    int(render_font[1]),
+                    str(render_font[2]) if len(render_font) > 2 else "normal"
+                )
+        except Exception:
+            render_font = self._font
+
+        paint_signature = (w, h, self._outside_bg, fill, border, text_color, self._text, str(render_font), self._state, self._hovered, self._border_w, tuple(active_stops or []))
         if paint_signature == self._paint_signature and self._canvas.find_all():
             return
 
@@ -1107,11 +1128,11 @@ class PillTextButton(ctk.CTkFrame):
             self._pill_photo = cached_photo
             self._canvas.delete("all")
             self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
-            wrap_w = max(10, w - PILL_TEXT_HORIZONTAL_INSET)
+            wrap_w = max(10, w - scale_tk_value(self, PILL_TEXT_HORIZONTAL_INSET))
             self._canvas.create_text(
                 w / 2, h / 2,
                 text=self._text,
-                font=self._font,
+                font=render_font,
                 fill=text_color,
                 width=wrap_w,
                 justify="center"
@@ -1131,7 +1152,7 @@ class PillTextButton(ctk.CTkFrame):
         usable_w = max(10 * scale, (x2 - x1))
         usable_h = max(10 * scale, (y2 - y1))
         radius = min(usable_w, usable_h) // 2
-        bw = max(1, int(self._border_w * scale))
+        bw = max(1, int(scale_tk_value(self, self._border_w) * scale))
 
         if active_stops:
             _draw_gradient_capsule(img, x1, y1, x2, y2, radius, active_stops, border_rgb=border_rgb, border_width=bw)
@@ -1145,11 +1166,11 @@ class PillTextButton(ctk.CTkFrame):
         self._canvas.delete("all")
         self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
 
-        wrap_w = max(10, w - PILL_TEXT_HORIZONTAL_INSET)
+        wrap_w = max(10, w - scale_tk_value(self, PILL_TEXT_HORIZONTAL_INSET))
         self._canvas.create_text(
             w / 2, h / 2,
             text=self._text,
-            font=self._font,
+            font=render_font,
             fill=text_color,
             width=wrap_w,
             justify="center"
@@ -1179,7 +1200,7 @@ class RightSidebar(tk.Frame):
 
         for key in keys:
             btn = self._create_button(key, current_theme)
-            btn.pack(pady=RIGHT_SIDEBAR_BUTTON_SPACING)
+            btn.pack(pady=scale_tk_value(self, RIGHT_SIDEBAR_BUTTON_SPACING))
             self.buttons[key] = btn
 
     def _create_button(self, key: str, theme_name: str) -> PillIconButton:

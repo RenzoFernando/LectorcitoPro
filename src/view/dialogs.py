@@ -66,6 +66,7 @@ def _style_entry(widget):
     widget.configure(
         height=DIALOG_INPUT_HEIGHT,
         corner_radius=DIALOG_INPUT_CORNER_RADIUS,
+        font=(FONT_FAMILY_PRIMARY, DIALOG_BUTTON_FONT_SIZE),
         fg_color=_get_color_tuple("bg_panel"),
         border_color=_get_color_tuple("border_subtle"),
         text_color=_get_color_tuple("text"),
@@ -78,6 +79,7 @@ def _style_option_menu(widget):
     widget.configure(
         height=DIALOG_OPTION_MENU_HEIGHT,
         corner_radius=DIALOG_OPTION_MENU_CORNER_RADIUS,
+        font=(FONT_FAMILY_PRIMARY, DIALOG_BUTTON_FONT_SIZE),
         fg_color=_get_color_tuple("bg_panel"),
         button_color=blue["bg"],
         button_hover_color=blue["hover"],
@@ -91,6 +93,7 @@ def _style_option_menu(widget):
 def _style_checkbox(widget):
     blue = get_button_tokens("blue")
     widget.configure(
+        font=(FONT_FAMILY_PRIMARY, DIALOG_BUTTON_FONT_SIZE),
         text_color=_get_color_tuple("text"),
         fg_color=blue["bg"],
         hover_color=blue["hover"],

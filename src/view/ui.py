@@ -33,6 +33,7 @@ from view.status_panel import StatusPanel
 from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
 from view.tags_dialog import TagsConfigDialog
+from view.ui_scaling import configure_application_scaling, refresh_application_scaling, get_application_workarea, get_widget_scaling, scale_tk_value, fit_canvas_font, measure_canvas_text, wrapped_line_count
 
 
 # =============================================================================
@@ -46,6 +47,7 @@ class LectorcitoApp(ctk.CTk):
 
         self.withdraw()
         self.attributes("-alpha", 0.0)
+        configure_application_scaling(self, prefer_pointer=True)
 
         self.TRANSLATIONS = TRANSLATIONS
         self.config = cfg
@@ -71,6 +73,8 @@ class LectorcitoApp(ctk.CTk):
         self._background_cache_key = None
         self._background_revision = 0
         self._surface_backdrops = {}
+        self._adaptive_layout_after_id = None
+        self._adaptive_layout_running = False
 
         self.title(APP_DISPLAY_NAME)
         self._app_w = MAIN_WINDOW_WIDTH
@@ -94,6 +98,8 @@ class LectorcitoApp(ctk.CTk):
         self.update_ui_texts()
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
+        self.bind("<Configure>", self._schedule_adaptive_layout_refresh, add="+")
+        self.after_idle(self._refresh_adaptive_layout)
 
         self.after(MAIN_WINDOW_SHOW_DELAY_MS, self._precise_center_and_show)
         self.after(MAIN_WINDOW_SHOW_DELAY_MS + MAIN_WINDOW_PRELOAD_DIALOGS_EXTRA_DELAY_MS, self._preload_persistent_dialogs)
@@ -108,23 +114,14 @@ class LectorcitoApp(ctk.CTk):
             return {"light": None, "dark": None}
 
     def _get_header_scaling(self) -> float:
-        for attr in ("_get_window_scaling", "_get_widget_scaling"):
-            getter = getattr(self, attr, None)
-            if callable(getter):
-                try:
-                    scale = float(getter())
-                    if scale > 0:
-                        return scale
-                except Exception:
-                    pass
-        return 1.0
+        return get_widget_scaling(self)
 
     def _get_header_logo_image(self):
         base_logo = self._header_logo_assets.get("light" if self.current_theme == "Light" else "dark")
         if base_logo is None:
             return None
 
-        scale = max(1.0, self._get_header_scaling())
+        scale = max(0.55, self._get_header_scaling())
         target_width = max(1, int(round(LOGO_TARGET_WIDTH * scale)))
         cache_key = ("light" if self.current_theme == "Light" else "dark", target_width)
         cached = self._header_logo_render_cache.get(cache_key)
@@ -174,24 +171,167 @@ class LectorcitoApp(ctk.CTk):
 
         logo = self._get_header_logo_image()
         current_y = 0
+        top_y = max(0, scale_tk_value(self, MAIN_WINDOW_HEADER_TOP_INSET))
         if logo is not None:
             self._header_logo_photo = ImageTk.PhotoImage(logo)
-            top_y = max(0, 4)
             self.header_canvas.create_image(w / 2, top_y, image=self._header_logo_photo, anchor="n")
-            current_y = top_y + logo.height + 8
+            current_y = top_y + logo.height + scale_tk_value(self, MAIN_WINDOW_HEADER_LOGO_TEXT_GAP)
         else:
             self._header_logo_photo = None
-            current_y = max(0, 4)
+            current_y = top_y
+
+        side_pad = max(1, scale_tk_value(self, MAIN_WINDOW_HEADER_TEXT_SIDE_PAD))
+        available_text_width = max(40, w - (side_pad * 2))
+        font_spec = fit_canvas_font(
+            self.header_canvas,
+            self._header_greeting_text,
+            FONT_FAMILY_PRIMARY,
+            MAIN_WINDOW_GREETING_FONT_SIZE,
+            MAIN_WINDOW_GREETING_MIN_FONT_SIZE,
+            available_text_width,
+            weight="normal"
+        )
+        text_width, line_height = measure_canvas_text(self.header_canvas, self._header_greeting_text, font_spec)
+        line_count = 1 if text_width <= available_text_width else wrapped_line_count(
+            self.header_canvas,
+            self._header_greeting_text,
+            font_spec,
+            available_text_width
+        )
+        text_height = max(line_height, line_height * line_count)
+        desired_height = max(
+            scale_tk_value(self, MAIN_WINDOW_HEADER_MIN_HEIGHT),
+            current_y + text_height + scale_tk_value(self, MAIN_WINDOW_HEADER_BOTTOM_INSET)
+        )
+
+        try:
+            if abs(int(self.header_frame.cget("height")) - int(desired_height)) > 1:
+                self.header_frame.configure(height=int(desired_height))
+                self.header_canvas.configure(height=int(desired_height))
+                self.after_idle(self._schedule_header_refresh)
+        except Exception:
+            pass
 
         self.header_canvas.create_text(
             w / 2,
             current_y,
             text=self._header_greeting_text,
             anchor="n",
-            font=(FONT_FAMILY_PRIMARY, max(1, int(round(MAIN_WINDOW_GREETING_FONT_SIZE * 0.92)))),
+            font=font_spec,
             fill=theme["text_primary"],
-            justify="center"
+            justify="center",
+            width=available_text_width
         )
+
+    def _schedule_adaptive_layout_refresh(self, event=None):
+        if event is not None and getattr(event, "widget", None) is not self:
+            return
+        if self._adaptive_layout_after_id is not None:
+            try:
+                self.after_cancel(self._adaptive_layout_after_id)
+            except Exception:
+                pass
+        try:
+            self._adaptive_layout_after_id = self.after(
+                max(1, int(MAIN_WINDOW_ADAPTIVE_REFRESH_DELAY_MS)),
+                self._refresh_adaptive_layout
+            )
+        except Exception:
+            self._adaptive_layout_after_id = None
+
+    def _apply_raw_tk_scaling(self):
+        footer_height = max(1, scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT))
+        footer_clearance = max(0, footer_height - scale_tk_value(self, 35))
+
+        try:
+            left_pady = scale_tk_value(self, MAIN_WINDOW_LEFT_PADY)
+            right_pady = scale_tk_value(self, MAIN_WINDOW_RIGHT_PADY)
+            center_pady = scale_tk_value(self, MAIN_WINDOW_CENTER_PADY)
+            self.left_container.grid_configure(
+                padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
+                pady=(left_pady[0], left_pady[1] + footer_clearance)
+            )
+            self.right_container.grid_configure(
+                padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
+                pady=(right_pady[0], right_pady[1] + footer_clearance)
+            )
+            self.center_container.grid_configure(
+                pady=(center_pady[0], center_pady[1] + footer_clearance)
+            )
+        except Exception:
+            pass
+
+        try:
+            self.header_frame.grid_configure(pady=scale_tk_value(self, MAIN_WINDOW_HEADER_PADY))
+            self.main_menu_frame.grid_configure(
+                pady=(0, scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_BOTTOM_GAP))
+            )
+            self.main_buttons_frame.pack_configure(
+                pady=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD),
+                padx=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD)
+            )
+            for btn in self.main_buttons.values():
+                btn.pack_configure(pady=scale_tk_value(self, MAIN_WINDOW_BUTTON_SPACING))
+            self.progress_frame.grid_configure(pady=scale_tk_value(self, MAIN_WINDOW_STATUS_AREA_PADY))
+        except Exception:
+            pass
+
+        try:
+            self.footer_frame.configure(height=footer_height)
+        except Exception:
+            pass
+
+    def _fit_main_button_fonts(self):
+        if not getattr(self, "main_buttons", None):
+            return
+        try:
+            self.update_idletasks()
+            widget_scale = max(0.1, get_widget_scaling(self))
+            panel_width = max(1, int(self.main_menu_frame.content_frame.winfo_width()))
+            horizontal_padding = scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD) * 2
+            logical_available_width = max(1, int((panel_width - horizontal_padding) / widget_scale))
+            button_width = max(MAIN_WINDOW_BUTTON_MIN_WIDTH, min(BTN_W_MAIN, logical_available_width))
+            for btn in self.main_buttons.values():
+                btn.configure(width=button_width)
+            self.update_idletasks()
+            widths = [max(1, int(btn.winfo_width())) for btn in self.main_buttons.values()]
+            heights = [max(1, int(btn.winfo_height())) for btn in self.main_buttons.values()]
+            available_width = max(
+                10,
+                min(widths) - scale_tk_value(self, PILL_TEXT_HORIZONTAL_INSET)
+            )
+            available_height = max(8, int(min(heights) * 0.62))
+            texts = [str(btn.cget("text") or "") for btn in self.main_buttons.values()]
+            font_spec = fit_canvas_font(
+                self,
+                texts,
+                FONT_FAMILY_PRIMARY,
+                MAIN_WINDOW_BUTTON_FONT_SIZE,
+                MAIN_WINDOW_BUTTON_MIN_FONT_SIZE,
+                available_width,
+                available_height,
+                "bold"
+            )
+            for btn in self.main_buttons.values():
+                btn.configure(font=font_spec)
+        except Exception:
+            pass
+
+    def _refresh_adaptive_layout(self):
+        self._adaptive_layout_after_id = None
+        if self._adaptive_layout_running:
+            return
+        self._adaptive_layout_running = True
+        try:
+            scaling_changed = refresh_application_scaling(self) if self.winfo_viewable() else False
+            if scaling_changed:
+                self._header_logo_render_cache.clear()
+                self.geometry(f"{self._app_w}x{self._app_h}")
+            self._apply_raw_tk_scaling()
+            self._fit_main_button_fonts()
+            self._schedule_header_refresh()
+        finally:
+            self._adaptive_layout_running = False
 
     def get_real_window_rect(self):
         return _get_widget_window_rect(self)
@@ -206,7 +346,7 @@ class LectorcitoApp(ctk.CTk):
     def _precise_center_and_show(self):
         try:
             self.update_idletasks()
-            self._startup_target_rect = _get_widget_workarea(self)
+            self._startup_target_rect = get_application_workarea(self)
             hidden_x, hidden_y = self._get_hidden_window_position(self._startup_target_rect)
             self.geometry(f"{self._app_w}x{self._app_h}+{hidden_x}+{hidden_y}")
 
@@ -558,18 +698,22 @@ class LectorcitoApp(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        footer_clearance = max(0, MAIN_WINDOW_FOOTER_HEIGHT - 35)
+        footer_height = max(1, scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT))
+        footer_clearance = max(0, footer_height - scale_tk_value(self, 35))
+        left_pady = scale_tk_value(self, MAIN_WINDOW_LEFT_PADY)
+        right_pady = scale_tk_value(self, MAIN_WINDOW_RIGHT_PADY)
+        center_pady = scale_tk_value(self, MAIN_WINDOW_CENTER_PADY)
 
         self.left_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.left_container.grid(row=0, column=0, sticky="ns", padx=MAIN_WINDOW_SIDE_PADX, pady=(MAIN_WINDOW_LEFT_PADY[0], MAIN_WINDOW_LEFT_PADY[1] + footer_clearance))
+        self.left_container.grid(row=0, column=0, sticky="ns", padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX), pady=(left_pady[0], left_pady[1] + footer_clearance))
         self._register_surface_backdrop(self.left_container)
 
         self.right_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.right_container.grid(row=0, column=2, sticky="ns", padx=MAIN_WINDOW_SIDE_PADX, pady=(MAIN_WINDOW_RIGHT_PADY[0], MAIN_WINDOW_RIGHT_PADY[1] + footer_clearance))
+        self.right_container.grid(row=0, column=2, sticky="ns", padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX), pady=(right_pady[0], right_pady[1] + footer_clearance))
         self._register_surface_backdrop(self.right_container)
 
         self.center_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.center_container.grid(row=0, column=1, sticky="nsew", pady=(MAIN_WINDOW_CENTER_PADY[0], MAIN_WINDOW_CENTER_PADY[1] + footer_clearance))
+        self.center_container.grid(row=0, column=1, sticky="nsew", pady=(center_pady[0], center_pady[1] + footer_clearance))
         self.center_container.grid_columnconfigure(0, weight=1)
         self.center_container.grid_rowconfigure(3, weight=1)
         self._register_surface_backdrop(self.center_container)
@@ -591,10 +735,13 @@ class LectorcitoApp(ctk.CTk):
         theme_keys = get_theme_tokens(self.current_theme)
         logo = self._get_header_logo_image()
         logo_height = 0 if logo is None else int(logo.height)
-        header_height = max(72, logo_height + MAIN_WINDOW_GREETING_FONT_SIZE + 24)
+        header_height = max(
+            scale_tk_value(self, MAIN_WINDOW_HEADER_MIN_HEIGHT),
+            logo_height + scale_tk_value(self, MAIN_WINDOW_GREETING_FONT_SIZE + 24)
+        )
 
         self.header_frame = tk.Frame(parent, bg=theme_keys["bg_base"], bd=0, highlightthickness=0, height=header_height)
-        self.header_frame.grid(row=0, column=0, sticky="ew", pady=MAIN_WINDOW_HEADER_PADY)
+        self.header_frame.grid(row=0, column=0, sticky="ew", pady=scale_tk_value(self, MAIN_WINDOW_HEADER_PADY))
         self.header_frame.grid_propagate(False)
 
         self.header_canvas = tk.Canvas(self.header_frame, height=header_height, highlightthickness=0, bd=0, relief="flat", bg=theme_keys["bg_base"])
@@ -615,10 +762,10 @@ class LectorcitoApp(ctk.CTk):
             content_inset=max(8, MAIN_WINDOW_MAIN_MENU_RADIUS // 2),
             backdrop_provider=self.get_backdrop_patch
         )
-        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=(0, MAIN_WINDOW_MAIN_MENU_BOTTOM_GAP))
+        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=(0, scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_BOTTOM_GAP)))
 
         self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame.content_frame, fg_color="transparent", bg_color="transparent")
-        self.main_buttons_frame.pack(pady=MAIN_WINDOW_MAIN_MENU_PAD, padx=MAIN_WINDOW_MAIN_MENU_PAD)
+        self.main_buttons_frame.pack(pady=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD), padx=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD))
 
         outside_bg = theme_keys["bg_panel"]
         btn_blue = get_button_tokens("blue")
@@ -630,7 +777,7 @@ class LectorcitoApp(ctk.CTk):
             "height": BTN_H_MAIN,
             "outside_bg": outside_bg,
             "border_width": MAIN_WINDOW_BUTTON_BORDER_WIDTH,
-            "font": (FONT_FAMILY_PRIMARY, MAIN_WINDOW_BUTTON_FONT_SIZE, "bold"),
+            "font": (FONT_FAMILY_PRIMARY, -scale_tk_value(self, MAIN_WINDOW_BUTTON_FONT_SIZE), "bold"),
             "text_color": btn_blue["text"],
         }
 
@@ -656,14 +803,14 @@ class LectorcitoApp(ctk.CTk):
             "delete": PillTextButton(self.main_buttons_frame, **build_palette(btn_red), **common),
         }
 
-        BTN_SPACING = MAIN_WINDOW_BUTTON_SPACING
+        BTN_SPACING = scale_tk_value(self, MAIN_WINDOW_BUTTON_SPACING)
         for btn in self.main_buttons.values():
             btn.pack(pady=BTN_SPACING, anchor="center")
 
     def _create_status_area(self, parent):
         theme_keys = get_theme_tokens(self.current_theme)
         self.progress_frame = tk.Frame(parent, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=MAIN_WINDOW_STATUS_AREA_PADY)
+        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=scale_tk_value(self, MAIN_WINDOW_STATUS_AREA_PADY))
         self.progress_frame.grid_columnconfigure(0, weight=1)
         self._register_surface_backdrop(self.progress_frame)
 
@@ -675,7 +822,7 @@ class LectorcitoApp(ctk.CTk):
 
     def _create_footer(self):
         theme_keys = get_theme_tokens(self.current_theme)
-        self.footer_frame = tk.Frame(self, height=MAIN_WINDOW_FOOTER_HEIGHT, bg=theme_keys["bg_footer"], bd=0, highlightthickness=0)
+        self.footer_frame = tk.Frame(self, height=scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT), bg=theme_keys["bg_footer"], bd=0, highlightthickness=0)
         self.footer_frame.pack_propagate(False)
 
         self.footer_frame.place(relx=0.0, rely=1.0, anchor="sw", relwidth=1.0)
@@ -719,6 +866,7 @@ class LectorcitoApp(ctk.CTk):
         for key, btn in self.main_buttons.items():
             if key in key_map:
                 btn.configure(text=self._tr(key_map[key]))
+        self.after_idle(self._fit_main_button_fonts)
 
         self.status_panel.set_translator(lambda k: self._tr(k))
         self.lbl_copyright.configure(text=self._tr("footer_copyright", YEAR, AUTHOR))
