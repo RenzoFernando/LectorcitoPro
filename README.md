@@ -26,7 +26,7 @@
 
 ## Descripción
 
-**Lectorcito Pro** es una aplicación de escritorio nativa para Windows, desarrollada en Python bajo una arquitectura MVC (Modelo-Vista-Controlador). Su función principal es analizar directorios de proyectos de software, consolidar su estructura y extraer el contenido relevante en un único reporte legible.
+**Lectorcito Pro** es una aplicación de escritorio para Windows y Linux, desarrollada en Python con separación entre control, interfaz, procesamiento, renderizado, internacionalización y servicios de plataforma. Su función principal es analizar directorios de proyectos de software, consolidar su estructura y extraer el contenido relevante en un único reporte legible.
 
 Está orientada a desarrolladores que necesitan:
 
@@ -40,7 +40,7 @@ Está orientada a desarrolladores que necesitan:
 1. [Acceso y Descarga](#acceso)
 2. [Características Técnicas](#caracteristicas)
 3. [Manual de Uso](#uso)
-4. [Distribución Windows](#distribucion)
+4. [Distribución](#distribucion)
 5. [Estructura del Proyecto](#estructura)
 6. [Guía para Desarrolladores](#desarrolladores)
 7. [Licencia](#licencia)
@@ -49,16 +49,19 @@ Está orientada a desarrolladores que necesitan:
 
 ## <a name="acceso"></a>Acceso y Descarga
 
-Lectorcito Pro ahora se distribuye en **dos artefactos oficiales**:
+Lectorcito Pro se distribuye en **tres artefactos oficiales**:
 
-* **Instalable recomendado:** `LectorcitoPro-Setup.exe`
-  * Opción principal para usuarios finales.
-  * Integra mejor el flujo nativo de Windows.
-  * Permite una instalación más limpia y consistente.
+* **Windows instalable recomendado:** `LectorcitoPro-Setup.exe`
+  * Opción principal para usuarios finales de Windows.
+  * Integra el ejecutable, la licencia y los accesos del instalador.
 
-* **Portable opcional:** `LectorcitoPro-Portable.exe`
-  * Pensado para ejecución directa sin instalación.
-  * Útil para pruebas, soporte técnico o uso puntual.
+* **Windows portable:** `LectorcitoPro-Portable.exe`
+  * Ejecutable único para uso directo sin instalación.
+
+* **Linux portable x86_64:** `LectorcitoPro-Linux-x86_64`
+  * Binario único generado con Nuitka Onefile.
+  * No requiere un instalador adicional.
+  * En Linux puede requerir `chmod +x LectorcitoPro-Linux-x86_64` después de descargarlo.
 
 Canales oficiales:
 
@@ -115,18 +118,21 @@ Desde el panel de ajustes se puede:
 
 ---
 
-## <a name="distribucion"></a>Distribución Windows
+## <a name="distribucion"></a>Distribución
 
+### Windows
 
-* **Portable:** orientado a ejecución directa.
-* **Instalable:** orientado a distribución recomendada para usuarios finales.
+* **Portable:** `LectorcitoPro-Portable.exe`.
+* **Instalable:** `LectorcitoPro-Setup.exe`.
+* Ambos artefactos pasan por el flujo de firma configurado para el proyecto.
 
-Además, la release mantiene:
+### Linux
 
-* Nombres de artefactos estables para publicación en GitHub Releases.
-* Integración con accesos directos de Windows.
-* Metadatos de producto, versión, copyright y descripción profesional.
-* Página oficial de documentación enlazada a la release pública.
+* **Portable Onefile x86_64:** `LectorcitoPro-Linux-x86_64`.
+* Se genera como un único binario distribuible.
+* No existe un segundo instalador Linux dentro del flujo oficial de la Versión 10.
+
+Todos los artefactos finales se generan en `downloads/`.
 
 ---
 
@@ -134,46 +140,33 @@ Además, la release mantiene:
 
 ```text
 LectorcitoPro/
-├── versionHistory.md
-├── LICENSE
+├── release.bat
 ├── README.md
-├── buildinstaller.bat
-├── buildportable.bat
-├── compilation.md
-├── signApplication.ps1
+├── LICENSE
 ├── index.html
 ├── pyproject.toml
 ├── requirements.txt
-├── setupAmp.bat
+├── versionHistory.md
+├── docs/
+│   └── compilation.md
+├── scripts/
+│   ├── release.ps1
+│   ├── windows/
+│   │   ├── setup.bat
+│   │   ├── build_portable.bat
+│   │   ├── build_installer.bat
+│   │   └── sign_application.ps1
+│   └── linux/
+│       ├── setup.sh
+│       ├── build.sh
+│       └── release.sh
 ├── resources/...
 └── src/
-    ├── __init__.py
-    ├── app_meta.py
-    ├── config.py
-    ├── file_rules.py
-    ├── main.py
-    ├── utils.py
     ├── controller/
-    │   ├── __init__.py
-    │   ├── controller.py
-    │   └── handlers.py
+    ├── i18n/
     ├── model/
-    │   ├── __init__.py
-    │   └── processor.py
+    ├── platform_services/
     └── view/
-        ├── __init__.py
-        ├── dialogs.py
-        ├── gradient_progress.py
-        ├── profiles_dialog.py
-        ├── settings_dialog.py
-        ├── sidebars.py
-        ├── status_panel.py
-        ├── tags_dialog.py
-        ├── tooltip.py
-        ├── translations.py
-        ├── ui.py
-        ├── ui_assets.py
-        └── ui_constants.py
 ```
 
 ---
@@ -182,10 +175,11 @@ LectorcitoPro/
 
 ### Requisitos del Entorno
 
-* **Python:** 3.11 recomendado.
-* **Sistema Operativo:** Windows 10/11.
+* **Python:** 3.11 o 3.12 para el flujo Windows.
+* **Windows:** Windows 10/11.
+* **Linux:** una distribución WSL instalada para el release integral desde Windows; Ubuntu LTS es la referencia recomendada para construir el binario Linux.
 * **Compilación:** Nuitka.
-* **Instalador:** Inno Setup 6.
+* **Instalador Windows:** Inno Setup 6.
 
 ### Configuración y compilación
 
@@ -196,31 +190,17 @@ git clone https://github.com/RenzoFernando/LectorcitoPro.git
 cd LectorcitoPro
 ```
 
-2. **Preparar entorno**
+2. **Generar el release completo desde Windows**
 
-```batch
-.\setupAmp.bat
+```powershell
+.\release.bat
 ```
 
-3. **Ejecutar en desarrollo**
+El orquestador ejecuta setup, portable Windows, firma del portable, instalador Windows, firma del instalador y build portable Linux mediante WSL.
 
-```bash
-.venv\Scripts\python.exe src/main.py
-```
+Los artefactos resultantes se generan en `downloads/` y los registros de cada ejecución se guardan en `build/release_logs/`.
 
-4. **Compilar versión portable**
-
-```batch
-.buildportable.bat
-```
-
-5. **Compilar instalador**
-
-```batch
-.buildinstaller.bat
-```
-
-Los artefactos resultantes se generan en la carpeta `downloads/`.
+Para ejecutar etapas individuales consulta `docs/compilation.md`.
 
 ---
 

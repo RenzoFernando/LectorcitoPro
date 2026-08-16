@@ -1,6 +1,9 @@
 @echo off
 setlocal EnableExtensions
 
+for %%I in ("%~dp0\..\..") do set "PROJECT_ROOT=%%~fI"
+cd /d "%PROJECT_ROOT%"
+
 REM ==============================================================================
 REM  SCRIPT DE CONFIGURACION DE ENTORNO (SETUP)
 REM  -----------------------------------------------------------------------------
@@ -39,7 +42,6 @@ echo.
 echo ERROR: No se encontro una version de Python compatible.
 echo Por favor instala Python 3.11 desde python.org
 echo.
-pause
 exit /b 1
 
 :py_ok
@@ -63,8 +65,7 @@ if errorlevel 1 echo WARNING: pip tooling upgrade failed. See `%PIPLOG%`.
 echo [3/5] Installing requirements from `%REQ%`...
 if not exist "%REQ%" (
     echo ERROR: `%REQ%` not found. Cannot install dependencies.
-    pause
-    exit /b 1
+exit /b 1
 )
 REM Aumentamos el timeout a 100 segundos para evitar errores de red con Nuitka
 "%VENV_PY%" -m pip install -r "%REQ%" --default-timeout=100
@@ -72,9 +73,9 @@ if errorlevel 1 goto install_fail
 
 echo [4/5] Setup complete.
 echo.
-echo [5/5] Entorno listo. Ahora ejecuta 'buildportable.bat' y/o 'buildinstaller.bat'.
+echo [5/5] Entorno listo.
 echo.
-pause
+endlocal
 exit /b 0
 
 :trypy
@@ -85,7 +86,6 @@ goto :eof
 
 :venv_fail
 echo ERROR: Failed to create the virtual environment.
-pause
 exit /b 1
 
 :install_fail
@@ -93,5 +93,4 @@ echo ERROR: Failed to install requirements from `%REQ%`.
 echo This is likely due to a Python version incompatibility with your packages.
 echo Your current Python is:
 "%VENV_PY%" --version
-pause
 exit /b 1

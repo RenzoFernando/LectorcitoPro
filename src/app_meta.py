@@ -5,7 +5,7 @@ import os
 
 APP_NAME_INTERNAL = "LectorcitoPro"
 APP_DISPLAY_NAME = "Lectorcito Pro"
-APP_VERSION = "10.2.9"
+APP_VERSION = "10.3.2"
 APP_AUTHOR = "Renzo Fernando Mosquera Daza"
 APP_VENDOR_NAME = "APPS_RenzoFernando"
 APP_COMPANY_NAME = "Renzo Fernando Mosquera Daza"
@@ -21,9 +21,9 @@ APP_EXECUTABLE_NAME = f"{APP_NAME_INTERNAL}.exe"
 APP_INSTALLER_NAME = f"{APP_NAME_INTERNAL}-Setup.exe"
 APP_INSTALLER_BASENAME = os.path.splitext(APP_INSTALLER_NAME)[0]
 APP_PORTABLE_ARTIFACT_NAME = f"{APP_NAME_INTERNAL}-Portable.exe"
-APP_LINUX_EXECUTABLE_NAME = APP_NAME_INTERNAL
-APP_LINUX_PACKAGE_DIR_NAME = f"{APP_NAME_INTERNAL}-Linux-x86_64"
-APP_LINUX_ARTIFACT_NAME = f"{APP_LINUX_PACKAGE_DIR_NAME}.tar.gz"
+APP_LINUX_EXECUTABLE_NAME = f"{APP_NAME_INTERNAL}-Linux-x86_64"
+APP_LINUX_PACKAGE_DIR_NAME = APP_LINUX_EXECUTABLE_NAME
+APP_LINUX_ARTIFACT_NAME = APP_LINUX_EXECUTABLE_NAME
 APP_LINUX_DESKTOP_ID = "io.github.renzofernando.lectorcitopro"
 APP_RELEASE_BASENAME = f"{APP_NAME_INTERNAL}-{APP_VERSION}"
 APP_RESOURCES_DIR_NAME = "resources"
@@ -56,6 +56,10 @@ def get_installer_download_url() -> str:
 
 def get_portable_download_url() -> str:
     return f"{APP_REPOSITORY_WEB_URL}/releases/latest/download/{APP_PORTABLE_ARTIFACT_NAME}"
+
+
+def get_linux_download_url() -> str:
+    return f"{APP_REPOSITORY_WEB_URL}/releases/latest/download/{APP_LINUX_ARTIFACT_NAME}"
 
 
 def get_release_download_url() -> str:
@@ -119,9 +123,11 @@ def get_web_meta_payload() -> dict:
         "downloadUrl": get_release_download_url(),
         "installerDownloadUrl": get_installer_download_url(),
         "portableDownloadUrl": get_portable_download_url(),
+        "linuxDownloadUrl": get_linux_download_url(),
         "executableName": APP_EXECUTABLE_NAME,
         "installerName": APP_INSTALLER_NAME,
         "portableArtifactName": APP_PORTABLE_ARTIFACT_NAME,
+        "linuxArtifactName": APP_LINUX_ARTIFACT_NAME,
         "releaseBasename": APP_RELEASE_BASENAME,
         "currentYear": get_current_year(),
         "copyrightText": get_copyright_text(),

@@ -16,10 +16,12 @@
 #>
 
 [CmdletBinding()]
-param()
+param([ValidateSet("Portable", "Installer", "All")][string]$Mode = "All")
+
+$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 
 function Get-PythonCommand {
-    $venvPython = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+    $venvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
     if (Test-Path $venvPython) {
         return $venvPython
     }
@@ -172,8 +174,7 @@ Write-Host "     FIRMA DIGITAL LOCAL AUTOMATICA     " -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-$PSScriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-Set-Location $PSScriptRoot
+Set-Location $ProjectRoot
 
 $CarpetaSalidaName = Get-AppMetaValue "app_meta.APP_OUTPUT_DIR_NAME" "downloads"
 $PortableArtifactName = Get-AppMetaValue "app_meta.APP_PORTABLE_ARTIFACT_NAME" "LectorcitoPro-Portable.exe"
@@ -183,7 +184,7 @@ $PublisherName = Get-AppMetaValue "app_meta.APP_PUBLISHER_NAME" "Lectorcito Pro"
 $SignatureFriendlyName = Get-AppMetaValue "app_meta.APP_SIGNATURE_FRIENDLY_NAME" "Lectorcito Pro Code Signing"
 
 $SubjectName = "CN=$PublisherName"
-$CarpetaSalida = Join-Path -Path $PSScriptRoot $CarpetaSalidaName
+$CarpetaSalida = Join-Path -Path $ProjectRoot $CarpetaSalidaName
 $RutaPortable = Join-Path -Path $CarpetaSalida $PortableArtifactName
 $RutaInstaller = Join-Path -Path $CarpetaSalida $InstallerName
 
@@ -192,12 +193,15 @@ $Artifacts = @(
     [PSCustomObject]@{ Nombre = "Installer"; Ruta = $RutaInstaller }
 )
 
+if ($Mode -ne "All") {
+    $Artifacts = @($Artifacts | Where-Object { $_.Nombre -eq $Mode })
+}
+
 $ExistingArtifacts = @($Artifacts | Where-Object { Test-Path $_.Ruta })
 
 if ($ExistingArtifacts.Count -eq 0) {
     Write-Host "[ERROR] No se encontraron artefactos para firmar en: $CarpetaSalida" -ForegroundColor Red
-    Write-Host "Primero ejecuta buildportable.bat y buildinstaller.bat."
-    Read-Host "Presiona Enter para salir"
+    Write-Host "Ejecuta primero la etapa de compilacion correspondiente."
     exit 1
 }
 
@@ -251,12 +255,11 @@ try {
     Write-Host "========================================" -ForegroundColor Green
 } catch {
     Write-Host "[ERROR] Fallo el firmado: $($_.Exception.Message)" -ForegroundColor Red
-    Read-Host "Presiona Enter para finalizar"
     exit 1
 }
 
 Write-Host ""
-Read-Host "Presiona Enter para finalizar"
+exit 0
 
 #Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 #.\signApplication.ps1

@@ -90,8 +90,6 @@
 
 ---
 
----
-
 ## Versión 6: Rediseño Visual y Optimización de Interfaz
 1.  Mejorada integralmente la interfaz de la barra de carga, con un diseño visual integrado y feedback preciso.
 2.  Ajustado el tamaño, disposición y orden lógico de los botones principales para mejorar la ergonomía.
@@ -145,3 +143,17 @@
 8.  Mejorada la gestión de perfiles, afinando su comportamiento, organización y consistencia dentro del flujo general de configuración.
 9.  Refinados mensajes informativos, confirmaciones de lectura y feedback visual del sistema, incluyendo ajustes sobre la barra de progreso y estados relacionados.
 10. Corregidos bugs visuales, optimizados detalles de renderizado y reforzada la estabilidad general de la experiencia de usuario en toda la aplicación.
+
+---
+
+## Versión 10: Refactorización Multiplataforma, Markdown y Preparación Profesional
+1. Sistema global de escalado, DPI y métricas visuales adaptativas.
+2. Reconstrucción adaptativa del encabezado y del menú principal.
+3. Refactor multiplataforma y aislamiento de servicios del sistema operativo.
+4. Compatibilidad funcional y distribución nativa para Linux.
+5. Generador Markdown real con bloques de código, navegación e hipervínculos internos.
+6. Separación entre procesamiento, modelo del reporte, renderizadores y traducciones.
+7. Infraestructura unificada de build, firma y release.
+8. Limpieza y separación profesional de dependencias y entornos.
+9. Pulido técnico de rendimiento, errores, logging, encoding, side effects y delays.
+10. Matriz de regresión y compatibilidad.

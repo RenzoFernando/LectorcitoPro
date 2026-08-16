@@ -20,7 +20,8 @@ REM     - RUTA: %LOCALAPPDATA%\Nuitka\Nuitka\Cache\downloads\depends\x86_64\
 REM     - ACCION: Descomprimir el ZIP ahi. Debe quedar "depends.exe" visible.
 REM ==============================================================================
 
-cd /d "%~dp0"
+for %%I in ("%~dp0\..\..") do set "PROJECT_ROOT=%%~fI"
+cd /d "%PROJECT_ROOT%"
 
 set "ENTRY_POINT=src/main.py"
 set "VENV_PYTHON=.venv\Scripts\python.exe"
@@ -102,8 +103,7 @@ if not exist "%LICENSE_FILE%" (
     echo * ERROR: No se encontro el archivo de licencia.      *
     echo * Falta: %LICENSE_FILE%                              *
     echo ******************************************************
-    pause
-    exit /b 1
+exit /b 1
 )
 
 echo Metadatos detectados:
@@ -129,7 +129,6 @@ echo.
 
 REM --- Limpieza de compilaciones anteriores ---
 echo Limpiando artefactos anteriores...
-if exist "build" rmdir /s /q build
 if exist "dist" rmdir /s /q dist
 if exist "%APP_NAME%.dist" rmdir /s /q "%APP_NAME%.dist"
 if exist "%APP_NAME%.build" rmdir /s /q "%APP_NAME%.build"
@@ -178,8 +177,7 @@ if %errorlevel% neq 0 (
     echo * REVISA LA SECCION DE "PLAN B" AL INICIO DE ESTE    *
     echo * ARCHIVO SI EL ERROR FUE DE DESCARGA.               *
     echo ******************************************************
-    pause
-    goto :eof
+goto :eof
 )
 
 echo.
@@ -207,10 +205,8 @@ if exist "%APP_NAME%.build" rmdir /s /q "%APP_NAME%.build"
 if exist "%APP_NAME%.onefile-build" rmdir /s /q "%APP_NAME%.onefile-build"
 if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1
 if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
-
-pause
 endlocal
-goto :eof
+exit /b 0
 
 :meta_error
 if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1
@@ -220,5 +216,4 @@ echo ******************************************************
 echo * ERROR: No se pudieron cargar los metadatos desde   *
 echo * 'src\app_meta.py'.                                 *
 echo ******************************************************
-pause
 exit /b 1
