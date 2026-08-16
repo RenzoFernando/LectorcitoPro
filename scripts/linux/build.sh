@@ -15,6 +15,15 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
     exit 1
 fi
 
+if ! "$PYTHON_BIN" -m pip check >/dev/null; then
+    echo "ERROR: El entorno Linux tiene dependencias inconsistentes. Ejecuta scripts/linux/setup.sh."
+    exit 1
+fi
+if ! "$PYTHON_BIN" -c 'import appdirs, customtkinter, PIL, nuitka' >/dev/null 2>&1; then
+    echo "ERROR: Faltan dependencias Linux. Ejecuta scripts/linux/setup.sh."
+    exit 1
+fi
+
 ENTRY_POINT="$PROJECT_ROOT/src/main.py"
 OUTPUT_DIR="$PROJECT_ROOT/downloads"
 BUILD_ROOT="$PROJECT_ROOT/build/linux"
@@ -23,6 +32,8 @@ if [[ ! -f "$ENTRY_POINT" ]]; then
     echo "ERROR: No se encontro $ENTRY_POINT."
     exit 1
 fi
+
+"$PYTHON_BIN" "$PROJECT_ROOT/src/app_meta.py"
 
 LINUX_ARTIFACT_NAME="$("$PYTHON_BIN" -c 'import os,sys; sys.path.insert(0, os.path.abspath("src")); import app_meta; print(app_meta.APP_LINUX_ARTIFACT_NAME)')"
 ICON_RELATIVE_PATH="$("$PYTHON_BIN" -c 'import os,sys; sys.path.insert(0, os.path.abspath("src")); import app_meta; print(app_meta.APP_ICON_PNG_RELATIVE_PATH)')"

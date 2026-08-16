@@ -17,7 +17,8 @@ REM     Este script ya incluye un timeout extendido (100s) para conexiones lenta
 REM ==============================================================================
 
 set "VENV_DIR=.venv"
-set "REQ=requirements.txt"
+set "REQ=requirements\windows.txt"
+set "BUILD_REQ=requirements\build.txt"
 set "PY_CMD="
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 set "PIPLOG=%TEMP%\setup_amp_pip.log"
@@ -67,8 +68,12 @@ if not exist "%REQ%" (
     echo ERROR: `%REQ%` not found. Cannot install dependencies.
 exit /b 1
 )
+if not exist "%BUILD_REQ%" (
+    echo ERROR: `%BUILD_REQ%` not found. Cannot install build dependencies.
+exit /b 1
+)
 REM Aumentamos el timeout a 100 segundos para evitar errores de red con Nuitka
-"%VENV_PY%" -m pip install -r "%REQ%" --default-timeout=100
+"%VENV_PY%" -m pip install -r "%REQ%" -r "%BUILD_REQ%" --default-timeout=100
 if errorlevel 1 goto install_fail
 
 echo [4/5] Setup complete.
@@ -81,6 +86,8 @@ exit /b 0
 :trypy
 set "candidate=%*"
 %candidate% --version >nul 2>&1
+if errorlevel 1 goto :eof
+%candidate% -c "import sys; raise SystemExit(0 if (3, 11) <= sys.version_info[:2] < (3, 13) else 1)" >nul 2>&1
 if not errorlevel 1 if not defined PY_CMD set "PY_CMD=%candidate%"
 goto :eof
 

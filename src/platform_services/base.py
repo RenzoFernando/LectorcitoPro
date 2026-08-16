@@ -4,6 +4,9 @@ from dataclasses import dataclass
 import os
 import sys
 import webbrowser
+from pathlib import Path
+
+from runtime_context import get_runtime_executable_candidates, is_frozen_runtime, is_nuitka_compiled
 
 
 @dataclass(frozen=True)
@@ -35,28 +38,12 @@ class PlatformService:
             return os.path.normcase(clean_path)
 
     def _is_nuitka_compiled(self) -> bool:
-        return globals().get("__compiled__") is not None
+        return is_nuitka_compiled()
 
     def get_runtime_executable(self) -> str:
-        candidates = []
-        if getattr(sys, "frozen", False):
-            candidates.append(sys.executable)
-        if self._is_nuitka_compiled():
-            compiled_info = globals().get("__compiled__")
-            original_argv0 = getattr(compiled_info, "original_argv0", "") if compiled_info is not None else ""
-            if original_argv0:
-                candidates.append(original_argv0)
-            if sys.argv:
-                candidates.append(sys.argv[0])
-            candidates.append(sys.executable)
-
-        for candidate in candidates:
-            try:
-                resolved = os.path.abspath(os.path.expanduser(str(candidate)))
-            except Exception:
-                continue
-            if os.path.isfile(resolved):
-                return resolved
+        for candidate in get_runtime_executable_candidates():
+            if os.path.isfile(candidate):
+                return candidate
         return ""
 
     def get_install_marker_path(self, marker_file: str, executable_path: str = "") -> str:
@@ -76,7 +63,7 @@ class PlatformService:
         return ""
 
     def get_script_fallback_launcher(self) -> str:
-        if getattr(sys, "frozen", False) or self._is_nuitka_compiled():
+        if is_frozen_runtime():
             return ""
         executable_path = self.normalize_launcher_path(sys.executable)
         if not executable_path or not os.path.isfile(executable_path):
@@ -144,14 +131,26 @@ class PlatformService:
             return ""
 
     def open_folder(self, path: str) -> bool:
-        return self._open_with_webbrowser(path)
+        return self._open_path_with_webbrowser(path)
 
     def open_file(self, path: str) -> bool:
-        return self._open_with_webbrowser(path)
+        return self._open_path_with_webbrowser(path)
 
-    def _open_with_webbrowser(self, path: str) -> bool:
+    def open_url(self, url: str) -> bool:
+        clean_url = str(url or "").strip()
+        if not clean_url:
+            return False
         try:
-            return bool(webbrowser.open(os.path.realpath(path)))
+            return bool(webbrowser.open_new_tab(clean_url))
+        except Exception:
+            return False
+
+    def _open_path_with_webbrowser(self, path: str) -> bool:
+        try:
+            resolved = os.path.realpath(os.path.expanduser(str(path or "")))
+            if not resolved or not os.path.exists(resolved):
+                return False
+            return bool(webbrowser.open_new_tab(Path(resolved).as_uri()))
         except Exception:
             return False
 

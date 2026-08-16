@@ -5,7 +5,7 @@ import os
 
 APP_NAME_INTERNAL = "LectorcitoPro"
 APP_DISPLAY_NAME = "Lectorcito Pro"
-APP_VERSION = "10.3.2"
+APP_VERSION = "10.3.7"
 APP_AUTHOR = "Renzo Fernando Mosquera Daza"
 APP_VENDOR_NAME = "APPS_RenzoFernando"
 APP_COMPANY_NAME = "Renzo Fernando Mosquera Daza"
@@ -159,7 +159,5 @@ def sync_web_meta_file() -> str | None:
     return output_path
 
 
-try:
+if __name__ == "__main__":
     sync_web_meta_file()
-except Exception:
-    pass

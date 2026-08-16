@@ -49,6 +49,9 @@ echo Version detectada:
 "%PYTHON_CMD%" --version
 echo.
 
+"%PYTHON_CMD%" "src\app_meta.py"
+if errorlevel 1 goto :meta_error
+
 if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1
 if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
 
@@ -123,8 +126,11 @@ echo [PORTABLE] %PORTABLE_ARTIFACT_NAME%
 echo [LICENSE] %LICENSE_FILE%
 echo.
 
-echo Instalando/Verificando Nuitka y dependencias...
-"%PYTHON_CMD%" -m pip install -r requirements.txt --default-timeout=100 > nul
+echo Verificando Nuitka y dependencias...
+"%PYTHON_CMD%" -m pip check > nul
+if errorlevel 1 goto :dependency_error
+"%PYTHON_CMD%" -c "import appdirs, customtkinter, PIL, nuitka; import win32com.client" > nul 2>&1
+if errorlevel 1 goto :dependency_error
 echo.
 
 REM --- Limpieza de compilaciones anteriores ---
@@ -207,6 +213,16 @@ if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1
 if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
 endlocal
 exit /b 0
+
+:dependency_error
+if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1
+if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
+echo.
+echo ******************************************************
+echo * ERROR: Faltan dependencias del entorno.             *
+echo * Ejecuta primero scripts\windows\setup.bat.          *
+echo ******************************************************
+exit /b 1
 
 :meta_error
 if exist "%META_EXPORT_SCRIPT%" del /q "%META_EXPORT_SCRIPT%" > nul 2>&1

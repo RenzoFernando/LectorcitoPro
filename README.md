@@ -146,6 +146,12 @@ LectorcitoPro/
 ├── index.html
 ├── pyproject.toml
 ├── requirements.txt
+├── requirements/
+│   ├── runtime.txt
+│   ├── windows.txt
+│   ├── linux.txt
+│   ├── build.txt
+│   └── dev.txt
 ├── versionHistory.md
 ├── docs/
 │   └── compilation.md
@@ -175,9 +181,14 @@ LectorcitoPro/
 
 ### Requisitos del Entorno
 
-* **Python:** 3.11 o 3.12 para el flujo Windows.
+* **Python:** 3.11, 3.12 o 3.13 para ejecución; el build Windows utiliza 3.11 o 3.12.
 * **Windows:** Windows 10/11.
 * **Linux:** una distribución WSL instalada para el release integral desde Windows; Ubuntu LTS es la referencia recomendada para construir el binario Linux.
+* **Runtime común:** `requirements/runtime.txt`.
+* **Runtime Windows:** `requirements/windows.txt`.
+* **Runtime Linux:** `requirements/linux.txt`.
+* **Build:** `requirements/build.txt`.
+* **Desarrollo opcional:** `requirements/dev.txt`.
 * **Compilación:** Nuitka.
 * **Instalador Windows:** Inno Setup 6.
 
@@ -190,7 +201,19 @@ git clone https://github.com/RenzoFernando/LectorcitoPro.git
 cd LectorcitoPro
 ```
 
-2. **Generar el release completo desde Windows**
+2. **Instalar únicamente el runtime común para desarrollo**
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+3. **Sincronizar metadata web cuando se modifique `src/app_meta.py`**
+
+```powershell
+python src/app_meta.py
+```
+
+4. **Generar el release completo desde Windows**
 
 ```powershell
 .\release.bat

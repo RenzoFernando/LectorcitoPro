@@ -16,12 +16,14 @@ import utils
 
 def main():
     utils.setup_logging()
+    utils.log_info("Inicio de aplicacion.", operation="startup")
 
     try:
         app = LectorcitoController()
         app.run()
 
     except KeyboardInterrupt:
+        utils.log_info("Aplicacion cancelada por teclado.", operation="shutdown")
         print("\n" + translate_default("msg_cancelled"))
         sys.exit(0)
 
@@ -36,7 +38,7 @@ def main():
             root.withdraw()
             messagebox.showerror(translate_default("critical_error_title", APP_DISPLAY_NAME), error_msg)
             root.destroy()
-        except:
+        except Exception:
             print(error_msg)
 
 # =============================================================================

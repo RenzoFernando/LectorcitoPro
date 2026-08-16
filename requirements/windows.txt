@@ -1,0 +1,2 @@
+-r runtime.txt
+pywin32==311; sys_platform == "win32"

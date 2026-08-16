@@ -1,0 +1,5 @@
+-r windows.txt
+-r build.txt
+debugpy==1.8.20
+ipython==9.10.0
+ipykernel==7.2.0

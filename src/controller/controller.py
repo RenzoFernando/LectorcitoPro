@@ -1,6 +1,5 @@
 import os
 import threading
-import webbrowser
 from tkinter import filedialog
 
 from app_meta import APP_WEBSITE_URL
@@ -58,7 +57,8 @@ class LectorcitoController:
             message_key="msg_open_repository_confirm",
             target_label=self.view.REPO_URL,
             continue_key="btn_continue_external",
-            cancel_key="btn_cancel_simple"
+            cancel_key="btn_cancel_simple",
+            platform_service=self.platform
         )
 
     def open_manual_link(self):
@@ -69,7 +69,8 @@ class LectorcitoController:
             message_key="msg_open_manual_confirm",
             target_label=APP_WEBSITE_URL,
             continue_key="btn_continue_external",
-            cancel_key="btn_cancel_simple"
+            cancel_key="btn_cancel_simple",
+            platform_service=self.platform
         )
 
     def run(self):
@@ -129,7 +130,7 @@ class LectorcitoController:
             overall_status = status
 
         except Exception as e:
-            utils.log_error("Excepción en hilo de procesamiento", e)
+            utils.log_error("Excepción en hilo de procesamiento", e, operation="processing_thread", file_path=folder_path)
             overall_status = "error"
 
         self.view.after(0, self._on_processing_finished, overall_status)
@@ -194,7 +195,7 @@ class LectorcitoController:
                 source_folder=source_path, output_path=self.config["lecturas_path"], config=self.config
             )
         except Exception as e:
-            utils.log_error("Excepción en hilo de árbol", e)
+            utils.log_error("Excepción en hilo de árbol", e, operation="tree_thread", file_path=source_path)
             status, report_path = "error", None
 
         self.view.after(0, self._on_tree_generation_finished, status, report_path)
@@ -240,4 +241,4 @@ class LectorcitoController:
             try:
                 os.makedirs(self.config["lecturas_path"], exist_ok=True)
             except Exception as e:
-                utils.log_error(f"Error creando carpeta lecturas: {self.config['lecturas_path']}", e)
+                utils.log_error("Error creando carpeta lecturas.", e, operation="create_readings_folder", file_path=self.config['lecturas_path'])

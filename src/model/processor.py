@@ -1,9 +1,9 @@
 import os
 import threading
-from time import sleep
 from i18n.translations import TRANSLATIONS
 from model.renderer_factory import get_report_renderer
 from model.scanner import ProjectScanner
+from app_logging import log_error
 
 
 # =============================================================================
@@ -158,30 +158,49 @@ def generate_report(
                     if cancel_event.is_set():
                         break
 
-                    processed_files += 1
-                    if progress_callback:
-                        progress = (processed_files / project.file_count) * 100
-                        progress_callback(progress, report_file.relative_path)
-
-                    sleep(0.01)
-
                     scanner.read_file(report_file)
                     renderer.write_file(report_file)
                     report_file.content = None
                     report_file.read_error = None
 
+                    processed_files += 1
+                    if progress_callback:
+                        progress = (processed_files / project.file_count) * 100
+                        progress_callback(progress, report_file.relative_path)
+
                 if cancel_event.is_set():
                     break
 
     except Exception as error:
-        print(f"Error generando reporte: {error}")
+        log_error(
+            "Error generando reporte.",
+            error,
+            operation="generate_report",
+            file_path=final_report_path
+        )
         if os.path.exists(final_report_path):
-            os.remove(final_report_path)
+            try:
+                os.remove(final_report_path)
+            except OSError as cleanup_error:
+                log_error(
+                    "No se pudo eliminar el reporte incompleto.",
+                    cleanup_error,
+                    operation="generate_report_cleanup",
+                    file_path=final_report_path
+                )
         return "error", None
 
     if cancel_event.is_set():
         if os.path.exists(final_report_path):
-            os.remove(final_report_path)
+            try:
+                os.remove(final_report_path)
+            except OSError as cleanup_error:
+                log_error(
+                    "No se pudo eliminar el reporte cancelado.",
+                    cleanup_error,
+                    operation="generate_report_cancel_cleanup",
+                    file_path=final_report_path
+                )
         return "cancelled", None
 
     return "success", final_report_path
@@ -226,5 +245,10 @@ def generate_tree_report(
             )
         return "success", final_report_path
     except Exception as error:
-        print(f"Error generando arbol: {error}")
+        log_error(
+            "Error generando arbol.",
+            error,
+            operation="generate_tree_report",
+            file_path=final_report_path
+        )
         return "error", None

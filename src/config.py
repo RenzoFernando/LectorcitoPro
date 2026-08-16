@@ -5,6 +5,7 @@ from datetime import datetime
 from app_meta import APP_NAME_INTERNAL, APP_VENDOR_NAME, APP_VERSION
 from file_rules import normalize_file_rule_list, normalize_file_tag_list
 from platform_services import get_platform_service
+from app_logging import log_error, log_warning
 
 PROFILE_CONFIG_KEYS = (
     "use_default_path",
@@ -232,8 +233,12 @@ def load_config() -> dict:
                     base_structure["profiles"]["default"] = build_profile_config(migrated_data, "default")
                     base_structure["active_profile_id"] = "default"
 
-        except (json.JSONDecodeError, TypeError):
-            print("Error leyendo config, usando defaults.")
+        except (json.JSONDecodeError, TypeError, OSError) as error:
+            log_warning(
+                str(error),
+                operation="load_config",
+                file_path=CONFIG_FILE_PATH
+            )
 
     return build_runtime_config(
         profiles=base_structure.get("profiles", {}),
@@ -329,7 +334,12 @@ def save_config(config: dict):
             json.dump(final_json, f, indent=4, ensure_ascii=False)
 
     except Exception as e:
-        print(f"Error al guardar config: {e}")
+        log_error(
+            "Error al guardar config.",
+            e,
+            operation="save_config",
+            file_path=CONFIG_FILE_PATH
+        )
 
 
 def delete_config_file():
@@ -337,4 +347,9 @@ def delete_config_file():
         if os.path.exists(CONFIG_FILE_PATH):
             os.remove(CONFIG_FILE_PATH)
     except Exception as e:
-        print(f"Error eliminando config: {e}")
+        log_error(
+            "Error eliminando config.",
+            e,
+            operation="delete_config",
+            file_path=CONFIG_FILE_PATH
+        )

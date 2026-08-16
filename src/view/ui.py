@@ -5,7 +5,6 @@ import tkinter as tk
 import datetime
 import os
 import random
-import webbrowser
 
 from PIL import Image, ImageDraw, ImageFilter, ImageTk, ImageStat
 from utils import resource_path
@@ -34,6 +33,8 @@ from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
 from view.tags_dialog import TagsConfigDialog
 from view.ui_scaling import configure_application_scaling, refresh_application_scaling, get_application_workarea, get_widget_scaling, scale_tk_value, fit_canvas_font, measure_canvas_text, wrapped_line_count
+from platform_services import get_platform_service
+from app_logging import log_error, log_warning
 
 
 # =============================================================================
@@ -1205,8 +1206,11 @@ class LectorcitoApp(ctk.CTk):
             self.get_media_dialog()
             self.get_profiles_dialog()
             self.get_settings_dialog()
-        except Exception:
-            pass
+        except Exception as error:
+            log_warning(
+                str(error),
+                operation="preload_persistent_dialogs"
+            )
 
     def get_view_dialog(self):
         return self._get_or_create_dialog("view", self._create_view_dialog)
@@ -1324,11 +1328,21 @@ class LectorcitoApp(ctk.CTk):
                 except Exception:
                     pass
             MessageDialog(self, self._tr(title_key), self._tr(message_key, *args), on_close=_on_message_closed)
-        except Exception:
+        except Exception as error:
+            log_error(
+                "Error mostrando dialogo de mensaje.",
+                error,
+                operation="show_message"
+            )
             self.restore_ui_from_modal()
 
     def show_app_info(self):
         if self.controller and hasattr(self.controller, "open_manual_link"):
             self.controller.open_manual_link()
         else:
-            webbrowser.open(APP_WEBSITE_URL)
+            if not get_platform_service().open_url(APP_WEBSITE_URL):
+                log_warning(
+                    "No se pudo abrir el manual de usuario.",
+                    operation="show_app_info",
+                    file_path=APP_WEBSITE_URL
+                )

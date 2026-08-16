@@ -4,6 +4,7 @@ import os
 import subprocess
 
 from platform_services.base import PlatformActionResult, PlatformService
+from app_logging import log_warning
 
 
 class WindowsPlatformService(PlatformService):
@@ -47,7 +48,7 @@ class WindowsPlatformService(PlatformService):
             os.startfile(os.path.realpath(path))
             return True
         except Exception:
-            return self._open_with_webbrowser(path)
+            return self._open_path_with_webbrowser(path)
 
     def create_system_shortcut(
         self,
@@ -143,7 +144,7 @@ class WindowsPlatformService(PlatformService):
                     return True
             return False
         except Exception as exc:
-            print(f"Intento de anclaje fallido: {exc}")
+            log_warning(str(exc), operation="pin_shortcut", file_path=link_path)
             return False
 
     def _rename_shortcut_for_manual_action(self, link_path: str, instruction_name: str) -> str:
@@ -160,7 +161,7 @@ class WindowsPlatformService(PlatformService):
             os.rename(link_path, new_path)
             return new_path
         except Exception as exc:
-            print(f"Error renombrando LNK: {exc}")
+            log_warning(str(exc), operation="rename_shortcut", file_path=link_path)
             return link_path
 
     def _reveal_in_explorer(self, link_path: str):

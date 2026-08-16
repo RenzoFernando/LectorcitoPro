@@ -1,6 +1,5 @@
 import os
 import shutil
-import webbrowser
 import customtkinter
 from tkinter import filedialog
 
@@ -14,6 +13,8 @@ from view.settings_dialog import SettingsDialog
 from i18n.translations import translate_default
 from view.ui_constants import PROFILE_SWITCH_FADE_DELAY_MS, RESTORE_FADE_DELAY_MS
 from view.ui_assets import get_app_icon_png_path
+from app_logging import log_error, log_warning
+from platform_services import get_platform_service
 
 def _get_effective_launcher_path(controller, provided_path=None, persist_changes=True, allow_script_fallback=False):
     platform = controller.platform
@@ -79,7 +80,12 @@ def select_destination_path(controller):
 def open_destination_folder(controller):
     path = controller.config.get("lecturas_path")
     if path and os.path.isdir(path):
-        controller.platform.open_folder(path)
+        if not controller.platform.open_folder(path):
+            log_warning(
+                "No se pudo abrir la carpeta de lecturas.",
+                operation="open_destination_folder",
+                file_path=path
+            )
     else:
         controller.view.show_message("info_title", "msg_select_dest")
 
@@ -99,7 +105,7 @@ def _get_latest_report_path_from_active_folder(controller):
         return ""
 
     valid_extensions = {".txt", ".md"}
-    valid_prefixes = ("reporte_", "arbol_")
+    valid_prefixes = ("reporte_", "arbol_", "report_", "tree_")
     latest_report = None
 
     try:
@@ -139,7 +145,12 @@ def open_last_report(controller):
 
     latest_report_path = _get_latest_report_path_from_active_folder(controller)
     if latest_report_path and os.path.isfile(latest_report_path):
-        controller.platform.open_file(latest_report_path)
+        if not controller.platform.open_file(latest_report_path):
+            log_warning(
+                "No se pudo abrir el ultimo reporte.",
+                operation="open_last_report",
+                file_path=latest_report_path
+            )
     else:
         controller.view.show_message("info_title", "msg_no_report_yet")
 
@@ -158,6 +169,12 @@ def delete_all_readings(controller):
             controller.last_report_path = None
             controller.view.show_message("info_title", "msg_delete_success", os.path.basename(path))
         except Exception as e:
+            log_error(
+                "Error eliminando lecturas.",
+                e,
+                operation="delete_all_readings",
+                file_path=path
+            )
             controller.view.show_message("error_title", "msg_delete_error", str(e))
 
 
@@ -313,6 +330,12 @@ def _export_app_configuration(controller, parent_window=None):
         msg_parent = parent_window if parent_window and parent_window.winfo_exists() else controller.view
         msg_parent.after(120, lambda: _show_msg_safe(msg_parent, "info_title", "msg_export_success", file_path))
     except Exception as e:
+        log_error(
+            "Error exportando configuracion.",
+            e,
+            operation="export_config",
+            file_path=file_path
+        )
         msg_parent = parent_window if parent_window and parent_window.winfo_exists() else controller.view
         msg_parent.after(120, lambda: _show_msg_safe(msg_parent, "error_title", "msg_export_error", str(e)))
 
@@ -333,6 +356,12 @@ def _import_app_configuration(controller, parent_window=None):
     try:
         runtime_config = config.import_config_from_file(file_path)
     except Exception as e:
+        log_error(
+            "Error importando configuracion.",
+            e,
+            operation="import_config",
+            file_path=file_path
+        )
         msg_parent = parent_window if parent_window and parent_window.winfo_exists() else controller.view
         msg_parent.after(120, lambda: _show_msg_safe(msg_parent, "error_title", "msg_import_error", str(e)))
         return
@@ -368,6 +397,12 @@ def _execute_import_config(controller, runtime_config, file_path):
         controller.view.apply_theme()
         save_preferences_silent(controller)
     except Exception as e:
+        log_error(
+            "Error aplicando configuracion importada.",
+            e,
+            operation="apply_imported_config",
+            file_path=file_path
+        )
         controller.view.complete_soft_refresh()
         controller.view.after(120, lambda: controller.view.show_message("error_title", "msg_import_error", str(e)))
         return
@@ -486,7 +521,12 @@ def _show_msg_safe(parent, title_key, msg_key, *args):
             MessageDialog(parent, title, msg)
         else:
             MessageDialog(parent, translate_default(title_key), translate_default(msg_key, *args))
-    except Exception:
+    except Exception as error:
+        log_error(
+            "Error mostrando mensaje seguro.",
+            error,
+            operation="show_safe_message"
+        )
         try:
             if hasattr(parent, "restore_ui_from_modal"):
                 parent.restore_ui_from_modal()
@@ -513,7 +553,7 @@ def _resolve_translation(parent, key_or_text, *args):
     return str(key_or_text)
 
 
-def open_external_link_with_confirmation(parent, url, title_key, message_key, target_label=None, continue_key=None, cancel_key=None):
+def open_external_link_with_confirmation(parent, url, title_key, message_key, target_label=None, continue_key=None, cancel_key=None, platform_service=None):
     if not url:
         return False
     try:
@@ -531,9 +571,22 @@ def open_external_link_with_confirmation(parent, url, title_key, message_key, ta
         )
         if not should_open:
             return False
-        webbrowser.open_new(url)
-        return True
-    except Exception:
+        service = platform_service or get_platform_service()
+        if service.open_url(url):
+            return True
+        log_warning(
+            "El sistema no pudo abrir el enlace externo.",
+            operation="open_external_url",
+            file_path=str(url)
+        )
+        return False
+    except Exception as error:
+        log_error(
+            "Error abriendo enlace externo.",
+            error,
+            operation="open_external_url",
+            file_path=str(url)
+        )
         try:
             if hasattr(parent, "restore_ui_from_modal"):
                 parent.restore_ui_from_modal()
@@ -554,8 +607,11 @@ def _apply_runtime_config(controller, runtime_config):
     controller.config = runtime_config
     try:
         controller.view.config = controller.config
-    except Exception:
-        pass
+    except Exception as error:
+        log_warning(
+            str(error),
+            operation="apply_runtime_config"
+        )
 
 
 def _save_meta_immediate(controller, profiles_snapshot, active_id=None):
@@ -628,7 +684,12 @@ def _load_profile_data(controller, new_active_id, new_profiles_meta):
         save_preferences_silent(controller)
 
     except Exception as e:
-        print(f"Error cargando perfil: {e}")
+        log_error(
+            "Error cargando perfil.",
+            e,
+            operation="load_profile",
+            file_path=str(new_active_id)
+        )
 
 
 def _show_app_after_switch(controller, new_active_id):
@@ -662,7 +723,11 @@ def _execute_restore(controller):
         controller.view.apply_theme()
         save_preferences_silent(controller)
     except Exception as e:
-        print(f"Error restaurando: {e}")
+        log_error(
+            "Error restaurando configuracion.",
+            e,
+            operation="restore_default_settings"
+        )
 
     controller.view.after(300, lambda: _finish_restore(controller))
 

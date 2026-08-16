@@ -31,14 +31,21 @@ else
 fi
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+RUNTIME_REQ="$PROJECT_ROOT/requirements/linux.txt"
+BUILD_REQ="$PROJECT_ROOT/requirements/build.txt"
 if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
     echo "ERROR: No se encontró $PYTHON_BIN."
     exit 1
 fi
 
+if ! "$PYTHON_BIN" -c 'import sys; raise SystemExit(0 if (3, 11) <= sys.version_info[:2] < (3, 14) else 1)' >/dev/null 2>&1; then
+    echo "ERROR: Se requiere Python 3.11, 3.12 o 3.13."
+    exit 1
+fi
+
 "$PYTHON_BIN" -m venv .venv-linux
 ".venv-linux/bin/python" -m pip install --upgrade pip setuptools wheel
-".venv-linux/bin/python" -m pip install -r requirements.txt --default-timeout=100
+".venv-linux/bin/python" -m pip install -r "$RUNTIME_REQ" -r "$BUILD_REQ" --default-timeout=100
 
 ".venv-linux/bin/python" - <<'PY'
 import tkinter

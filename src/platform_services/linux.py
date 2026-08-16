@@ -104,7 +104,7 @@ class LinuxPlatformService(PlatformService):
             except Exception:
                 continue
 
-        return self._open_with_webbrowser(resolved)
+        return self._open_path_with_webbrowser(resolved)
 
     def create_system_shortcut(
         self,

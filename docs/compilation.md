@@ -57,7 +57,34 @@ El script `scripts/linux/setup.sh` reconoce automáticamente sistemas basados en
 
 Instala o verifica las herramientas necesarias para Python, Tk, compilación nativa, `patchelf`, `ccache`, `xdg-utils` y utilidades de escritorio.
 
-## 6. Artefacto Linux
+## 6. Dependencias Python
+
+Las dependencias se separan por responsabilidad:
+
+```text
+requirements/
+├── runtime.txt
+├── windows.txt
+├── linux.txt
+├── build.txt
+└── dev.txt
+```
+
+`requirements.txt` en la raíz instala únicamente el runtime común y se conserva como punto de entrada simple para desarrollo.
+
+Windows instala `requirements/windows.txt` junto con `requirements/build.txt`. Linux instala `requirements/linux.txt` junto con `requirements/build.txt`. Las herramientas de Jupyter, IPython y depuración quedan fuera del runtime productivo y solo viven en `requirements/dev.txt`.
+
+La versión declarada en `pyproject.toml` admite Python 3.11, 3.12 y 3.13. El setup Windows utiliza 3.11 o 3.12; el setup Linux admite también 3.13.
+
+Cuando se modifique `src/app_meta.py`, la metadata web se sincroniza explícitamente con:
+
+```powershell
+python src/app_meta.py
+```
+
+Importar `app_meta` desde la aplicación ya no modifica archivos.
+
+## 7. Artefacto Linux
 
 El artefacto Linux oficial es:
 
@@ -76,7 +103,7 @@ chmod +x LectorcitoPro-Linux-x86_64
 
 No se genera `.exe`, `.tar.gz`, `.deb`, `.rpm` ni un segundo instalador Linux dentro del flujo oficial.
 
-## 7. Firma de Windows
+## 8. Firma de Windows
 
 La firma actual continúa utilizando un certificado autofirmado local.
 
@@ -90,7 +117,7 @@ Esto permite que:
 
 El autofirmado local sirve para validación y pruebas, pero no sustituye un certificado público de confianza para SmartScreen.
 
-## 8. Logs
+## 9. Logs
 
 Cada ejecución crea una carpeta con timestamp:
 
@@ -108,7 +135,7 @@ build/release_logs/
 
 El resumen final incluye la ruta y SHA-256 de cada artefacto.
 
-## 9. Scripts internos
+## 10. Scripts internos
 
 Los scripts internos quedan organizados así:
 
@@ -128,7 +155,7 @@ scripts/
 
 Durante un release normal no deben ejecutarse manualmente.
 
-## 10. Ejecución manual de emergencia
+## 11. Ejecución manual de emergencia
 
 ### Windows setup
 
@@ -168,7 +195,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\sign_appli
 bash scripts/linux/release.sh
 ```
 
-## 11. Solución de problemas
+## 12. Solución de problemas
 
 ### WSL no está instalado
 
@@ -200,6 +227,6 @@ cd /ruta/al/proyecto
 bash scripts/linux/release.sh
 ```
 
-## 12. Carpeta de salida
+## 13. Carpeta de salida
 
 Se conserva `downloads/` como carpeta oficial de salida porque ya forma parte de la metadata y del flujo de publicación del proyecto. La infraestructura interna queda separada en `scripts/` y `build/`, mientras `downloads/` contiene únicamente los artefactos que se distribuyen.

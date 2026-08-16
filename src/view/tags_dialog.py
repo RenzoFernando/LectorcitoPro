@@ -6,6 +6,7 @@ from file_rules import file_rules_conflict, matches_file_rule, normalize_file_ru
 from view.dialogs import BaseDialog, _get_color_tuple, _style_button, _style_checkbox, _style_entry, _style_scrollable
 from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, mix_color, NEUTRAL_WHITE, TAGS_DIALOG_WIDTH, TAGS_DIALOG_HEIGHT, TAGS_DIALOG_TAG_FONT_SIZE, TAGS_DIALOG_EXTRA_CHECKBOX_PADX, TAGS_DIALOG_EXTRA_CHECKBOX_PADY, TAGS_DIALOG_SEPARATOR_HEIGHT, TAGS_DIALOG_SEPARATOR_PADY, TAGS_DIALOG_BUTTON_FRAME_PADY, TAGS_DIALOG_ACTION_BUTTON_WIDTH, TAGS_DIALOG_ACTION_BUTTON_PADX, TAGS_DIALOG_LAYOUT_REFRESH_DELAY_MS, TAGS_DIALOG_SECTION_LABEL_FONT_SIZE, TAGS_DIALOG_SECTION_LABEL_PADY, TAGS_DIALOG_SECTION_LABEL_PADX, TAGS_DIALOG_SCROLL_PADX, TAGS_DIALOG_SCROLL_BORDER_WIDTH, TAGS_DIALOG_INPUT_PADX, TAGS_DIALOG_INPUT_PADY, TAGS_DIALOG_AUTODETECT_BUTTON_WIDTH, TAGS_DIALOG_AUTODETECT_BUTTON_HEIGHT, TAGS_DIALOG_AUTODETECT_BUTTON_PADX, TAGS_DIALOG_ROW_PADY, TAGS_DIALOG_PILL_SPACING, TAGS_DIALOG_WRAP_SAFETY_PX, TAGS_DIALOG_PILL_RADIUS, TAGS_DIALOG_PILL_LABEL_PADX, TAGS_DIALOG_PILL_LABEL_PADY, TAGS_DIALOG_PILL_CLOSE_SIZE, TAGS_DIALOG_PILL_CLOSE_RADIUS, TAGS_DIALOG_PILL_CLOSE_PADX, TAGS_DIALOG_PILL_CLOSE_PADY, DIALOG_BUTTON_FONT_SIZE
 from i18n.translations import translate_default
+from app_logging import log_error
 
 # =============================================================================
 # DIALOGO DE CONFIGURACION DE ETIQUETAS
@@ -603,7 +604,7 @@ class TagsConfigDialog(BaseDialog):
                 self._parent.show_message("info_title", "msg_autodetect_none")
 
         except Exception as e:
-            print(f"Error autodetectando: {e}")
+            log_error("Error autodetectando.", e, operation="autodetect_project_tags")
             self._parent.show_message("error_title", "msg_error_generic")
         finally:
             try:

@@ -4,6 +4,7 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 from utils import resource_path
 from view.ui_constants import SIDEBAR_ICON_SIZE, THEME_TOGGLE_ICON_SIZE, LOGO_TARGET_WIDTH
+from app_logging import log_warning
 
 # =============================================================================
 # GESTION DE RECURSOS VISUALES
@@ -27,14 +28,14 @@ def load_sidebar_icons(size=SIDEBAR_ICON_SIZE) -> dict:
             img_light = Image.open(resource_path(os.path.join("icons", f"{key}_claro.png")))
             icons[key] = ctk.CTkImage(light_image=img_light, dark_image=img_dark, size=size)
         except Exception as e:
-            print(f"Error cargando icono '{key}': {e}")
+            log_warning(str(e), operation="load_sidebar_icon", file_path=key)
             icons[key] = None
 
     try:
         icons["sun"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "sol.png"))), size=THEME_TOGGLE_ICON_SIZE)
         icons["moon"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "luna.png"))), size=THEME_TOGGLE_ICON_SIZE)
     except Exception as e:
-        print(f"Error cargando iconos de tema: {e}")
+        log_warning(str(e), operation="load_theme_icons")
         icons["sun"] = None
         icons["moon"] = None
 
@@ -54,7 +55,7 @@ def load_logo(target_width=LOGO_TARGET_WIDTH) -> ctk.CTkImage | None:
             light_image=logo_light, dark_image=logo_dark, size=(target_width, target_height)
         )
     except Exception as e:
-        print(f"Error al cargar logo: {e}")
+        log_warning(str(e), operation="load_logo")
         return None
 
 
@@ -66,7 +67,7 @@ def safe_set_window_icon(window) -> None:
                 window.iconbitmap(icon_path)
                 window._icon_path = icon_path
             except Exception as e:
-                print(f"Error al asignar icono: {e}")
+                log_warning(str(e), operation="set_window_icon", file_path=icon_path)
         return
 
     icon_path = get_app_icon_png_path()
@@ -77,4 +78,4 @@ def safe_set_window_icon(window) -> None:
             window._icon_photo = icon_image
             window._icon_path = icon_path
         except Exception as e:
-            print(f"Error al asignar icono: {e}")
+            log_warning(str(e), operation="set_window_icon", file_path=icon_path)

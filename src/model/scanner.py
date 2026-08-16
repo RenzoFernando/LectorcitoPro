@@ -2,6 +2,8 @@ import os
 from fnmatch import fnmatchcase
 from file_rules import matches_file_rule
 from model.report_model import ReportFile, ReportFolder, ReportProject
+from app_logging import log_error, log_warning
+from text_io import read_text_file
 
 
 class ProjectScanner:
@@ -61,12 +63,17 @@ class ProjectScanner:
 
         rules = []
         try:
-            with open(gitignore_path, "r", encoding="utf-8", errors="ignore") as infile:
-                for raw_line in infile:
-                    parsed = self._split_gitignore_line(raw_line)
-                    if parsed is not None:
-                        rules.append(parsed)
-        except OSError:
+            content = read_text_file(gitignore_path)
+            for raw_line in content.splitlines(keepends=True):
+                parsed = self._split_gitignore_line(raw_line)
+                if parsed is not None:
+                    rules.append(parsed)
+        except OSError as error:
+            log_warning(
+                str(error),
+                operation="load_gitignore",
+                file_path=gitignore_path
+            )
             return []
 
         return rules
@@ -194,7 +201,12 @@ class ProjectScanner:
                         )
                     )
         except OSError as error:
-            print(f"Error contando archivos: {error}")
+            log_error(
+                "Error recorriendo el proyecto.",
+                error,
+                operation="scan_project",
+                file_path=source_folder
+            )
             return ReportProject(name=project.name, source_path=project.source_path)
 
         return project
@@ -207,10 +219,15 @@ class ProjectScanner:
         report_file.content = None
         report_file.read_error = None
         try:
-            with open(report_file.absolute_path, "r", encoding="utf-8", errors="ignore") as infile:
-                report_file.content = infile.read()
+            report_file.content = read_text_file(report_file.absolute_path)
         except Exception as error:
             report_file.read_error = str(error)
+            log_error(
+                "Error leyendo archivo de proyecto.",
+                error,
+                operation="read_project_file",
+                file_path=report_file.absolute_path
+            )
         return report_file
 
     def build_tree_text(self, source_folder: str) -> str:
@@ -236,7 +253,12 @@ class ProjectScanner:
     ):
         try:
             elements = sorted(os.listdir(current_path))
-        except OSError:
+        except OSError as error:
+            log_warning(
+                str(error),
+                operation="build_tree",
+                file_path=current_path
+            )
             return
 
         filtered_elements = []

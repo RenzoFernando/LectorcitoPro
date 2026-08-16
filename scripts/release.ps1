@@ -73,6 +73,10 @@ $RequiredFiles = @(
     "scripts\linux\release.sh",
     "src\app_meta.py",
     "requirements.txt",
+    "requirements\runtime.txt",
+    "requirements\windows.txt",
+    "requirements\linux.txt",
+    "requirements\build.txt",
     "LICENSE"
 )
 

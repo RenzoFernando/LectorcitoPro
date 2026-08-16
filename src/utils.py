@@ -1,7 +1,7 @@
-import sys
 import os
-import logging
-import traceback
+
+from app_logging import configure_logging, log_error as _log_error, log_info as _log_info, log_warning as _log_warning
+from runtime_context import get_resource_base_candidates
 
 try:
     import config
@@ -14,19 +14,25 @@ except ImportError:
 # =============================================================================
 
 def resource_path(relative_path: str) -> str:
-    try:
+    normalized_relative = os.path.normpath(str(relative_path or "").lstrip("\\/"))
+    candidates = get_resource_base_candidates(__file__)
+
+    for base_path in candidates:
         # PyInstaller crea una carpeta temporal en _MEIPASS
-        base_path = sys._MEIPASS
-    except AttributeError:
+        candidate = os.path.join(base_path, "resources", normalized_relative)
+        if os.path.exists(candidate):
+            return candidate
+
         # Nuitka o Modo Desarrollo
-        base_path = os.path.dirname(os.path.abspath(__file__))
-
+        alternate = os.path.join(base_path, normalized_relative)
         # Si estamos en 'src', los resources suelen estar un nivel arriba
-        # Nuitka mantiene la estructura interna 'src' al compilar
         if os.path.basename(base_path) == 'src':
-            base_path = os.path.abspath(os.path.join(base_path, ".."))
+            alternate = os.path.join(os.path.abspath(os.path.join(base_path, "..")), "resources", normalized_relative)
+        # Nuitka mantiene la estructura interna 'src' al compilar
+        if os.path.exists(alternate):
+            return alternate
 
-    return os.path.join(base_path, 'resources', relative_path)
+    return os.path.join(candidates[0], "resources", normalized_relative)
 
 
 # =============================================================================
@@ -34,21 +40,21 @@ def resource_path(relative_path: str) -> str:
 # =============================================================================
 
 def setup_logging():
-    if not config: return
-
-    logging.basicConfig(
-        filename=config.LOG_FILE_PATH,
-        level=logging.ERROR,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
+    if not config:
+        return
+    configure_logging(config.LOG_FILE_PATH)
 
 
-def log_error(message: str, exception: Exception = None):
-    if exception:
-        logging.error(f"{message}\n{traceback.format_exc()}")
-    else:
-        logging.error(message)
+def log_error(message: str, exception: Exception = None, operation: str = "", file_path: str = ""):
+    _log_error(message, exception, operation=operation, file_path=file_path)
+
+
+def log_warning(message: str, operation: str = "", file_path: str = ""):
+    _log_warning(message, operation=operation, file_path=file_path)
+
+
+def log_info(message: str, operation: str = "", file_path: str = ""):
+    _log_info(message, operation=operation, file_path=file_path)
 
 
 def get_log_path() -> str:
