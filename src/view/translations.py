@@ -81,6 +81,8 @@ TRANSLATIONS = {
     "msg_error_generic": "Ocurrió un error inesperado durante la operación.",
     "msg_coming_soon": "Próximamente...",
     "default_report_name": "Reporte",
+    "rep_filename_prefix": "Reporte",
+    "rep_tree_filename_prefix": "Arbol",
 
     # --- SELECCION DESTINO ---
     "dlg_dest_choice_title": "Elegir Destino de Reportes",
@@ -173,6 +175,20 @@ TRANSLATIONS = {
     "rep_sep_start": "    >> INICIO DEL CONTENIDO: {}",
     "rep_sep_end": "    << FIN DEL CONTENIDO: {}",
     "rep_read_error": "      [Error al leer el archivo: {}]",
+    "rep_md_project_label": "PROYECTO",
+    "rep_md_path_label": "RUTA",
+    "rep_md_folder_label": "CARPETA",
+    "rep_md_file_label": "Archivo",
+    "rep_md_important": "IMPORTANTE",
+    "rep_md_toc": "Tabla de contenidos",
+    "rep_md_content_start": "INICIO DEL CONTENIDO",
+    "rep_md_content_end": "FIN DEL CONTENIDO",
+    "rep_md_media_notice": "Archivo multimedia listado; contenido no expandido.",
+    "rep_md_read_error": "Error al leer el archivo: {}",
+    "rep_md_tree_title": "LECTORCITO PRO - ESTRUCTURA DEL PROYECTO",
+    "rep_md_tree_structure": "Estructura",
+    "rep_md_folder_anchor_prefix": "carpeta",
+    "rep_md_file_anchor_prefix": "archivo",
 
     # --- TOOLTIPS ---
     "tooltip_ver": "Configurar qué carpetas y extensiones incluir en la lectura.",
@@ -265,6 +281,8 @@ TRANSLATIONS = {
     "msg_error_generic": "An unexpected error occurred during the operation.",
     "msg_coming_soon": "Coming soon...",
     "default_report_name": "Report",
+    "rep_filename_prefix": "Report",
+    "rep_tree_filename_prefix": "Tree",
 
     # --- DESTINATION ---
     "dlg_dest_choice_title": "Choose Report Destination",
@@ -357,6 +375,20 @@ TRANSLATIONS = {
     "rep_sep_start": "    >> CONTENT START: {}",
     "rep_sep_end": "    << CONTENT END: {}",
     "rep_read_error": "      [Error reading file: {}]",
+    "rep_md_project_label": "PROJECT",
+    "rep_md_path_label": "PATH",
+    "rep_md_folder_label": "FOLDER",
+    "rep_md_file_label": "File",
+    "rep_md_important": "IMPORTANT",
+    "rep_md_toc": "Table of contents",
+    "rep_md_content_start": "CONTENT START",
+    "rep_md_content_end": "CONTENT END",
+    "rep_md_media_notice": "Multimedia file listed; content not expanded.",
+    "rep_md_read_error": "Error reading file: {}",
+    "rep_md_tree_title": "LECTORCITO PRO - PROJECT STRUCTURE",
+    "rep_md_tree_structure": "Structure",
+    "rep_md_folder_anchor_prefix": "folder",
+    "rep_md_file_anchor_prefix": "file",
 
     # --- TOOLTIPS ---
     "tooltip_ver": "Configure which folders and extensions to include in the reading.",

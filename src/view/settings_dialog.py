@@ -311,6 +311,8 @@ class SettingsDialog(BaseDialog):
         self.selected_extension = value
         self.fmt_var.set(value)
         self._apply_format_button_styles()
+        if self.on_save_callback:
+            self.on_save_callback(value, self.current_exe_path)
 
     def _trigger_shortcut(self, shortcut_type):
         if shortcut_type not in self.platform_capabilities.get("shortcut_modes", ()):

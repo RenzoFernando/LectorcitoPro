@@ -1,8 +1,10 @@
 import os
 import threading
+from io import StringIO
 from fnmatch import fnmatchcase
 from time import sleep
 from file_rules import matches_file_rule
+from model.markdown_renderer import MarkdownReportRenderer
 from view.translations import TRANSLATIONS
 
 
@@ -20,6 +22,11 @@ def _get_tr(config: dict, key: str, *args) -> str:
     dct = TRANSLATIONS.get(lang, TRANSLATIONS["es"])
     val = dct.get(key, key)
     return val.format(*args)
+
+
+def _get_filename_prefix(config: dict, key: str, fallback: str) -> str:
+    value = _get_tr(config, key).strip()
+    return value if value and value != key else fallback
 
 
 def _split_gitignore_line(raw_line: str) -> tuple[bool, bool, bool, str, bool] | None:
@@ -162,6 +169,194 @@ def _count_files_to_process(folder: str, config: dict, gitignore_rules: list[tup
     return file_count
 
 
+def _get_markdown_labels(config: dict) -> dict[str, str]:
+    lang = config.get("language", "es")
+    translations = TRANSLATIONS.get(lang, TRANSLATIONS["es"])
+    return {
+        "project_label": _get_tr(config, "rep_md_project_label"),
+        "path_label": _get_tr(config, "rep_md_path_label"),
+        "folder_label": _get_tr(config, "rep_md_folder_label"),
+        "file_label": _get_tr(config, "rep_md_file_label"),
+        "root": _get_tr(config, "rep_root"),
+        "important": _get_tr(config, "rep_md_important"),
+        "toc": _get_tr(config, "rep_md_toc"),
+        "content_start": _get_tr(config, "rep_md_content_start"),
+        "content_end": _get_tr(config, "rep_md_content_end"),
+        "media_notice": _get_tr(config, "rep_md_media_notice"),
+        "read_error": translations.get("rep_md_read_error", "Error reading file: {}"),
+        "tree_structure": _get_tr(config, "rep_md_tree_structure"),
+        "folder_anchor_prefix": _get_tr(config, "rep_md_folder_anchor_prefix"),
+        "file_anchor_prefix": _get_tr(config, "rep_md_file_anchor_prefix"),
+    }
+
+
+def _to_markdown_relative_path(path: str) -> str:
+    return path.replace("\\", "/")
+
+
+def _collect_markdown_entries(
+        source_folder: str,
+        config: dict,
+        gitignore_rules: list[tuple[bool, bool, bool, str, bool]],
+        important_folders: set,
+        text_ext: set,
+        media_ext: set,
+        excluded_folders: set,
+        excluded_files: set
+) -> list[dict]:
+    entries = []
+
+    for root, dirs, files in os.walk(source_folder, topdown=True):
+        relative_root = os.path.relpath(root, source_folder)
+        relative_root = "" if relative_root == "." else relative_root
+        dirs[:] = [
+            d for d in dirs
+            if d not in excluded_folders and not _is_gitignore_excluded(
+                os.path.join(relative_root, d), True, gitignore_rules
+            )
+        ]
+        files.sort()
+
+        files_in_dir = []
+        for filename in files:
+            if matches_file_rule(filename, excluded_files):
+                continue
+            if _is_gitignore_excluded(os.path.join(relative_root, filename), False, gitignore_rules):
+                continue
+
+            is_text = matches_file_rule(filename, text_ext)
+            is_media = matches_file_rule(filename, media_ext)
+            if not is_text and not is_media:
+                continue
+
+            file_path = os.path.join(root, filename)
+            rel_path_from_root = os.path.relpath(file_path, source_folder)
+            files_in_dir.append({
+                "filename": filename,
+                "file_path": file_path,
+                "relative_path": _to_markdown_relative_path(rel_path_from_root),
+                "is_text": is_text,
+                "is_media": is_media,
+            })
+
+        if files_in_dir:
+            entries.append({
+                "relative_root": _to_markdown_relative_path(relative_root),
+                "important": os.path.basename(root) in important_folders,
+                "files": files_in_dir,
+            })
+
+    return entries
+
+
+def _generate_markdown_report(
+        source_folder: str,
+        output_path: str,
+        config: dict,
+        cancel_event: threading.Event,
+        progress_callback: callable,
+        folder_name: str,
+        total_files: int,
+        gitignore_rules: list[tuple[bool, bool, bool, str, bool]],
+        important_folders: set,
+        text_ext: set,
+        media_ext: set,
+        excluded_folders: set,
+        excluded_files: set
+) -> tuple[str, str | None]:
+    version = 1
+    while True:
+        report_filename = f"{_get_filename_prefix(config, 'rep_filename_prefix', 'Reporte')}_{folder_name}_v{version}.md"
+        final_report_path = os.path.join(output_path, report_filename)
+        if not os.path.exists(final_report_path):
+            break
+        version += 1
+
+    try:
+        entries = _collect_markdown_entries(
+            source_folder=source_folder,
+            config=config,
+            gitignore_rules=gitignore_rules,
+            important_folders=important_folders,
+            text_ext=text_ext,
+            media_ext=media_ext,
+            excluded_folders=excluded_folders,
+            excluded_files=excluded_files
+        )
+
+        if cancel_event.is_set():
+            return "cancelled", None
+
+        processed_files = 0
+        with open(final_report_path, "w", encoding="utf-8") as outfile:
+            renderer = MarkdownReportRenderer(outfile, _get_markdown_labels(config))
+            renderer.write_header(
+                _get_tr(config, "rep_title"),
+                folder_name,
+                source_folder
+            )
+            renderer.write_toc(entries)
+
+            for entry in entries:
+                if cancel_event.is_set():
+                    break
+
+                renderer.write_folder(entry["relative_root"], entry["important"])
+
+                for file_entry in entry["files"]:
+                    if cancel_event.is_set():
+                        break
+
+                    processed_files += 1
+                    if progress_callback:
+                        progress = (processed_files / total_files) * 100
+                        progress_callback(progress, file_entry["relative_path"])
+
+                    sleep(0.01)
+
+                    if file_entry["is_text"]:
+                        try:
+                            with open(
+                                file_entry["file_path"],
+                                "r",
+                                encoding="utf-8",
+                                errors="ignore"
+                            ) as infile:
+                                content = infile.read()
+                            renderer.write_text_file(
+                                file_entry["filename"],
+                                file_entry["relative_path"],
+                                content
+                            )
+                        except Exception as e:
+                            renderer.write_read_error(
+                                file_entry["filename"],
+                                file_entry["relative_path"],
+                                str(e)
+                            )
+                    elif file_entry["is_media"]:
+                        renderer.write_media_file(
+                            file_entry["filename"],
+                            file_entry["relative_path"]
+                        )
+
+                if cancel_event.is_set():
+                    break
+
+    except Exception as e:
+        print(f"Error generando reporte: {e}")
+        if os.path.exists(final_report_path):
+            os.remove(final_report_path)
+        return "error", None
+
+    if cancel_event.is_set():
+        if os.path.exists(final_report_path):
+            os.remove(final_report_path)
+        return "cancelled", None
+
+    return "success", final_report_path
+
+
 # =============================================================================
 # GENERACION DE REPORTE COMPLETO
 # =============================================================================
@@ -189,9 +384,26 @@ def generate_report(
     report_ext = config.get("report_extension", ".txt")
     folder_name = os.path.basename(os.path.normpath(source_folder))
 
+    if report_ext == ".md":
+        return _generate_markdown_report(
+            source_folder=source_folder,
+            output_path=output_path,
+            config=config,
+            cancel_event=cancel_event,
+            progress_callback=progress_callback,
+            folder_name=folder_name,
+            total_files=total_files,
+            gitignore_rules=gitignore_rules,
+            important_folders=important_folders,
+            text_ext=text_ext,
+            media_ext=media_ext,
+            excluded_folders=excluded_folders,
+            excluded_files=excluded_files
+        )
+
     version = 1
     while True:
-        report_filename = f"Reporte_{folder_name}_v{version}{report_ext}"
+        report_filename = f"{_get_filename_prefix(config, 'rep_filename_prefix', 'Reporte')}_{folder_name}_v{version}{report_ext}"
         final_report_path = os.path.join(output_path, report_filename)
         if not os.path.exists(final_report_path): break
         version += 1
@@ -293,18 +505,33 @@ def generate_tree_report(
 ) -> tuple[str, str | None]:
     folder_name = os.path.basename(os.path.normpath(source_folder))
     gitignore_rules = _load_gitignore_rules(source_folder, config)
+    report_ext = config.get("report_extension", ".txt")
 
     version = 1
     while True:
-        report_filename = f"Arbol_{folder_name}_v{version}.txt"
+        report_filename = f"{_get_filename_prefix(config, 'rep_tree_filename_prefix', 'Arbol')}_{folder_name}_v{version}{report_ext}"
         final_report_path = os.path.join(output_path, report_filename)
         if not os.path.exists(final_report_path): break
         version += 1
 
     try:
-        with open(final_report_path, "w", encoding="utf-8") as f:
-            f.write(f"{folder_name}/\n")
-            _build_tree_recursive(source_folder, "", f, config, source_folder, gitignore_rules)
+        if report_ext == ".md":
+            tree_buffer = StringIO()
+            tree_buffer.write(f"{folder_name}/\n")
+            _build_tree_recursive(source_folder, "", tree_buffer, config, source_folder, gitignore_rules)
+
+            with open(final_report_path, "w", encoding="utf-8") as f:
+                renderer = MarkdownReportRenderer(f, _get_markdown_labels(config))
+                renderer.write_tree(
+                    _get_tr(config, "rep_md_tree_title"),
+                    folder_name,
+                    source_folder,
+                    tree_buffer.getvalue()
+                )
+        else:
+            with open(final_report_path, "w", encoding="utf-8") as f:
+                f.write(f"{folder_name}/\n")
+                _build_tree_recursive(source_folder, "", f, config, source_folder, gitignore_rules)
         return "success", final_report_path
     except Exception as e:
         print(f"Error generando arbol: {e}")
