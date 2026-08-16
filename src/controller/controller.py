@@ -84,8 +84,9 @@ class LectorcitoController:
             return
 
         path = filedialog.askdirectory(
+            parent=self.view,
             title=self.view._tr("btn_choose_folder"),
-            initialdir=self.config.get("last_read_folder", "")
+            initialdir=self.platform.get_dialog_initial_directory(self.config.get("last_read_folder", ""))
         )
 
         if path:
@@ -173,7 +174,7 @@ class LectorcitoController:
         if self.is_processing or not self._check_destination_path():
             return
 
-        source_path = filedialog.askdirectory(title=self.view._tr("btn_create_tree"))
+        source_path = filedialog.askdirectory(parent=self.view, title=self.view._tr("btn_create_tree"))
         if not source_path:
             return
 
@@ -227,10 +228,13 @@ class LectorcitoController:
         return True
 
     def _update_active_lecturas_path(self):
-        if self.config.get("use_default_path", True):
-            self.config["lecturas_path"] = config.DEFAULT_LECTURAS_PATH
-        else:
-            self.config["lecturas_path"] = self.config.get("custom_lecturas_path", config.DEFAULT_LECTURAS_PATH)
+        resolved_path, using_default = self.platform.resolve_readings_path(
+            self.config.get("use_default_path", True),
+            self.config.get("custom_lecturas_path", ""),
+            config.DEFAULT_LECTURAS_PATH
+        )
+        self.config["use_default_path"] = using_default
+        self.config["lecturas_path"] = resolved_path
 
         if self.config["lecturas_path"]:
             try:

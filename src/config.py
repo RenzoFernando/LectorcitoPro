@@ -2,9 +2,9 @@ import os
 import json
 import copy
 from datetime import datetime
-from appdirs import user_config_dir
 from app_meta import APP_NAME_INTERNAL, APP_VENDOR_NAME, APP_VERSION
 from file_rules import normalize_file_rule_list, normalize_file_tag_list
+from platform_services import get_platform_service
 
 PROFILE_CONFIG_KEYS = (
     "use_default_path",
@@ -33,12 +33,17 @@ APP_AUTHOR = APP_VENDOR_NAME
 CFG_NAME = "config.json"
 LOG_NAME = "error.log"
 
-_config_dir = user_config_dir(APP_NAME, APP_AUTHOR, roaming=True)
-os.makedirs(_config_dir, exist_ok=True)
+_platform_service = get_platform_service()
+_config_dir = _platform_service.get_user_config_dir(APP_NAME, APP_AUTHOR)
+_data_dir = _platform_service.get_user_data_dir(APP_NAME, APP_AUTHOR)
+_state_dir = _platform_service.get_user_state_dir(APP_NAME, APP_AUTHOR)
+
+for _required_dir in (_config_dir, _data_dir, _state_dir):
+    os.makedirs(_required_dir, exist_ok=True)
 
 CONFIG_FILE_PATH = os.path.join(_config_dir, CFG_NAME)
-LOG_FILE_PATH = os.path.join(_config_dir, LOG_NAME)
-DEFAULT_LECTURAS_PATH = os.path.join(_config_dir, "Lecturas")
+LOG_FILE_PATH = os.path.join(_state_dir, LOG_NAME)
+DEFAULT_LECTURAS_PATH = os.path.join(_data_dir, "Lecturas")
 EXPORT_FILE_EXTENSION = ".json"
 EXPORT_FORMAT_NAME = "lectorcito-pro-config"
 EXPORT_SCHEMA_VERSION = 1

@@ -1,6 +1,7 @@
 import os
+import sys
 import customtkinter as ctk
-from PIL import Image
+from PIL import Image, ImageTk
 from utils import resource_path
 from view.ui_constants import SIDEBAR_ICON_SIZE, THEME_TOGGLE_ICON_SIZE, LOGO_TARGET_WIDTH
 
@@ -10,6 +11,10 @@ from view.ui_constants import SIDEBAR_ICON_SIZE, THEME_TOGGLE_ICON_SIZE, LOGO_TA
 
 def get_app_icon_path() -> str:
     return resource_path(os.path.join("branding", "lector.ico"))
+
+
+def get_app_icon_png_path() -> str:
+    return resource_path(os.path.join("branding", "lector.png"))
 
 
 def load_sidebar_icons(size=SIDEBAR_ICON_SIZE) -> dict:
@@ -54,10 +59,22 @@ def load_logo(target_width=LOGO_TARGET_WIDTH) -> ctk.CTkImage | None:
 
 
 def safe_set_window_icon(window) -> None:
-    icon_path = get_app_icon_path()
+    if sys.platform.startswith("win"):
+        icon_path = get_app_icon_path()
+        if icon_path and os.path.exists(icon_path):
+            try:
+                window.iconbitmap(icon_path)
+                window._icon_path = icon_path
+            except Exception as e:
+                print(f"Error al asignar icono: {e}")
+        return
+
+    icon_path = get_app_icon_png_path()
     if icon_path and os.path.exists(icon_path):
         try:
-            window.iconbitmap(icon_path)
+            icon_image = ImageTk.PhotoImage(Image.open(icon_path))
+            window.iconphoto(True, icon_image)
+            window._icon_photo = icon_image
             window._icon_path = icon_path
         except Exception as e:
             print(f"Error al asignar icono: {e}")

@@ -544,7 +544,7 @@ class TagsConfigDialog(BaseDialog):
                 self.btn_auto = btn_auto
 
     def _on_autodetect(self):
-        path = filedialog.askdirectory(title=self._parent._tr("btn_autodetect"))
+        path = filedialog.askdirectory(parent=self, title=self._parent._tr("btn_autodetect"))
         if not path:
             return
 

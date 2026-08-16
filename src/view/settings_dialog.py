@@ -190,16 +190,23 @@ class SettingsDialog(BaseDialog):
             return {
                 "platform": "windows",
                 "supports_launcher_configuration": True,
-                "shortcut_modes": ("desktop", "start", "taskbar", "start_pin")
+                "shortcut_modes": ("desktop", "start", "taskbar", "start_pin"),
+                "system_shortcuts_label_key": "lbl_system_shortcuts",
+                "shortcut_label_keys": {}
             }
         source = capabilities if isinstance(capabilities, dict) else {}
         shortcut_modes = source.get("shortcut_modes", ())
         if isinstance(shortcut_modes, str):
             shortcut_modes = (shortcut_modes,)
+        shortcut_label_keys = source.get("shortcut_label_keys", {})
+        if not isinstance(shortcut_label_keys, dict):
+            shortcut_label_keys = {}
         return {
             "platform": str(source.get("platform", "generic")),
             "supports_launcher_configuration": bool(source.get("supports_launcher_configuration", False)),
-            "shortcut_modes": tuple(shortcut_modes or ())
+            "shortcut_modes": tuple(shortcut_modes or ()),
+            "system_shortcuts_label_key": str(source.get("system_shortcuts_label_key", "lbl_system_shortcuts")),
+            "shortcut_label_keys": dict(shortcut_label_keys)
         }
 
     def _apply_platform_capabilities(self):
@@ -259,11 +266,13 @@ class SettingsDialog(BaseDialog):
         self.lbl_exe_path.configure(text=self.parent_view._tr("lbl_exe_path", APP_EXECUTABLE_NAME))
         self.lbl_exe_example.configure(text=self.parent_view._tr("lbl_exe_example", APP_EXECUTABLE_NAME))
         self.entry_exe.configure(placeholder_text=self.parent_view._tr("ph_exe_path"))
-        self.lbl_system_shortcuts.configure(text=self.parent_view._tr("lbl_system_shortcuts"))
-        self.btn_desktop.configure(text=self.parent_view._tr("btn_shortcut_desktop"))
-        self.btn_start.configure(text=self.parent_view._tr("btn_shortcut_start"))
-        self.btn_taskbar.configure(text=self.parent_view._tr("btn_shortcut_taskbar"))
-        self.btn_pin_start.configure(text=self.parent_view._tr("btn_shortcut_pin_start"))
+        system_label_key = self.platform_capabilities.get("system_shortcuts_label_key", "lbl_system_shortcuts")
+        shortcut_label_keys = self.platform_capabilities.get("shortcut_label_keys", {})
+        self.lbl_system_shortcuts.configure(text=self.parent_view._tr(system_label_key))
+        self.btn_desktop.configure(text=self.parent_view._tr(shortcut_label_keys.get("desktop", "btn_shortcut_desktop")))
+        self.btn_start.configure(text=self.parent_view._tr(shortcut_label_keys.get("start", "btn_shortcut_start")))
+        self.btn_taskbar.configure(text=self.parent_view._tr(shortcut_label_keys.get("taskbar", "btn_shortcut_taskbar")))
+        self.btn_pin_start.configure(text=self.parent_view._tr(shortcut_label_keys.get("start_pin", "btn_shortcut_pin_start")))
         self.lbl_config_transfer.configure(text=self.parent_view._tr("lbl_config_transfer"))
         self.btn_export_config.configure(text=self.parent_view._tr("btn_export_config"))
         self.btn_import_config.configure(text=self.parent_view._tr("btn_import_config"))
@@ -306,7 +315,7 @@ class SettingsDialog(BaseDialog):
     def _trigger_shortcut(self, shortcut_type):
         if shortcut_type not in self.platform_capabilities.get("shortcut_modes", ()):
             return
-        current_path_input = self.entry_exe.get().strip().replace('"', '')
+        current_path_input = self.entry_exe.get().strip().replace('"', '') if self.platform_capabilities.get("supports_launcher_configuration", False) else ""
         if self.on_shortcut_callback:
             self.on_shortcut_callback(shortcut_type, current_path_input, parent_window=self)
 

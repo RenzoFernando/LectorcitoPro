@@ -56,7 +56,10 @@ class WindowsPlatformService(PlatformService):
         app_name: str,
         description: str,
         taskbar_instruction: str = "",
-        start_instruction: str = ""
+        start_instruction: str = "",
+        display_name: str = "",
+        desktop_id: str = "",
+        icon_path: str = ""
     ) -> PlatformActionResult:
         if not self.supports_shortcut_mode(mode):
             return PlatformActionResult(False, status="unsupported", error=f"Unsupported Windows shortcut mode: {mode}")

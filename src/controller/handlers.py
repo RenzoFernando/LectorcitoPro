@@ -5,7 +5,7 @@ import customtkinter
 from tkinter import filedialog
 
 import config
-from app_meta import APP_DISPLAY_NAME, APP_NAME_INTERNAL, APP_INSTALL_MARKER_FILE
+from app_meta import APP_DISPLAY_NAME, APP_NAME_INTERNAL, APP_INSTALL_MARKER_FILE, APP_LINUX_DESKTOP_ID
 from file_rules import canonical_file_rule, normalize_file_rule_list, normalize_file_tag_list
 from view.dialogs import ConfirmDialog, ChoiceDialog, ExternalLinkDialog, MessageDialog
 from view.tags_dialog import TagsConfigDialog
@@ -13,6 +13,7 @@ from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
 from view.translations import translate_default
 from view.ui_constants import PROFILE_SWITCH_FADE_DELAY_MS, RESTORE_FADE_DELAY_MS
+from view.ui_assets import get_app_icon_png_path
 
 def _get_effective_launcher_path(controller, provided_path=None, persist_changes=True, allow_script_fallback=False):
     platform = controller.platform
@@ -65,7 +66,7 @@ def select_destination_path(controller):
         controller.view.show_message("info_title", "dest_set_default_msg")
 
     elif choice == "custom":
-        path = filedialog.askdirectory(title=controller.view._tr("btn_sel_lecturas"))
+        path = filedialog.askdirectory(parent=controller.view, title=controller.view._tr("btn_sel_lecturas"))
         if path:
             custom_path = os.path.join(path, "Lecturas")
             controller.config.update({"use_default_path": False, "custom_lecturas_path": custom_path})
@@ -443,7 +444,10 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
         app_name=APP_NAME_INTERNAL,
         description=controller.view._tr("shortcut_desc", APP_DISPLAY_NAME),
         taskbar_instruction=controller.view._tr("lnk_name_taskbar"),
-        start_instruction=controller.view._tr("lnk_name_start")
+        start_instruction=controller.view._tr("lnk_name_start"),
+        display_name=APP_DISPLAY_NAME,
+        desktop_id=APP_LINUX_DESKTOP_ID,
+        icon_path=get_app_icon_png_path()
     )
 
     if not result.success:
@@ -460,7 +464,9 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
         "taskbar_pinned": "msg_shortcut_taskbar_ok",
         "start_pinned": "msg_shortcut_pin_start_ok",
         "taskbar_manual": "msg_shortcut_manual_taskbar",
-        "start_manual": "msg_shortcut_manual_start"
+        "start_manual": "msg_shortcut_manual_start",
+        "linux_desktop_created": "msg_shortcut_linux_desktop_ok",
+        "linux_menu_created": "msg_shortcut_linux_menu_ok"
     }
     msg_key = message_map.get(result.status)
     if msg_key:
