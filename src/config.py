@@ -64,7 +64,7 @@ def _normalize_profile_file_rules(profile: dict) -> dict:
     normalized_profile["last_read_folder"] = str(normalized_profile.get("last_read_folder", "") or "")
     normalized_profile["theme"] = "Dark" if str(normalized_profile.get("theme", "Light")).lower() == "dark" else "Light"
     normalized_profile["language"] = "en" if str(normalized_profile.get("language", "es")).lower() == "en" else "es"
-    normalized_profile["report_extension"] = ".md" if str(normalized_profile.get("report_extension", ".txt")).lower() == ".md" else ".txt"
+    normalized_profile["report_extension"] = ".txt" if str(normalized_profile.get("report_extension", ".md")).lower() == ".txt" else ".md"
     normalized_profile["use_gitignore_exclusions"] = bool(normalized_profile.get("use_gitignore_exclusions", False))
     normalized_profile["etiquetas_carpetas_importantes"] = normalize_file_tag_list(
         normalized_profile.get("etiquetas_carpetas_importantes", [])
@@ -150,7 +150,7 @@ DEFAULT_CONFIG_VALUES = {
     "last_read_folder": "",
     "theme": "Light",
     "language": "es",
-    "report_extension": ".txt",
+    "report_extension": ".md",
     "use_gitignore_exclusions": False,
     "etiquetas_carpetas_importantes": to_tags(["src"]),
     "etiquetas_extensiones_incluidas": to_tags([".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json", ".sql"]),
@@ -175,7 +175,7 @@ BLANK_PROFILE_CONFIG = {
     "last_read_folder": "",
     "theme": "Light",
     "language": "es",
-    "report_extension": ".txt",
+    "report_extension": ".md",
     "use_gitignore_exclusions": False,
     "etiquetas_carpetas_importantes": [],
     "etiquetas_extensiones_incluidas": [],

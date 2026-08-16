@@ -129,19 +129,26 @@ class MarkdownReportRenderer:
         self._anchors = {}
         self._used_anchors = {}
 
+    @staticmethod
+    def _markdown_path(path: str) -> str:
+        return str(path).replace("\\", "/")
+
     def _anchor(self, kind: str, path: str) -> str:
-        key = (kind, path)
+        normalized_path = self._markdown_path(path)
+        key = (kind, normalized_path)
         if key in self._anchors:
             return self._anchors[key]
 
-        base = f"{kind}-{_slugify(path)}"
+        base = f"{kind}-{_slugify(normalized_path)}"
         anchor = base
         previous = self._used_anchors.get(anchor)
         if previous is not None and previous != key:
-            digest = hashlib.sha1(f"{kind}:{path}".encode("utf-8")).hexdigest()[:8]
+            digest = hashlib.sha1(f"{kind}:{normalized_path}".encode("utf-8")).hexdigest()[:8]
             anchor = f"{base}-{digest}"
             while anchor in self._used_anchors and self._used_anchors[anchor] != key:
-                digest = hashlib.sha1(f"{kind}:{path}:{anchor}".encode("utf-8")).hexdigest()[:8]
+                digest = hashlib.sha1(
+                    f"{kind}:{normalized_path}:{anchor}".encode("utf-8")
+                ).hexdigest()[:8]
                 anchor = f"{base}-{digest}"
 
         self._anchors[key] = anchor
@@ -154,40 +161,62 @@ class MarkdownReportRenderer:
             f"**{self.labels['path_label']}:** {_inline_code(source_path)}\n\n"
         )
 
-    def write_header(self, title: str, project_name: str, source_path: str):
+    def write_header(self, title: str, project):
         self.outfile.write(f"# {title}\n\n")
-        self._write_metadata(project_name, source_path)
+        self._write_metadata(project.name, project.source_path)
 
-    def write_toc(self, entries: list[dict]):
+    def write_toc(self, project):
         self.outfile.write(f"## {self.labels['toc']}\n\n")
-        for entry in entries:
-            folder_path = entry["relative_root"] or self.labels["root"]
+        for folder in project.folders:
+            folder_path = self._markdown_path(folder.relative_path) or self.labels["root"]
             folder_anchor = self._anchor(self.labels["folder_anchor_prefix"], folder_path)
-            folder_text = entry["relative_root"] or self.labels["root"]
-            important = f" — **{self.labels['important']}**" if entry.get("important") else ""
+            folder_text = self._markdown_path(folder.relative_path) or self.labels["root"]
+            important = f" — **{self.labels['important']}**" if folder.important else ""
             self.outfile.write(
                 f"- [{_escape_link_text(folder_text)}](#{folder_anchor}){important}\n"
             )
-            for file_entry in entry["files"]:
-                file_anchor = self._anchor(self.labels["file_anchor_prefix"], file_entry["relative_path"])
+            for report_file in folder.files:
+                relative_path = self._markdown_path(report_file.relative_path)
+                file_anchor = self._anchor(self.labels["file_anchor_prefix"], relative_path)
                 self.outfile.write(
-                    f"  - [{_escape_link_text(file_entry['filename'])}](#{file_anchor})\n"
+                    f"  - [{_escape_link_text(report_file.filename)}](#{file_anchor})\n"
                 )
         self.outfile.write("\n")
 
-    def write_folder(self, relative_root: str, important: bool):
+    def write_folder(self, folder):
+        relative_root = self._markdown_path(folder.relative_path)
         folder_path = relative_root or self.labels["root"]
         folder_anchor = self._anchor(self.labels["folder_anchor_prefix"], folder_path)
         folder_display = _inline_code(relative_root) if relative_root else self.labels["root"]
-        important_text = f" — **{self.labels['important']}**" if important else ""
+        important_text = f" — **{self.labels['important']}**" if folder.important else ""
         self.outfile.write(
             f'<a id="{folder_anchor}"></a>\n'
             f"## {self.labels['folder_label']}: {folder_display}{important_text}\n\n"
         )
 
-    def write_text_file(self, filename: str, relative_path: str, content: str):
+    def write_file(self, report_file):
+        relative_path = self._markdown_path(report_file.relative_path)
         file_anchor = self._anchor(self.labels["file_anchor_prefix"], relative_path)
-        filename_inline = _inline_code(filename)
+        filename_inline = _inline_code(report_file.filename)
+
+        if report_file.is_media:
+            self.outfile.write(
+                f'<a id="{file_anchor}"></a>\n'
+                f"### {self.labels['file_label']}: {filename_inline}\n\n"
+                f"**{self.labels['path_label']}:** {_inline_code(relative_path)}\n\n"
+                f"> {self.labels['media_notice']}\n\n"
+            )
+            return
+
+        if report_file.read_error is not None:
+            self.outfile.write(
+                f'<a id="{file_anchor}"></a>\n'
+                f"### {self.labels['file_label']}: {filename_inline}\n\n"
+                f"**{self.labels['path_label']}:** {_inline_code(relative_path)}\n\n"
+                f"> {self.labels['read_error'].format(report_file.read_error)}\n\n"
+            )
+            return
+
         self.outfile.write(
             f'<a id="{file_anchor}"></a>\n'
             f"### {self.labels['file_label']}: {filename_inline}\n\n"
@@ -195,8 +224,9 @@ class MarkdownReportRenderer:
             f"**{self.labels['content_start']}: {filename_inline}**\n\n"
         )
 
+        content = report_file.content or ""
         fence = _fence_for(content)
-        language = _language_for(filename)
+        language = _language_for(report_file.filename)
         self.outfile.write(f"{fence}{language}\n")
         self.outfile.write(content)
         if content and not content.endswith("\n"):
@@ -206,27 +236,9 @@ class MarkdownReportRenderer:
             f"**{self.labels['content_end']}: {filename_inline}**\n\n"
         )
 
-    def write_read_error(self, filename: str, relative_path: str, error_text: str):
-        file_anchor = self._anchor(self.labels["file_anchor_prefix"], relative_path)
-        filename_inline = _inline_code(filename)
-        self.outfile.write(
-            f'<a id="{file_anchor}"></a>\n'
-            f"### {self.labels['file_label']}: {filename_inline}\n\n"
-            f"**{self.labels['path_label']}:** {_inline_code(relative_path)}\n\n"
-            f"> {self.labels['read_error'].format(error_text)}\n\n"
-        )
-
-    def write_media_file(self, filename: str, relative_path: str):
-        file_anchor = self._anchor(self.labels["file_anchor_prefix"], relative_path)
-        self.outfile.write(
-            f'<a id="{file_anchor}"></a>\n'
-            f"### {self.labels['file_label']}: {_inline_code(filename)}\n\n"
-            f"**{self.labels['path_label']}:** {_inline_code(relative_path)}\n\n"
-            f"> {self.labels['media_notice']}\n\n"
-        )
-
     def write_tree(self, title: str, project_name: str, source_path: str, tree_text: str):
-        self.write_header(title, project_name, source_path)
+        self.outfile.write(f"# {title}\n\n")
+        self._write_metadata(project_name, source_path)
         self.outfile.write(f"## {self.labels['tree_structure']}\n\n")
         fence = _fence_for(tree_text)
         self.outfile.write(f"{fence}text\n")

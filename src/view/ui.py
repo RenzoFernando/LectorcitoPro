@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageTk, ImageStat
 from utils import resource_path
 
 from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
-from view.translations import TRANSLATIONS, translate_default
+from i18n.translations import TRANSLATIONS, translate_default
 from view.dialogs import MessageDialog, _get_widget_window_rect, _get_widget_workarea, _get_centered_position
 from view.tooltip import CustomTooltip
 from view.ui_constants import *
@@ -1177,7 +1177,7 @@ class LectorcitoApp(ctk.CTk):
     def _create_settings_dialog(self):
         return SettingsDialog(
             parent=self,
-            current_extension=self.controller.config.get("report_extension", ".txt"),
+            current_extension=self.controller.config.get("report_extension", ".md"),
             current_exe_path=self.controller.config.get("custom_exe_path", ""),
             persistent=True,
             defer_show=True

@@ -6,7 +6,7 @@ from tkinter import filedialog
 from app_meta import APP_WEBSITE_URL
 import config
 import utils
-from view.translations import translate_default
+from i18n.translations import translate_default
 from model import processor
 from view.ui import LectorcitoApp
 from controller import handlers

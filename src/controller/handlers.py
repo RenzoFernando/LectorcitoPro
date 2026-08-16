@@ -11,7 +11,7 @@ from view.dialogs import ConfirmDialog, ChoiceDialog, ExternalLinkDialog, Messag
 from view.tags_dialog import TagsConfigDialog
 from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
-from view.translations import translate_default
+from i18n.translations import translate_default
 from view.ui_constants import PROFILE_SWITCH_FADE_DELAY_MS, RESTORE_FADE_DELAY_MS
 from view.ui_assets import get_app_icon_png_path
 
@@ -262,7 +262,7 @@ def show_etiqueta_config_dialog(controller):
 # =============================================================================
 
 def show_settings_dialog(controller):
-    current_ext = controller.config.get("report_extension", ".txt")
+    current_ext = controller.config.get("report_extension", ".md")
     current_exe = controller.config.get("custom_exe_path", "")
     if controller.platform.supports_launcher_configuration():
         current_exe = _get_effective_launcher_path(controller, persist_changes=True, allow_script_fallback=False)

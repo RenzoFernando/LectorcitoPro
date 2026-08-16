@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from controller.controller import LectorcitoController
 from app_meta import APP_DISPLAY_NAME
-from view.translations import translate_default
+from i18n.translations import translate_default
 import utils
 
 # =============================================================================

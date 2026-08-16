@@ -2,7 +2,7 @@ import customtkinter as ctk
 from app_meta import APP_EXECUTABLE_NAME
 from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry
 from view.ui_constants import FONT_FAMILY_PRIMARY, get_button_tokens, SETTINGS_DIALOG_WIDTH, SETTINGS_DIALOG_HEIGHT, SETTINGS_DIALOG_MAIN_PADX, SETTINGS_DIALOG_MAIN_PADY, SETTINGS_DIALOG_CONTENT_PADX, SETTINGS_DIALOG_CONTENT_PADY, SETTINGS_DIALOG_SECTION_FONT_SIZE, SETTINGS_DIALOG_SECTION_PADY, SETTINGS_DIALOG_FORMAT_SHELL_BORDER_WIDTH, SETTINGS_DIALOG_FORMAT_SHELL_RADIUS, SETTINGS_DIALOG_FORMAT_SHELL_PADY, SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH, SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT, SETTINGS_DIALOG_FORMAT_BUTTON_PAD, SETTINGS_DIALOG_EXE_LABEL_PADY, SETTINGS_DIALOG_EXAMPLE_FONT_SIZE, SETTINGS_DIALOG_EXAMPLE_PADY, SETTINGS_DIALOG_ENTRY_PADY, SETTINGS_DIALOG_SEPARATOR_HEIGHT, SETTINGS_DIALOG_SEPARATOR_PADY, SETTINGS_DIALOG_SHORTCUTS_LABEL_PADY, SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, SETTINGS_DIALOG_TRANSFER_LABEL_PADY, SETTINGS_DIALOG_TRANSFER_BUTTON_PADY, SETTINGS_DIALOG_TRANSFER_LAST_BUTTON_PADY, SETTINGS_DIALOG_TOGGLE_RADIUS, SETTINGS_DIALOG_TOGGLE_BORDER_WIDTH, SETTINGS_DIALOG_TOGGLE_FONT_SIZE
-from view.translations import translate_default
+from i18n.translations import translate_default
 
 # =============================================================================
 # DIALOGO DE CONFIGURACION GENERAL
@@ -20,7 +20,7 @@ def _tr_text(parent, key: str, *args):
 
 
 class SettingsDialog(BaseDialog):
-    def __init__(self, parent, current_extension: str = ".txt", current_exe_path: str = "", on_save_callback=None,
+    def __init__(self, parent, current_extension: str = ".md", current_exe_path: str = "", on_save_callback=None,
                  on_shortcut_callback=None, on_export_callback=None, on_import_callback=None, platform_capabilities=None, persistent: bool = False, defer_show: bool = False):
         title = _tr_text(parent, "dlg_settings_title")
         super().__init__(parent, title, persistent=persistent, defer_show=defer_show)
