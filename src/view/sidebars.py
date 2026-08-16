@@ -331,7 +331,7 @@ class LeftSidebar(ctk.CTkFrame):
         self._text_color = light_theme["sidebar_text"]
         self._state = "normal"
 
-        self._border_w = 2
+        self._border_w = RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH
         self._border_color = None
         self._backdrop_provider = backdrop_provider
 
@@ -381,10 +381,7 @@ class LeftSidebar(ctk.CTkFrame):
         self._pill_bg_mid = theme.get("sidebar_pill_mid", _mix(self._pill_bg, self._pill_bg_end, 0.42))
         self._text_color = theme["sidebar_text"]
 
-        if _luma(self._pill_bg) < 140:
-            self._border_color = _mix(self._pill_bg_end, NEUTRAL_WHITE, 0.18)
-        else:
-            self._border_color = _mix(self._pill_bg_end, NEUTRAL_BLACK, 0.18)
+        self._border_color = theme["card_border"]
 
         self._canvas.configure(bg=self._outside_bg)
         self._paint_signature = None
@@ -542,7 +539,7 @@ class PillIconButton(ctk.CTkFrame):
         self._backdrop_provider = backdrop_provider
         self._explicit_border = border_color
         self._border_color = border_color if border_color else _auto_border(self._fg_color)
-        self._hover_border_color = _auto_border(self._hover_color)
+        self._hover_border_color = border_color if border_color else _auto_border(self._hover_color)
 
         self._canvas = Canvas(self, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
         self._canvas.pack(fill="both", expand=True)
@@ -596,10 +593,11 @@ class PillIconButton(ctk.CTkFrame):
         if "border_color" in kwargs:
             self._explicit_border = kwargs.pop("border_color")
             self._border_color = self._explicit_border
+            self._hover_border_color = self._explicit_border if self._explicit_border else _auto_border(self._hover_color)
 
         if "hover_color" in kwargs:
             self._hover_color = kwargs.pop("hover_color")
-            self._hover_border_color = _auto_border(self._hover_color)
+            self._hover_border_color = self._explicit_border if self._explicit_border else _auto_border(self._hover_color)
 
         if "gradient_start" in kwargs:
             self._gradient_start = kwargs.pop("gradient_start")
@@ -692,34 +690,47 @@ class PillIconButton(ctk.CTkFrame):
         img = self._image
         if img is None:
             return None
-        try:
-            if isinstance(img, Image.Image):
-                return img
-        except Exception:
-            pass
-        try:
-            mode = ctk.get_appearance_mode()
-        except Exception:
-            mode = "Light"
 
         pil = None
-        if mode == "Dark":
-            for a in ("_dark_image", "dark_image"):
-                if hasattr(img, a):
-                    pil = getattr(img, a)
-                    break
+        try:
+            if isinstance(img, Image.Image):
+                pil = img
+        except Exception:
+            pass
+
         if pil is None:
-            for a in ("_light_image", "light_image"):
-                if hasattr(img, a):
-                    pil = getattr(img, a)
-                    break
-        if pil is None:
-            for a in ("_pil_image", "_image", "image"):
-                if hasattr(img, a):
-                    pil = getattr(img, a)
-                    break
+            try:
+                mode = ctk.get_appearance_mode()
+            except Exception:
+                mode = "Light"
+
+            if mode == "Dark":
+                for a in ("_dark_image", "dark_image"):
+                    if hasattr(img, a):
+                        pil = getattr(img, a)
+                        break
+            if pil is None:
+                for a in ("_light_image", "light_image"):
+                    if hasattr(img, a):
+                        pil = getattr(img, a)
+                        break
+            if pil is None:
+                for a in ("_pil_image", "_image", "image"):
+                    if hasattr(img, a):
+                        pil = getattr(img, a)
+                        break
+
         if pil is None:
             return None
+
+        try:
+            pil = pil.convert("RGBA")
+            bbox = pil.getchannel("A").getbbox()
+            if bbox:
+                pil = pil.crop(bbox)
+        except Exception:
+            pass
+
         size = None
         for a in ("_size", "size"):
             if hasattr(img, a):
@@ -727,13 +738,19 @@ class PillIconButton(ctk.CTkFrame):
                 break
         if isinstance(size, (tuple, list)) and len(size) == 2:
             try:
-                target = (int(size[0]), int(size[1]))
-                if pil.size != target:
+                target_w = max(1, int(size[0]))
+                target_h = max(1, int(size[1]))
+                iw, ih = pil.size
+                ratio = min(target_w / max(1, iw), target_h / max(1, ih))
+                new_w = max(1, int(round(iw * ratio)))
+                new_h = max(1, int(round(ih * ratio)))
+                if pil.size != (new_w, new_h):
                     resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
-                    pil = pil.resize(target, resample)
+                    pil = pil.resize((new_w, new_h), resample)
             except Exception:
                 pass
         return pil
+
 
     def _on_configure(self, event=None):
         if event is not None and getattr(event, "widget", None) not in (self, self._canvas):
@@ -1195,8 +1212,8 @@ class RightSidebar(tk.Frame):
         self._button_container = tk.Frame(self, bg=bg, bd=0, highlightthickness=0)
         self._button_container.pack(expand=True, anchor="center")
 
-        keys = ["ver", "nover", "etiqueta", "theme_icon", "traducir", "restaurar", "perfil", "github", "info",
-                "ajustes"]
+        keys = ["ver", "nover", "etiqueta", "theme_icon", "traducir", "perfil", "ajustes", "restaurar", "github",
+                "info"]
 
         for key in keys:
             btn = self._create_button(key, current_theme)
@@ -1227,7 +1244,7 @@ class RightSidebar(tk.Frame):
             hover_gradient_start=theme_keys["sidebar_pill_hover_start"],
             hover_gradient_mid=theme_keys.get("sidebar_pill_hover_mid", _mix(theme_keys["sidebar_pill_hover_start"], theme_keys["sidebar_pill_hover_end"], 0.48)),
             hover_gradient_end=theme_keys["sidebar_pill_hover_end"],
-            border_color=theme_keys["border_strong"],
+            border_color=theme_keys["card_border"],
             border_width=RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH,
             backdrop_provider=self._backdrop_provider
         )
@@ -1261,7 +1278,7 @@ class RightSidebar(tk.Frame):
                 "hover_gradient_start": theme_keys["sidebar_pill_hover_start"],
                 "hover_gradient_mid": theme_keys.get("sidebar_pill_hover_mid", _mix(theme_keys["sidebar_pill_hover_start"], theme_keys["sidebar_pill_hover_end"], 0.48)),
                 "hover_gradient_end": theme_keys["sidebar_pill_hover_end"],
-                "border_color": theme_keys["border_strong"],
+                "border_color": theme_keys["card_border"],
                 "border_width": 1,
             }
             if key == "theme_icon":

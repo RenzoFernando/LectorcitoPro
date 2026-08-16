@@ -47,10 +47,10 @@ class StatusPanel(tk.Frame):
         self.status_panel = BlendedRoundedFrame(
             self,
             outside_bg=theme["bg_base"],
-            fill_color=theme["bg_card"],
+            fill_color=theme["bg_panel"],
             corner_radius=STATUS_PANEL_CORNER_RADIUS,
             border_width=STATUS_PANEL_BORDER_WIDTH,
-            border_color=theme["border_subtle"],
+            border_color=theme["card_border"],
             content_inset=max(4, (STATUS_PANEL_CORNER_RADIUS // 2) - 2)
         )
         self.status_panel.grid(row=0, column=0, padx=STATUS_PANEL_PADX, pady=STATUS_PANEL_PADY, sticky="ew")
@@ -209,7 +209,7 @@ class StatusPanel(tk.Frame):
         self.configure(bg=theme["bg_base"])
 
         try:
-            self.status_panel.configure(outside_bg=theme["bg_base"], fill_color=theme["bg_card"], border_color=theme["border_subtle"], border_width=STATUS_PANEL_BORDER_WIDTH, backdrop_provider=getattr(self.status_panel, "_backdrop_provider", None))
+            self.status_panel.configure(outside_bg=theme["bg_base"], fill_color=theme["bg_panel"], border_color=theme["card_border"], border_width=STATUS_PANEL_BORDER_WIDTH, backdrop_provider=getattr(self.status_panel, "_backdrop_provider", None))
         except Exception:
             pass
 

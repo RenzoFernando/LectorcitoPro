@@ -47,7 +47,7 @@ TRANSLATIONS = {
     # --- DIALOGOS TAGS ---
     "dlg_ver_title": "Configurar qué Ver",
     "dlg_ver_folder_prompt": "Carpetas a resaltar como Importantes (ej: src, utils):",
-    "dlg_ver_file_prompt": "Extensiones de archivo a Leer (ej: .py, .md):",
+    "dlg_ver_file_prompt": "Extensiones o archivos a Leer (ej: .py, .md, .gitignore):",
 
     "dlg_nover_title": "Configurar qué No Ver",
     "dlg_nover_folder_prompt": "Carpetas a Ignorar por completo (ej: node_modules, .venv):",
@@ -59,8 +59,10 @@ TRANSLATIONS = {
 
     "placeholder_tags": "Escribir y presionar Enter para añadir...",
     "msg_tag_conflict": "La etiqueta '{}' ya existe en la configuración de 'Ver' o 'No Ver'.\nPor prioridad, no puede añadirla aquí.",
-    "msg_autodetect_result": "Se detectaron y añadieron {} nuevas extensiones.",
+    "msg_autodetect_result": "Se detectaron y añadieron {} nuevas extensiones o archivos.",
     "msg_autodetect_none": "No se encontraron nuevas extensiones (o ya estaban configuradas/excluidas).",
+    "confirm_discard_tags_title": "Descartar cambios",
+    "confirm_discard_tags_prompt": "Hay cambios sin guardar en esta configuración.\n\n¿Desea descartarlos y cerrar la ventana?",
 
     # --- PROGRESO ---
     "progress_processing_text": "Procesando...",
@@ -247,7 +249,7 @@ TRANSLATIONS = {
     # --- DIALOGS ---
     "dlg_ver_title": "Configure what to View",
     "dlg_ver_folder_prompt": "Folders to highlight as Important (e.g., src, utils):",
-    "dlg_ver_file_prompt": "File extensions to Read (e.g., .py, .md):",
+    "dlg_ver_file_prompt": "File extensions or files to Read (e.g., .py, .md, .gitignore):",
 
     "dlg_nover_title": "Configure what Not to View",
     "dlg_nover_folder_prompt": "Folders to Ignore completely (e.g., node_modules, .venv):",
@@ -259,8 +261,10 @@ TRANSLATIONS = {
 
     "placeholder_tags": "Type and press Enter to add...",
     "msg_tag_conflict": "The tag '{}' already exists in 'View' or 'No View' settings.\nDue to priority, it cannot be added here.",
-    "msg_autodetect_result": "Detected and added {} new extensions.",
+    "msg_autodetect_result": "Detected and added {} new extensions or files.",
     "msg_autodetect_none": "No new extensions found (or they were already configured/excluded).",
+    "confirm_discard_tags_title": "Discard changes",
+    "confirm_discard_tags_prompt": "There are unsaved changes in this configuration.\n\nDo you want to discard them and close the window?",
 
     # --- PROGRESS ---
     "progress_processing_text": "Processing...",
@@ -416,4 +420,3 @@ def translate(language: str, key: str, *args):
 
 def translate_default(key: str, *args):
     return translate("es", key, *args)
-

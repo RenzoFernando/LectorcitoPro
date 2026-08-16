@@ -20,7 +20,7 @@ THEME_TOKENS = {
     "bg_elevated": "#FAFCFF",
     "bg_panel": "#F6F9FD",
     "bg_card": "#F6F9FD",
-    "bg_sidebar": "#0C1420",
+    "bg_sidebar": "#F6F9FD",
     "bg_dialog": "#F6F9FD",
     "bg_footer": "#F6F9FD",
     "text_primary": "#101826",
@@ -46,14 +46,14 @@ THEME_TOKENS = {
     "danger_red_deep": "#A73335",
     "danger_red_mid": "#D94D50",
 
-    "sidebar_pill_start": "#1C232E",
-    "sidebar_pill_mid": "#1B2F49",
-    "sidebar_pill_end": "#1C232E",
+    "sidebar_pill_start": "#F6F9FD",
+    "sidebar_pill_mid": "#F6F9FD",
+    "sidebar_pill_end": "#F6F9FD",
     "sidebar_pill_hover_start": "#386FE0",
     "sidebar_pill_hover_mid": "#5588F0",
     "sidebar_pill_hover_end": "#7569DE",
 
-    "sidebar_text": "#FFFFFF",
+    "sidebar_text": "#101826",
     "progress_track": "#DCE5F3",
     "progress_border": "#C8D4E7",
     "progress_gradient_start": "#2F6FE4",
@@ -79,7 +79,7 @@ THEME_TOKENS = {
     "bg_elevated": "#101721",
     "bg_panel": "#0D1117",
     "bg_card": "#0D1117",
-    "bg_sidebar": "#F7FAFF",
+    "bg_sidebar": "#0D1117",
     "bg_dialog": "#0D1117",
     "bg_footer": "#0D1117",
     "text_primary": "#E9EEF7",
@@ -105,14 +105,14 @@ THEME_TOKENS = {
     "danger_red_deep": "#A73335",
     "danger_red_mid": "#D94D50",
 
-    "sidebar_pill_start": "#EDF0F4",
-    "sidebar_pill_mid": "#E6F0FF",
-    "sidebar_pill_end": "#EDF0F4",
+    "sidebar_pill_start": "#0D1117",
+    "sidebar_pill_mid": "#0D1117",
+    "sidebar_pill_end": "#0D1117",
     "sidebar_pill_hover_start": "#2F6FE4",
     "sidebar_pill_hover_mid": "#4A7FF1",
     "sidebar_pill_hover_end": "#6E63DA",
 
-    "sidebar_text": "#122036",
+    "sidebar_text": "#E9EEF7",
     "progress_track": "#162131",
     "progress_border": "#25364F",
     "progress_gradient_start": "#3D76EC",
@@ -153,24 +153,24 @@ BUTTON_TOKENS = {
     "hover": "#2A9540",
     "border": "#52C86B",
     "text": "#FFFFFF",
-    "gradient_start": "#27883A",
-    "gradient_mid": "#32B04A",
-    "gradient_end": "#3AAE54",
-    "hover_gradient_start": "#226F31",
-    "hover_gradient_mid": "#2A9540",
-    "hover_gradient_end": "#338E48"
+    "gradient_start": "#32B04A",
+    "gradient_mid": "#2D9D43",
+    "gradient_end": "#27883A",
+    "hover_gradient_start": "#2A9540",
+    "hover_gradient_mid": "#267F38",
+    "hover_gradient_end": "#226F31"
 },
 "red": {
     "bg": "#D03B3D",
     "hover": "#B33537",
     "border": "#E06163",
     "text": "#FFFFFF",
-    "gradient_start": "#A73335",
-    "gradient_mid": "#D03B3D",
-    "gradient_end": "#C94A4C",
-    "hover_gradient_start": "#8F2D2E",
-    "hover_gradient_mid": "#B33537",
-    "hover_gradient_end": "#AA4143"
+    "gradient_start": "#D03B3D",
+    "gradient_mid": "#BC3739",
+    "gradient_end": "#A73335",
+    "hover_gradient_start": "#B33537",
+    "hover_gradient_mid": "#A23133",
+    "hover_gradient_end": "#8F2D2E"
 },
 "neutral": {
     "bg": "#384A68",
@@ -205,8 +205,8 @@ COLORS = {
 # =============================================================================
 
 # Dimensiones estandar
-BTN_W_MAIN, BTN_H_MAIN = 315, 35
-BTN_W_ICON, BTN_H_ICON = 35, 40
+BTN_W_MAIN, BTN_H_MAIN = 380, 35
+BTN_W_ICON, BTN_H_ICON = 35, 37
 SIDEBAR_WIDTH = 50
 
 # Animaciones y transiciones
@@ -272,19 +272,19 @@ PADDING_4XL = 20
 PADDING_5XL = 24
 
 # Ventana principal
-MAIN_WINDOW_WIDTH = 600
-MAIN_WINDOW_HEIGHT = 500
+MAIN_WINDOW_WIDTH = 640
+MAIN_WINDOW_HEIGHT = 490
 MAIN_WINDOW_PRELOAD_DIALOGS_EXTRA_DELAY_MS = 260
 MAIN_WINDOW_BG_REFRESH_DELAY_MS = 16
 MAIN_WINDOW_SIDE_PADX = 15
-MAIN_WINDOW_LEFT_PADY = (0, 14)
-MAIN_WINDOW_RIGHT_PADY = (0, 15)
-MAIN_WINDOW_CENTER_PADY = (3, 5)
-MAIN_WINDOW_HEADER_PADY = (9, 5)
+MAIN_WINDOW_LEFT_PADY = (45, 19)
+MAIN_WINDOW_RIGHT_PADY = (45, 20)
+MAIN_WINDOW_CENTER_PADY = (1, 7)
+MAIN_WINDOW_HEADER_PADY = (7, 5)
 MAIN_WINDOW_GREETING_FONT_SIZE = FONT_SIZE_LG
 MAIN_WINDOW_GREETING_MIN_FONT_SIZE = FONT_SIZE_SM
 MAIN_WINDOW_HEADER_MIN_HEIGHT = 60
-MAIN_WINDOW_HEADER_TOP_INSET = 3
+MAIN_WINDOW_HEADER_TOP_INSET = 2
 MAIN_WINDOW_HEADER_LOGO_TEXT_GAP = 6
 MAIN_WINDOW_HEADER_TEXT_SIDE_PAD = 12
 MAIN_WINDOW_HEADER_BOTTOM_INSET = 3
@@ -299,7 +299,7 @@ MAIN_WINDOW_BUTTON_BORDER_WIDTH = BORDER_WIDTH_MEDIUM
 MAIN_WINDOW_BUTTON_SPACING = 1
 MAIN_WINDOW_STATUS_AREA_PADY = (3, 5)
 MAIN_WINDOW_STATUS_MIN_VISIBLE_SECONDS = 1.0
-MAIN_WINDOW_FOOTER_HEIGHT = 40
+MAIN_WINDOW_FOOTER_HEIGHT = 30
 MAIN_WINDOW_FOOTER_LINE_HEIGHT = 1
 MAIN_WINDOW_FOOTER_FONT_SIZE = FONT_SIZE_XS
 MAIN_WINDOW_TOPMOST_RESET_DELAY_MS = 90
@@ -512,18 +512,18 @@ TOOLTIP_FALLBACK_WIDTH = 240
 TOOLTIP_FALLBACK_HEIGHT = 40
 
 # Recursos visuales
-SIDEBAR_ICON_SIZE = (30, 30)
-THEME_TOGGLE_ICON_SIZE = (32, 32)
+SIDEBAR_ICON_SIZE = (26, 26)
+THEME_TOGGLE_ICON_SIZE = (26, 26)
 LOGO_TARGET_WIDTH = 165
 
 # Sidebars
-LEFT_SIDEBAR_HEIGHT = 415
+LEFT_SIDEBAR_HEIGHT = 370
 LEFT_SIDEBAR_FONT_SIZE = FONT_SIZE_BASE
 PILL_TEXT_BUTTON_FONT_SIZE = FONT_SIZE_MD
 SIDEBAR_REPAINT_DELAY_MS = 16
 SIDEBAR_CLICK_LOCK_DELAY_MS = 220
 PILL_TEXT_HORIZONTAL_INSET = 16
-RIGHT_SIDEBAR_BUTTON_SPACING = 1
+RIGHT_SIDEBAR_BUTTON_SPACING = 0
 RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH = BORDER_WIDTH_THIN
 
 # Progress bar

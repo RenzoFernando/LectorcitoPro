@@ -1,7 +1,7 @@
 import os
 import sys
 import customtkinter as ctk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageOps
 from utils import resource_path
 from view.ui_constants import SIDEBAR_ICON_SIZE, THEME_TOGGLE_ICON_SIZE, LOGO_TARGET_WIDTH
 from app_logging import log_warning
@@ -26,14 +26,24 @@ def load_sidebar_icons(size=SIDEBAR_ICON_SIZE) -> dict:
         try:
             img_dark = Image.open(resource_path(os.path.join("icons", f"{key}_oscuro.png")))
             img_light = Image.open(resource_path(os.path.join("icons", f"{key}_claro.png")))
-            icons[key] = ctk.CTkImage(light_image=img_light, dark_image=img_dark, size=size)
+            icons[key] = ctk.CTkImage(light_image=img_dark, dark_image=img_light, size=size)
         except Exception as e:
             log_warning(str(e), operation="load_sidebar_icon", file_path=key)
             icons[key] = None
 
     try:
-        icons["sun"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "sol.png"))), size=THEME_TOGGLE_ICON_SIZE)
-        icons["moon"] = ctk.CTkImage(Image.open(resource_path(os.path.join("icons", "luna.png"))), size=THEME_TOGGLE_ICON_SIZE)
+        sun_image = Image.open(resource_path(os.path.join("icons", "sol.png"))).convert("RGBA")
+        moon_image = Image.open(resource_path(os.path.join("icons", "luna.png"))).convert("RGBA")
+
+        sun_rgb = Image.merge("RGB", sun_image.split()[:3])
+        moon_rgb = Image.merge("RGB", moon_image.split()[:3])
+        sun_inverse = ImageOps.invert(sun_rgb).convert("RGBA")
+        moon_inverse = ImageOps.invert(moon_rgb).convert("RGBA")
+        sun_inverse.putalpha(sun_image.getchannel("A"))
+        moon_inverse.putalpha(moon_image.getchannel("A"))
+
+        icons["sun"] = ctk.CTkImage(light_image=sun_image, dark_image=sun_inverse, size=THEME_TOGGLE_ICON_SIZE)
+        icons["moon"] = ctk.CTkImage(light_image=moon_inverse, dark_image=moon_image, size=THEME_TOGGLE_ICON_SIZE)
     except Exception as e:
         log_warning(str(e), operation="load_theme_icons")
         icons["sun"] = None

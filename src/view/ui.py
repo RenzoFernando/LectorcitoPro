@@ -583,7 +583,7 @@ class LectorcitoApp(ctk.CTk):
 
         try:
             if hasattr(self, "main_menu_frame") and self.main_menu_frame.winfo_exists():
-                self.main_menu_frame.configure(outside_bg=theme["bg_base"], fill_color=theme["bg_panel"], border_color=theme["border_subtle"], backdrop_provider=self.get_backdrop_patch)
+                self.main_menu_frame.configure(outside_bg=theme["bg_base"], fill_color=theme["bg_panel"], border_color=theme["card_border"], backdrop_provider=self.get_backdrop_patch)
         except Exception:
             pass
 
@@ -723,7 +723,7 @@ class LectorcitoApp(ctk.CTk):
         self._create_main_buttons(self.center_container)
         self._create_status_area(self.center_container)
 
-        self.left_sidebar = LeftSidebar(self.left_container, text=f"{APP_DISPLAY_NAME} v{VERSION}", backdrop_provider=self.get_backdrop_patch)
+        self.left_sidebar = LeftSidebar(self.left_container, text=f"{APP_DISPLAY_NAME} v{VERSION}", height=LEFT_SIDEBAR_HEIGHT, backdrop_provider=self.get_backdrop_patch)
         self.right_sidebar = RightSidebar(self.right_container, icons=self.icons, current_theme=self.current_theme, backdrop_provider=self.get_backdrop_patch)
         self._register_surface_backdrop(self.right_sidebar)
         self._register_surface_backdrop(self.right_sidebar._button_container)
@@ -759,7 +759,7 @@ class LectorcitoApp(ctk.CTk):
             fill_color=theme_keys["bg_panel"],
             corner_radius=MAIN_WINDOW_MAIN_MENU_RADIUS,
             border_width=MAIN_WINDOW_MAIN_MENU_BORDER_WIDTH,
-            border_color=theme_keys["border_subtle"],
+            border_color=theme_keys["card_border"],
             content_inset=max(8, MAIN_WINDOW_MAIN_MENU_RADIUS // 2),
             backdrop_provider=self.get_backdrop_patch
         )
@@ -926,7 +926,7 @@ class LectorcitoApp(ctk.CTk):
             self.header_frame.configure(bg=theme_keys["bg_base"])
             self.header_canvas.configure(bg=theme_keys["bg_base"])
             self.progress_frame.configure(bg=theme_keys["bg_base"])
-            self.main_menu_frame.configure(outside_bg=theme_keys["bg_base"], fill_color=theme_keys["bg_panel"], border_color=theme_keys["border_subtle"], backdrop_provider=self.get_backdrop_patch)
+            self.main_menu_frame.configure(outside_bg=theme_keys["bg_base"], fill_color=theme_keys["bg_panel"], border_color=theme_keys["card_border"], backdrop_provider=self.get_backdrop_patch)
             self.main_buttons_frame.configure(bg_color="transparent")
         except Exception:
             pass
