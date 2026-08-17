@@ -386,6 +386,12 @@ class StatusPanel(tk.Frame):
             self.progress_bar.set(self.current_progress / 100.0)
             if self._mode != "indeterminate":
                 self.lbl_percent.configure(text=f"{int(self.current_progress)}%")
+                if self._mode == "processing" and self.current_progress >= 100.0:
+                    self.btn_cancel.grid_remove()
+                    try:
+                        self.lbl_status.master.update_idletasks()
+                    except Exception:
+                        pass
             self._stop_progress_animation()
             return
 
@@ -428,6 +434,13 @@ class StatusPanel(tk.Frame):
             final_status: str | None = None
     ):
         if is_active:
+            try:
+                self.btn_cancel.grid()
+                self.btn_cancel.update_idletasks()
+                self.lbl_status.master.update_idletasks()
+            except Exception:
+                pass
+
             # Reseteo de tiempos para calculo UX
             self._processing_started_at = time.monotonic()
             self._min_end_time = self._processing_started_at + self._min_visible_s
@@ -456,7 +469,6 @@ class StatusPanel(tk.Frame):
                 base = _translate_status(self._tr, self._key_status_reading)
                 self._set_status(base, with_dots=True)
 
-            self.btn_cancel.grid()
             return
 
         self.btn_cancel.grid_remove()

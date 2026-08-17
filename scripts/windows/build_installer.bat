@@ -1,11 +1,11 @@
 @echo off
 setlocal EnableExtensions
-
+chcp 65001 >nul
 for %%I in ("%~dp0\..\..") do set "PROJECT_ROOT=%%~fI"
 cd /d "%PROJECT_ROOT%"
-
-set "VENV_PYTHON=.venv\Scripts\python.exe"
-set "META_EXPORT_CMD=build\.installer_meta.cmd"
+set "VENV_PYTHON=.venv-build\Scripts\python.exe"
+set "PYTHONUTF8=1"
+set "PYTHONIOENCODING=utf-8"
 set "INSTALLER_SCRIPT=build\windows\installer\LectorcitoPro.iss"
 set "STAGE_DIR=build\windows\installer\payload"
 set "ISCC_CMD="
@@ -14,65 +14,60 @@ echo.
 echo =======================================================
 echo  Compilador de Instalador Windows
 echo =======================================================
+
 echo.
 
 if not exist "%VENV_PYTHON%" (
-    echo ERROR: No existe el entorno .venv. Ejecuta primero el setup.
+    echo ERROR: No existe el entorno .venv-build. Ejecuta primero el setup.
     exit /b 1
 )
-
 set "PYTHON_CMD=%VENV_PYTHON%"
 "%PYTHON_CMD%" --version
+
 echo.
 
 if not exist "build" mkdir "build"
 if not exist "build\windows" mkdir "build\windows"
 if not exist "build\windows\installer" mkdir "build\windows\installer"
-if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
 if exist "%INSTALLER_SCRIPT%" del /q "%INSTALLER_SCRIPT%" > nul 2>&1
 if exist "%STAGE_DIR%" rmdir /s /q "%STAGE_DIR%"
 mkdir "%STAGE_DIR%"
 
-type nul > "%META_EXPORT_CMD%"
-
-call :append_meta_line APP_NAME app_meta.APP_NAME_INTERNAL
+call :read_meta APP_NAME app_meta.APP_NAME_INTERNAL
 if errorlevel 1 goto :meta_error
-call :append_meta_line APP_EXE_NAME app_meta.APP_EXECUTABLE_NAME
+call :read_meta APP_EXE_NAME app_meta.APP_EXECUTABLE_NAME
 if errorlevel 1 goto :meta_error
-call :append_meta_line ICON_FILE app_meta.APP_ICON_ICO_RELATIVE_PATH
+call :read_meta ICON_FILE app_meta.APP_ICON_ICO_RELATIVE_PATH
 if errorlevel 1 goto :meta_error
-call :append_meta_line OUTPUT_FOLDER app_meta.APP_OUTPUT_DIR_NAME
+call :read_meta OUTPUT_FOLDER app_meta.APP_OUTPUT_DIR_NAME
 if errorlevel 1 goto :meta_error
-call :append_meta_line PRODUCT_NAME app_meta.APP_PRODUCT_NAME
+call :read_meta PRODUCT_NAME app_meta.APP_PRODUCT_NAME
 if errorlevel 1 goto :meta_error
-call :append_meta_line PRODUCT_VERSION app_meta.APP_PRODUCT_VERSION
+call :read_meta PRODUCT_VERSION app_meta.APP_PRODUCT_VERSION
 if errorlevel 1 goto :meta_error
-call :append_meta_line FILE_VERSION app_meta.APP_FILE_VERSION
+call :read_meta FILE_VERSION app_meta.APP_FILE_VERSION
 if errorlevel 1 goto :meta_error
-call :append_meta_line COMPANY_NAME app_meta.APP_COMPANY_NAME
+call :read_meta COMPANY_NAME app_meta.APP_COMPANY_NAME
 if errorlevel 1 goto :meta_error
-call :append_meta_line COPYRIGHT_TEXT app_meta.APP_LEGAL_COPYRIGHT
+call :read_meta COPYRIGHT_TEXT app_meta.APP_LEGAL_COPYRIGHT
 if errorlevel 1 goto :meta_error
-call :append_meta_line FILE_DESCRIPTION app_meta.APP_FILE_DESCRIPTION
+call :read_meta FILE_DESCRIPTION app_meta.APP_FILE_DESCRIPTION
 if errorlevel 1 goto :meta_error
-call :append_meta_line INSTALLER_NAME app_meta.APP_INSTALLER_NAME
+call :read_meta INSTALLER_NAME app_meta.APP_INSTALLER_NAME
 if errorlevel 1 goto :meta_error
-call :append_meta_line INSTALLER_BASENAME app_meta.APP_INSTALLER_BASENAME
+call :read_meta INSTALLER_BASENAME app_meta.APP_INSTALLER_BASENAME
 if errorlevel 1 goto :meta_error
-call :append_meta_line PORTABLE_ARTIFACT_NAME app_meta.APP_PORTABLE_ARTIFACT_NAME
+call :read_meta PORTABLE_ARTIFACT_NAME app_meta.APP_PORTABLE_ARTIFACT_NAME
 if errorlevel 1 goto :meta_error
-call :append_meta_line LICENSE_FILE app_meta.APP_LICENSE_RELATIVE_PATH
+call :read_meta LICENSE_FILE app_meta.APP_LICENSE_RELATIVE_PATH
 if errorlevel 1 goto :meta_error
-call :append_meta_line PUBLISHER_URL app_meta.APP_PUBLISHER_URL
+call :read_meta PUBLISHER_URL app_meta.APP_PUBLISHER_URL
 if errorlevel 1 goto :meta_error
-call :append_meta_line SUPPORT_URL app_meta.APP_SUPPORT_URL
+call :read_meta SUPPORT_URL app_meta.APP_SUPPORT_URL
 if errorlevel 1 goto :meta_error
-call :append_meta_line UPDATES_URL app_meta.APP_UPDATES_URL
+call :read_meta UPDATES_URL app_meta.APP_UPDATES_URL
 if errorlevel 1 goto :meta_error
-call :append_meta_line INSTALL_MARKER_FILE app_meta.APP_INSTALL_MARKER_FILE
-if errorlevel 1 goto :meta_error
-
-call "%META_EXPORT_CMD%"
+call :read_meta INSTALL_MARKER_FILE app_meta.APP_INSTALL_MARKER_FILE
 if errorlevel 1 goto :meta_error
 
 if not defined APP_NAME goto :meta_error
@@ -97,12 +92,11 @@ if not defined INSTALL_MARKER_FILE goto :meta_error
 if not exist "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" (
     echo ERROR: No existe "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%".
     echo El instalador utiliza el mismo binario portable ya firmado.
-    exit /b 1
+    goto :fail
 )
-
 if not exist "%LICENSE_FILE%" (
     echo ERROR: No existe "%LICENSE_FILE%".
-    exit /b 1
+    goto :fail
 )
 
 copy /y "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" "%STAGE_DIR%\%APP_EXE_NAME%" > nul
@@ -117,11 +111,11 @@ if not defined ISCC_CMD (
     echo Define ISCC_PATH o instala Inno Setup 6.
     goto :fail
 )
-
 if not exist "%OUTPUT_FOLDER%" mkdir "%OUTPUT_FOLDER%"
 if exist "%OUTPUT_FOLDER%\%INSTALLER_NAME%" del /q "%OUTPUT_FOLDER%\%INSTALLER_NAME%" > nul 2>&1
 
 > "%INSTALLER_SCRIPT%" echo [Setup]
+>> "%INSTALLER_SCRIPT%" echo SourceDir=%PROJECT_ROOT%
 >> "%INSTALLER_SCRIPT%" echo AppId={{B9D7D8A0-8E70-4E8C-AB34-0A2C7965E5C1}
 >> "%INSTALLER_SCRIPT%" echo AppName=%PRODUCT_NAME%
 >> "%INSTALLER_SCRIPT%" echo AppVersion=%PRODUCT_VERSION%
@@ -172,23 +166,31 @@ if exist "%OUTPUT_FOLDER%\%INSTALLER_NAME%" del /q "%OUTPUT_FOLDER%\%INSTALLER_N
 
 "%ISCC_CMD%" "%INSTALLER_SCRIPT%"
 if errorlevel 1 goto :fail
-
 if not exist "%OUTPUT_FOLDER%\%INSTALLER_NAME%" goto :fail
 
 echo.
 echo =======================================================
 echo  Instalador generado correctamente!
 echo =======================================================
+
 echo.
 echo %OUTPUT_FOLDER%\%INSTALLER_NAME%
-
 call :cleanup
 endlocal
 exit /b 0
 
-:append_meta_line
->> "%META_EXPORT_CMD%" "%PYTHON_CMD%" -c "import os,sys; sys.path.insert(0, os.path.abspath('src')); import app_meta; value=str(%2).replace(chr(34), ''); print('set \"%1={}\"'.format(value))"
-exit /b %errorlevel%
+:read_meta
+set "%~1="
+set "META_VALUE_FILE=%TEMP%\LectorcitoPro_meta_%RANDOM%_%RANDOM%.tmp"
+"%PYTHON_CMD%" -c "import os,sys; sys.path.insert(0, os.path.abspath('src')); import app_meta; print(%~2)" > "%META_VALUE_FILE%"
+if errorlevel 1 (
+    if exist "%META_VALUE_FILE%" del /q "%META_VALUE_FILE%" > nul 2>&1
+    exit /b 1
+)
+set /p "%~1="<"%META_VALUE_FILE%"
+del /q "%META_VALUE_FILE%" > nul 2>&1
+if not defined %~1 exit /b 1
+exit /b 0
 
 :resolve_iscc
 if defined ISCC_PATH if exist "%ISCC_PATH%" set "ISCC_CMD=%ISCC_PATH%"
@@ -212,7 +214,6 @@ echo ERROR: No se pudieron cargar los metadatos desde src\app_meta.py.
 goto :fail
 
 :cleanup
-if exist "%META_EXPORT_CMD%" del /q "%META_EXPORT_CMD%" > nul 2>&1
 if exist "%INSTALLER_SCRIPT%" del /q "%INSTALLER_SCRIPT%" > nul 2>&1
 if exist "%STAGE_DIR%" rmdir /s /q "%STAGE_DIR%"
 goto :eof
@@ -223,4 +224,5 @@ endlocal
 exit /b 1
 
 :: $env:ISCC_PATH="C:\Users\renzi\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
+
 :: Seleccionar CRLF - Windows (\r\n).

@@ -2,26 +2,24 @@
 .SYNOPSIS
     Script de autofirmado nativo para LectorcitoPro.
     No requiere Windows SDK ni signtool.exe.
-
 .DESCRIPTION
     1. Genera un certificado Autofirmado temporal.
     2. Firma el EXE generado por build.bat.
     3. Elimina la necesidad de instalar herramientas externas.
-
 .INSTRUCCIONES SI FALLA POR PERMISOS:
     Si ves un error rojo de "UnauthorizedAccess" o "signing script",
     copia y pega este comando en la terminal antes de ejecutar el script:
-
     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 #>
 
 [CmdletBinding()]
 param([ValidateSet("Portable", "Installer", "All")][string]$Mode = "All")
+$ErrorActionPreference = "Stop"
 
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 
 function Get-PythonCommand {
-    $venvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+    $venvPython = Join-Path $ProjectRoot ".venv-build\Scripts\python.exe"
     if (Test-Path $venvPython) {
         return $venvPython
     }
@@ -57,7 +55,6 @@ function Get-ExistingSelfSignedCodeSigningCertificate([string]$FriendlyName, [st
             $_.FriendlyName -eq $FriendlyName
         } |
         Sort-Object NotAfter -Descending
-
     return ($certificates | Select-Object -First 1)
 }
 
@@ -65,7 +62,6 @@ function New-LocalCodeSigningCertificate([string]$FriendlyName, [string]$Subject
     if (-not (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue)) {
         throw "No se encontro el cmdlet New-SelfSignedCertificate en este Windows."
     }
-
     $params = @{
         Type              = "CodeSigningCert"
         Subject           = $SubjectName
@@ -76,12 +72,10 @@ function New-LocalCodeSigningCertificate([string]$FriendlyName, [string]$Subject
         HashAlgorithm     = "SHA256"
         NotAfter          = (Get-Date).AddYears(3)
     }
-
     $cert = New-SelfSignedCertificate @params
     if (-not $cert) {
         throw "No se pudo crear el certificado autofirmado."
     }
-
     return $cert
 }
 
@@ -112,7 +106,6 @@ function Get-ManagedCodeSigningCertificate([string]$FriendlyName, [string]$Subje
             Created     = $false
         }
     }
-
     $created = New-LocalCodeSigningCertificate -FriendlyName $FriendlyName -SubjectName $SubjectName
     return [PSCustomObject]@{
         Certificate = $created
@@ -128,10 +121,8 @@ function Sign-Artifact(
     if (-not (Test-Path $FilePath)) {
         throw "No existe el archivo: $FilePath"
     }
-
     $signature = $null
     $usedTimestamp = $false
-
     if ($TimestampUrl) {
         try {
             $signature = Set-AuthenticodeSignature `
@@ -147,7 +138,6 @@ function Sign-Artifact(
             Write-Host "[WARN] Se aplicara la firma sin timestamp." -ForegroundColor Yellow
         }
     }
-
     if (-not $signature) {
         $signature = Set-AuthenticodeSignature `
             -FilePath $FilePath `
@@ -156,12 +146,10 @@ function Sign-Artifact(
             -IncludeChain All `
             -ErrorAction Stop
     }
-
     $verification = Get-AuthenticodeSignature -FilePath $FilePath
     if ($verification.Status -ne "Valid") {
         throw "La verificacion fallo para '$FilePath'. Estado: $($verification.Status) - $($verification.StatusMessage)"
     }
-
     return [PSCustomObject]@{
         Signature      = $verification
         UsedTimestamp  = $usedTimestamp
@@ -173,41 +161,32 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "     FIRMA DIGITAL LOCAL AUTOMATICA     " -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-
 Set-Location $ProjectRoot
-
 $CarpetaSalidaName = Get-AppMetaValue "app_meta.APP_OUTPUT_DIR_NAME" "downloads"
 $PortableArtifactName = Get-AppMetaValue "app_meta.APP_PORTABLE_ARTIFACT_NAME" "LectorcitoPro-Portable.exe"
 $InstallerName = Get-AppMetaValue "app_meta.APP_INSTALLER_NAME" "LectorcitoPro-Setup.exe"
 $TimestampUrl = Get-AppMetaValue "app_meta.APP_SIGNING_TIMESTAMP_URL" "http://timestamp.digicert.com"
 $PublisherName = Get-AppMetaValue "app_meta.APP_PUBLISHER_NAME" "Lectorcito Pro"
 $SignatureFriendlyName = Get-AppMetaValue "app_meta.APP_SIGNATURE_FRIENDLY_NAME" "Lectorcito Pro Code Signing"
-
 $SubjectName = "CN=$PublisherName"
 $CarpetaSalida = Join-Path -Path $ProjectRoot $CarpetaSalidaName
 $RutaPortable = Join-Path -Path $CarpetaSalida $PortableArtifactName
 $RutaInstaller = Join-Path -Path $CarpetaSalida $InstallerName
-
 $Artifacts = @(
     [PSCustomObject]@{ Nombre = "Portable"; Ruta = $RutaPortable },
     [PSCustomObject]@{ Nombre = "Installer"; Ruta = $RutaInstaller }
 )
-
 if ($Mode -ne "All") {
     $Artifacts = @($Artifacts | Where-Object { $_.Nombre -eq $Mode })
 }
-
 $ExistingArtifacts = @($Artifacts | Where-Object { Test-Path $_.Ruta })
-
 if ($ExistingArtifacts.Count -eq 0) {
     Write-Host "[ERROR] No se encontraron artefactos para firmar en: $CarpetaSalida" -ForegroundColor Red
     Write-Host "Ejecuta primero la etapa de compilacion correspondiente."
     exit 1
 }
-
 Write-Host "[INFO] Carpeta de salida: $CarpetaSalida" -ForegroundColor Yellow
 Write-Host ""
-
 foreach ($artifact in $Artifacts) {
     if (Test-Path $artifact.Ruta) {
         Write-Host "[OK] Detectado $($artifact.Nombre): $($artifact.Ruta)" -ForegroundColor Green
@@ -215,26 +194,21 @@ foreach ($artifact in $Artifacts) {
         Write-Host "[WARN] No encontrado $($artifact.Nombre): $($artifact.Ruta)" -ForegroundColor Yellow
     }
 }
-
 Write-Host ""
 
 try {
     $managedCertificate = Get-ManagedCodeSigningCertificate -FriendlyName $SignatureFriendlyName -SubjectName $SubjectName
     $certificate = $managedCertificate.Certificate
-
     Trust-LocalCodeSigningCertificate -Certificate $certificate
-
     if ($managedCertificate.Created) {
         Write-Host "[OK] Certificado autofirmado creado." -ForegroundColor Green
     } else {
         Write-Host "[OK] Certificado autofirmado reutilizado." -ForegroundColor Green
     }
-
     Write-Host "[INFO] Subject: $($certificate.Subject)" -ForegroundColor Green
     Write-Host "[INFO] Thumbprint: $($certificate.Thumbprint)" -ForegroundColor Green
     Write-Host "[INFO] Valido hasta: $($certificate.NotAfter)" -ForegroundColor Green
     Write-Host ""
-
     foreach ($artifact in $ExistingArtifacts) {
         Write-Host "[PROCESO] Firmando $($artifact.Nombre)..." -ForegroundColor Cyan
         $result = Sign-Artifact -FilePath $artifact.Ruta -Certificate $certificate -TimestampUrl $TimestampUrl
@@ -245,7 +219,6 @@ try {
         }
         Write-Host ""
     }
-
     Write-Host "========================================" -ForegroundColor Green
     Write-Host "   EXITO: ARCHIVOS FIRMADOS EN SITIO    " -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Green
@@ -257,9 +230,7 @@ try {
     Write-Host "[ERROR] Fallo el firmado: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
-
 Write-Host ""
 exit 0
-
 #Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 #.\signApplication.ps1

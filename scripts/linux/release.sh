@@ -16,6 +16,5 @@ if [[ ! -s "$ARTIFACT" ]]; then
     echo "ERROR: No existe el artefacto Linux final."
     exit 1
 fi
-
 echo "SHA256 Linux:"
 sha256sum "$ARTIFACT"

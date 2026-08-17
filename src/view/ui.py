@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import customtkinter as ctk
 import tkinter as tk
+import ctypes
+import ctypes.util
 import datetime
+import math
 import os
 import random
+import sys
 
 from PIL import Image, ImageDraw, ImageFilter, ImageTk, ImageStat
 from utils import resource_path
@@ -76,6 +80,7 @@ class LectorcitoApp(ctk.CTk):
         self._surface_backdrops = {}
         self._adaptive_layout_after_id = None
         self._adaptive_layout_running = False
+        self._linux_shape_after_id = None
 
         self.title(APP_DISPLAY_NAME)
         self._app_w = MAIN_WINDOW_WIDTH
@@ -100,6 +105,8 @@ class LectorcitoApp(ctk.CTk):
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
         self.bind("<Configure>", self._schedule_adaptive_layout_refresh, add="+")
+        if sys.platform.startswith("linux"):
+            self.bind("<Map>", lambda event: self._schedule_linux_window_shape(120), add="+")
         self.after_idle(self._refresh_adaptive_layout)
 
         self.after(MAIN_WINDOW_SHOW_DELAY_MS, self._precise_center_and_show)
@@ -334,6 +341,158 @@ class LectorcitoApp(ctk.CTk):
         finally:
             self._adaptive_layout_running = False
 
+    def _schedule_linux_window_shape(self, delay=120):
+        if not sys.platform.startswith("linux"):
+            return
+        if self._linux_shape_after_id is not None:
+            try:
+                self.after_cancel(self._linux_shape_after_id)
+            except Exception:
+                pass
+        try:
+            self._linux_shape_after_id = self.after(max(1, int(delay)), self._apply_linux_window_shape)
+        except Exception:
+            self._linux_shape_after_id = None
+
+    def _apply_linux_window_shape(self):
+        self._linux_shape_after_id = None
+        if not sys.platform.startswith("linux"):
+            return
+        try:
+            if not self.winfo_exists() or not self.winfo_ismapped():
+                return
+            self.update_idletasks()
+
+            x11 = ctypes.CDLL(ctypes.util.find_library("X11") or "libX11.so.6")
+            xext = ctypes.CDLL(ctypes.util.find_library("Xext") or "libXext.so.6")
+
+            class XRectangle(ctypes.Structure):
+                _fields_ = [
+                    ("x", ctypes.c_short),
+                    ("y", ctypes.c_short),
+                    ("width", ctypes.c_ushort),
+                    ("height", ctypes.c_ushort),
+                ]
+
+            x11.XOpenDisplay.argtypes = [ctypes.c_char_p]
+            x11.XOpenDisplay.restype = ctypes.c_void_p
+            x11.XCloseDisplay.argtypes = [ctypes.c_void_p]
+            x11.XCloseDisplay.restype = ctypes.c_int
+            x11.XQueryTree.argtypes = [
+                ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_ulong),
+                ctypes.POINTER(ctypes.POINTER(ctypes.c_ulong)), ctypes.POINTER(ctypes.c_uint)
+            ]
+            x11.XQueryTree.restype = ctypes.c_int
+            x11.XGetGeometry.argtypes = [
+                ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_uint), ctypes.POINTER(ctypes.c_uint),
+                ctypes.POINTER(ctypes.c_uint), ctypes.POINTER(ctypes.c_uint)
+            ]
+            x11.XGetGeometry.restype = ctypes.c_int
+            x11.XFree.argtypes = [ctypes.c_void_p]
+            x11.XFree.restype = ctypes.c_int
+            x11.XFlush.argtypes = [ctypes.c_void_p]
+            x11.XFlush.restype = ctypes.c_int
+
+            xext.XShapeQueryExtension.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+            xext.XShapeQueryExtension.restype = ctypes.c_int
+            xext.XShapeCombineRectangles.argtypes = [
+                ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                ctypes.POINTER(XRectangle), ctypes.c_int, ctypes.c_int, ctypes.c_int
+            ]
+            xext.XShapeCombineRectangles.restype = None
+
+            display = x11.XOpenDisplay(None)
+            if not display:
+                return
+
+            try:
+                event_base = ctypes.c_int()
+                error_base = ctypes.c_int()
+                if not xext.XShapeQueryExtension(display, ctypes.byref(event_base), ctypes.byref(error_base)):
+                    return
+
+                current_window = int(self.winfo_id())
+                outer_window = current_window
+                for _ in range(12):
+                    root_return = ctypes.c_ulong()
+                    parent_return = ctypes.c_ulong()
+                    children_return = ctypes.POINTER(ctypes.c_ulong)()
+                    child_count = ctypes.c_uint()
+                    status = x11.XQueryTree(
+                        display, ctypes.c_ulong(current_window), ctypes.byref(root_return), ctypes.byref(parent_return),
+                        ctypes.byref(children_return), ctypes.byref(child_count)
+                    )
+                    if children_return:
+                        x11.XFree(ctypes.cast(children_return, ctypes.c_void_p))
+                    if not status:
+                        break
+                    parent_window = int(parent_return.value)
+                    root_window = int(root_return.value)
+                    if not parent_window or parent_window == current_window:
+                        break
+                    if parent_window == root_window:
+                        outer_window = current_window
+                        break
+                    current_window = parent_window
+                    outer_window = current_window
+
+                root_return = ctypes.c_ulong()
+                x_return = ctypes.c_int()
+                y_return = ctypes.c_int()
+                width_return = ctypes.c_uint()
+                height_return = ctypes.c_uint()
+                border_return = ctypes.c_uint()
+                depth_return = ctypes.c_uint()
+                if not x11.XGetGeometry(
+                        display, ctypes.c_ulong(outer_window), ctypes.byref(root_return), ctypes.byref(x_return),
+                        ctypes.byref(y_return), ctypes.byref(width_return), ctypes.byref(height_return),
+                        ctypes.byref(border_return), ctypes.byref(depth_return)):
+                    return
+
+                width = int(width_return.value)
+                height = int(height_return.value)
+                if width <= 2 or height <= 2:
+                    return
+
+                radius = max(6, min(scale_tk_value(self, CORNER_RADIUS_XL), width // 2, height // 2))
+
+                def row_inset(row):
+                    if row < radius:
+                        local_row = row
+                    elif row >= height - radius:
+                        local_row = height - 1 - row
+                    else:
+                        return 0
+                    dy = radius - (local_row + 0.5)
+                    return max(0, int(math.ceil(radius - math.sqrt(max(0.0, (radius * radius) - (dy * dy))))))
+
+                runs = []
+                run_start = 0
+                run_inset = row_inset(0)
+                for row in range(1, height):
+                    inset = row_inset(row)
+                    if inset != run_inset:
+                        runs.append((run_start, row - run_start, run_inset))
+                        run_start = row
+                        run_inset = inset
+                runs.append((run_start, height - run_start, run_inset))
+
+                rectangles = (XRectangle * len(runs))()
+                for index, (start_y, run_height, inset) in enumerate(runs):
+                    rectangles[index] = XRectangle(
+                        int(inset), int(start_y), max(1, int(width - (inset * 2))), max(1, int(run_height))
+                    )
+
+                xext.XShapeCombineRectangles(
+                    display, ctypes.c_ulong(outer_window), 0, 0, 0, rectangles, len(runs), 0, 1
+                )
+                x11.XFlush(display)
+            finally:
+                x11.XCloseDisplay(display)
+        except Exception:
+            pass
+
     def get_real_window_rect(self):
         return _get_widget_window_rect(self)
 
@@ -358,6 +517,7 @@ class LectorcitoApp(ctk.CTk):
         except Exception:
             self.deiconify()
             self.attributes("-alpha", 1.0)
+            self._schedule_linux_window_shape(120)
 
     def _stabilize_initial_position(self, attempt=1):
         try:
@@ -380,6 +540,7 @@ class LectorcitoApp(ctk.CTk):
                 self.geometry(f"{self._app_w}x{self._app_h}+{int(self.winfo_x())}+{self._reveal_target_y + MAIN_WINDOW_REVEAL_OFFSET_Y}")
         except Exception:
             self._reveal_target_y = None
+        self._schedule_linux_window_shape(MAIN_WINDOW_CENTER_RETRY_DELAY_MS)
         self.attributes("-alpha", MAIN_WINDOW_INITIAL_ALPHA)
         self.after(MAIN_WINDOW_REVEAL_DELAY_MS, self._fade_in)
 
@@ -1016,6 +1177,7 @@ class LectorcitoApp(ctk.CTk):
             self.after(MAIN_WINDOW_TOPMOST_RESET_DELAY_MS, lambda: self.attributes("-topmost", False))
         except Exception:
             pass
+        self._schedule_linux_window_shape(120)
 
     def _fade_in_after_switch(self):
         try:
