@@ -11,7 +11,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-
     <nav class="navbar">
         <div class="logo-container">
             <img src="resources/branding/logo_oscuro.png" alt="Logo de la aplicación" id="app-logo" class="nav-logo">
@@ -30,16 +29,15 @@
             </button>
         </div>
     </nav>
-
     <header id="intro" class="hero section-anchor">
         <div class="container hero-shell">
             <div class="hero-content fade-in-up">
                 <h1>Documentación y Análisis de Código Simplificado</h1>
                 <p class="hero-desc">
-                    <strong id="hero-app-name"></strong> es la herramienta definitiva para desarrolladores que necesitan consolidar proyectos complejos en un solo archivo de texto. Ideal para crear contextos para Inteligencia Artificial (LLMs), auditorías de código y documentación técnica.
+                    <strong id="hero-app-name"></strong> es una herramienta para desarrolladores que necesitan consolidar proyectos complejos en un único reporte TXT o Markdown. Ideal para crear contextos para Inteligencia Artificial (LLMs), auditorías de código y documentación técnica.
                 </p>
                 <div class="hero-buttons">
-                    <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest/download/LectorcitoPro-Setup.exe" class="btn btn-blue" id="hero-download-link">Descargar ahora</a>
+                    <a href="#descargas" class="btn btn-blue" id="hero-download-link">Descargar ahora</a>
                     <a href="#" target="_blank" class="btn btn-outline btn-repo" id="hero-repo-link">
                         <img src="resources/icons/github_oscuro.png" class="btn-icon-img" id="github-btn-icon" alt="Github"> Ver Repositorio
                     </a>
@@ -50,12 +48,10 @@
             </div>
         </div>
     </header>
-
     <section id="workflow" class="section section-anchor">
         <div class="container">
             <h2 class="section-title">Flujo de Trabajo Sugerido</h2>
             <p class="section-subtitle">Sigue estos 3 pasos para obtener el mejor resultado.</p>
-
             <div class="timeline">
                 <div class="timeline-item fade-in-up">
                     <div class="timeline-number">1</div>
@@ -81,12 +77,10 @@
             </div>
         </div>
     </section>
-
     <section id="main-menu" class="section alt-bg section-anchor">
         <div class="container">
             <h2 class="section-title">Menú Principal</h2>
             <p class="section-subtitle">Explicación detallada de las 6 funciones centrales de la aplicación.</p>
-
             <div class="cards-grid">
                 <div class="feature-card fade-in-up">
                     <div class="card-header color-blue">
@@ -96,7 +90,6 @@
                         <p>Por defecto, los reportes se guardan dentro de la aplicación. Con este botón puedes elegir una carpeta externa personalizada para que todos los reportes se guarden allí.</p>
                     </div>
                 </div>
-
                 <div class="feature-card fade-in-up">
                     <div class="card-header color-blue">
                         <h3>2. Generar Lectura Completa</h3>
@@ -105,7 +98,6 @@
                         <p><strong>La función principal.</strong> Abre un selector para elegir la carpeta de tu proyecto, analiza archivos, ignora lo configurado en los filtros y crea un archivo único con todo el código fuente.</p>
                     </div>
                 </div>
-
                 <div class="feature-card fade-in-up">
                     <div class="card-header color-blue">
                         <h3>3. Crear Estructura de Árbol</h3>
@@ -114,16 +106,14 @@
                         <p>No lee el contenido de los archivos. Solo genera un diagrama visual de la jerarquía de carpetas y archivos para entender la arquitectura del proyecto de forma inmediata.</p>
                     </div>
                 </div>
-
                 <div class="feature-card fade-in-up">
                     <div class="card-header color-blue">
                         <h3>4. Abrir Carpeta Lecturas</h3>
                     </div>
                     <div class="card-body">
-                        <p>Abre el explorador de archivos de Windows directamente en la carpeta donde se están guardando los reportes generados.</p>
+                        <p>Abre el gestor de archivos del sistema directamente en la carpeta donde se están guardando los reportes generados.</p>
                     </div>
                 </div>
-
                 <div class="feature-card fade-in-up">
                     <div class="card-header color-green">
                         <h3>5. Abrir Último Reporte</h3>
@@ -132,7 +122,6 @@
                         <p>Acceso rápido al archivo más reciente generado, en formato <code>.txt</code> o <code>.md</code>, sin tener que buscarlo manualmente.</p>
                     </div>
                 </div>
-
                 <div class="feature-card fade-in-up">
                     <div class="card-header color-red">
                         <h3>6. Eliminar Lecturas</h3>
@@ -144,12 +133,10 @@
             </div>
         </div>
     </section>
-
     <section id="sidebar-tools" class="section section-anchor">
         <div class="container">
             <h2 class="section-title">Barra de Herramientas</h2>
             <p class="section-subtitle">Configura lectura, exclusiones, perfiles y ajustes del sistema desde un solo lugar.</p>
-
             <div class="tools-list">
                 <div class="tool-group fade-in-up">
                     <h3>Control de Archivos</h3>
@@ -175,7 +162,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="tool-group fade-in-up">
                     <h3>Interfaz y Sistema</h3>
                     <div class="tool-item">
@@ -200,14 +186,13 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="tool-group fade-in-up">
                     <h3>Ajustes Avanzados</h3>
                     <div class="tool-item">
                         <img src="resources/icons/ajustes_claro.png" class="tool-icon bg-dark" alt="Ajustes">
                         <div>
                             <h4>Ajustes</h4>
-                            <p>Cambia el formato de salida y administra integraciones con Windows como accesos directos y distribución del ejecutable.</p>
+                            <p>Configura el formato TXT/Markdown, administra accesos del sistema disponibles e importa o exporta la configuración de la aplicación.</p>
                         </div>
                     </div>
                     <div class="tool-item">
@@ -228,59 +213,90 @@
                         <img src="resources/icons/info_claro.png" class="tool-icon bg-dark" alt="Info">
                         <div>
                             <h4>Información</h4>
-                            <p>Muestra la versión actual y facilita el acceso al manual de usuario en línea.</p>
+                            <p>Abre directamente el manual de usuario en línea para consultar funciones, uso, descargas y documentación del proyecto.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
-
     <section id="descargas" class="section highlight-bg section-anchor">
         <div class="container">
             <h2 class="section-title">Descargas Oficiales</h2>
-            <p class="section-subtitle">La opción principal descarga directamente el instalable oficial recomendado. El portable sigue disponible como alternativa sin instalación.</p>
-
+            <p class="section-subtitle">Elige la distribución que mejor se adapte a tu sistema: instalable recomendado para Windows o versiones portables para Windows y Linux.</p>
             <div class="downloads-grid">
                 <div class="download-card fade-in-up recommended-card">
                     <div class="download-icon">
                         <img src="resources/branding/lector.png" alt="Mascota de la aplicación">
                     </div>
                     <div class="download-details">
-                        <span class="download-badge">Recomendado</span>
-                        <h3 id="download-installer-title">Instalable</h3>
-                        <p>Ideal para uso principal en Windows. Integra mejor accesos directos, flujo de instalación y experiencia general del sistema.</p>
+                        <span class="download-badge green-badge">Recomendado</span>
+                        <h3 id="download-installer-title">Lectorcito Pro Instalable</h3>
+                        <p>La opción recomendada para <strong>Windows</strong>. Instala Lectorcito Pro, ofrece mayor integración con el sistema y facilita futuras actualizaciones.</p>
                         <ul class="specs-list">
                             <li>Tipo: Instalable</li>
                             <li>Sistema: Windows 10 / 11</li>
-                            <li>Uso: Principal</li>
+                            <li>Enfoque: Integración</li>
                         </ul>
+                        <div class="download-info-panel" id="download-installer-info" hidden>
+                            <strong>Instalable para Windows</strong>
+                            <p>Es la opción recomendada. Si Windows Defender muestra una alerta, verifica que lo descargaste desde el canal oficial y permite el archivo o excluye únicamente la carpeta de instalación.</p>
+                        </div>
                         <div class="download-actions">
-                            <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest/download/LectorcitoPro-Setup.exe" class="btn btn-green" id="download-installer-link">Descargar instalable</a>
+                            <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest/download/LectorcitoPro-Setup.exe" class="btn btn-green" id="download-installer-link">Descargar</a>
+                            <button type="button" class="download-info-btn" aria-expanded="false" aria-controls="download-installer-info" title="Información sobre la versión instalable">i</button>
                         </div>
                     </div>
                 </div>
-
-                <div class="download-card fade-in-up">
+                <div class="download-card fade-in-up portable-card">
                     <div class="download-icon">
                         <img src="resources/branding/lector.png" alt="Mascota de la aplicación">
                     </div>
                     <div class="download-details">
-                        <span class="download-badge neutral-badge">Opcional</span>
-                        <h3 id="download-portable-title">Portable</h3>
-                        <p>Útil para llevar la aplicación contigo o ejecutarla rápidamente en otros entornos sin pasar por el asistente de instalación.</p>
+                        <span class="download-badge blue-badge">Opcional</span>
+                        <h3 id="download-portable-title">Lectorcito Pro Portable</h3>
+                        <p>Ejecuta Lectorcito Pro en <strong>Windows</strong> sin instalación. Ideal para llevarlo contigo, probarlo rápidamente o utilizarlo de forma temporal.</p>
                         <ul class="specs-list">
                             <li>Tipo: Portable</li>
                             <li>Sistema: Windows 10 / 11</li>
-                            <li>Uso: Secundario</li>
+                            <li>Enfoque: Portabilidad</li>
                         </ul>
+                        <div class="download-info-panel" id="download-portable-info" hidden>
+                            <strong>Portable para Windows</strong>
+                            <p>Úsala si no quieres instalar. Si Windows Defender la bloquea, verifica el origen y permite el ejecutable o excluye únicamente la carpeta donde guardaste la versión portable.</p>
+                        </div>
                         <div class="download-actions">
-                            <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest/download/LectorcitoPro-Portable.exe" class="btn btn-blue" id="download-portable-link">Descargar portable</a>
+                            <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest/download/LectorcitoPro-Portable.exe" class="btn btn-blue" id="download-portable-link">Descargar</a>
+                            <button type="button" class="download-info-btn" aria-expanded="false" aria-controls="download-portable-info" title="Información sobre la versión portable de Windows">i</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="download-card linux-card fade-in-up">
+                    <div class="download-icon">
+                        <img src="resources/branding/lector.png" alt="Mascota de la aplicación">
+                    </div>
+                    <div class="download-details">
+                        <span class="download-badge red-badge">Alternativo</span>
+                        <h3 id="download-linux-title">Lectorcito Pro Portable</h3>
+                        <p>Ejecuta Lectorcito Pro directamente en <strong>Linux</strong> mediante un único binario portable, sin necesidad de un instalador adicional.</p>
+                        <ul class="specs-list">
+                            <li>Tipo: Portable</li>
+                            <li>Sistema: Linux x86_64</li>
+                            <li>Enfoque: Compatibilidad</li>
+                        </ul>
+                        <div class="download-info-panel" id="download-linux-info" hidden>
+                            <strong>Portable para Linux</strong>
+                            <p>Abre una terminal en la carpeta del archivo y ejecuta:</p>
+                            <code>chmod +x LectorcitoPro-Linux-x86_64</code>
+                            <code>./LectorcitoPro-Linux-x86_64</code>
+                        </div>
+                        <div class="download-actions">
+                            <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest/download/LectorcitoPro-Linux-x86_64" class="btn btn-red" id="download-linux-link">Descargar</a>
+                            <button type="button" class="download-info-btn" aria-expanded="false" aria-controls="download-linux-info" title="Información para ejecutar la versión portable de Linux">i</button>
                         </div>
                     </div>
                 </div>
             </div>
-
             <div class="download-footer-actions fade-in-up">
                 <a href="docs/versionHistory.md" target="_blank" class="btn btn-soft" id="download-history-link">Historial de versiones</a>
                 <a href="#" target="_blank" class="btn btn-outline btn-repo btn-repo-wide" id="download-repo-link">
@@ -290,14 +306,12 @@
             </div>
         </div>
     </section>
-
     <footer class="footer">
         <div class="container">
-            <p><strong id="footer-app-name"></strong> <span id="footer-app-version"></span></p>
+            <p><a href="https://github.com/RenzoFernando/LectorcitoPro" target="_blank" rel="noopener noreferrer" id="footer-app-link"><strong id="footer-app-name"></strong></a><span> — Auditoría y documentación de código</span></p>
             <p class="copyright" id="footer-copyright"></p>
         </div>
     </footer>
-
     <script src="resources/js/app_meta.js"></script>
     <script src="resources/js/scripts.js"></script>
 </body>
