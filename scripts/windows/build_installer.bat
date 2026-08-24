@@ -3,34 +3,24 @@ setlocal EnableExtensions
 chcp 65001 >nul
 for %%I in ("%~dp0\..\..") do set "PROJECT_ROOT=%%~fI"
 cd /d "%PROJECT_ROOT%"
+
 set "VENV_PYTHON=.venv-build\Scripts\python.exe"
 set "PYTHONUTF8=1"
 set "PYTHONIOENCODING=utf-8"
-set "INSTALLER_SCRIPT=build\windows\installer\LectorcitoPro.iss"
-set "STAGE_DIR=build\windows\installer\payload"
+set "INSTALLER_WORK_DIR=build\windows\installer"
+set "INSTALLER_SCRIPT=%INSTALLER_WORK_DIR%\LectorcitoPro.iss"
+set "STAGE_DIR=%INSTALLER_WORK_DIR%\payload"
 set "ISCC_CMD="
-
-echo.
-echo =======================================================
-echo  Compilador de Instalador Windows
-echo =======================================================
-
-echo.
 
 if not exist "%VENV_PYTHON%" (
     echo ERROR: No existe el entorno .venv-build. Ejecuta primero el setup.
     exit /b 1
 )
 set "PYTHON_CMD=%VENV_PYTHON%"
-"%PYTHON_CMD%" --version
 
-echo.
-
-if not exist "build" mkdir "build"
 if not exist "build\windows" mkdir "build\windows"
-if not exist "build\windows\installer" mkdir "build\windows\installer"
-if exist "%INSTALLER_SCRIPT%" del /q "%INSTALLER_SCRIPT%" > nul 2>&1
-if exist "%STAGE_DIR%" rmdir /s /q "%STAGE_DIR%"
+if exist "%INSTALLER_WORK_DIR%" rmdir /s /q "%INSTALLER_WORK_DIR%"
+mkdir "%INSTALLER_WORK_DIR%"
 mkdir "%STAGE_DIR%"
 
 call :read_meta APP_NAME app_meta.APP_NAME_INTERNAL
@@ -45,8 +35,6 @@ call :read_meta PRODUCT_NAME app_meta.APP_PRODUCT_NAME
 if errorlevel 1 goto :meta_error
 call :read_meta PRODUCT_VERSION app_meta.APP_PRODUCT_VERSION
 if errorlevel 1 goto :meta_error
-call :read_meta FILE_VERSION app_meta.APP_FILE_VERSION
-if errorlevel 1 goto :meta_error
 call :read_meta COMPANY_NAME app_meta.APP_COMPANY_NAME
 if errorlevel 1 goto :meta_error
 call :read_meta COPYRIGHT_TEXT app_meta.APP_LEGAL_COPYRIGHT
@@ -56,8 +44,6 @@ if errorlevel 1 goto :meta_error
 call :read_meta INSTALLER_NAME app_meta.APP_INSTALLER_NAME
 if errorlevel 1 goto :meta_error
 call :read_meta INSTALLER_BASENAME app_meta.APP_INSTALLER_BASENAME
-if errorlevel 1 goto :meta_error
-call :read_meta PORTABLE_ARTIFACT_NAME app_meta.APP_PORTABLE_ARTIFACT_NAME
 if errorlevel 1 goto :meta_error
 call :read_meta LICENSE_FILE app_meta.APP_LICENSE_RELATIVE_PATH
 if errorlevel 1 goto :meta_error
@@ -70,28 +56,10 @@ if errorlevel 1 goto :meta_error
 call :read_meta INSTALL_MARKER_FILE app_meta.APP_INSTALL_MARKER_FILE
 if errorlevel 1 goto :meta_error
 
-if not defined APP_NAME goto :meta_error
-if not defined APP_EXE_NAME goto :meta_error
-if not defined ICON_FILE goto :meta_error
-if not defined OUTPUT_FOLDER goto :meta_error
-if not defined PRODUCT_NAME goto :meta_error
-if not defined PRODUCT_VERSION goto :meta_error
-if not defined FILE_VERSION goto :meta_error
-if not defined COMPANY_NAME goto :meta_error
-if not defined COPYRIGHT_TEXT goto :meta_error
-if not defined FILE_DESCRIPTION goto :meta_error
-if not defined INSTALLER_NAME goto :meta_error
-if not defined INSTALLER_BASENAME goto :meta_error
-if not defined PORTABLE_ARTIFACT_NAME goto :meta_error
-if not defined LICENSE_FILE goto :meta_error
-if not defined PUBLISHER_URL goto :meta_error
-if not defined SUPPORT_URL goto :meta_error
-if not defined UPDATES_URL goto :meta_error
-if not defined INSTALL_MARKER_FILE goto :meta_error
+set "INSTALLED_DIST_DIR=build\windows\installed-app\%APP_NAME%.dist"
 
-if not exist "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" (
-    echo ERROR: No existe "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%".
-    echo El instalador utiliza el mismo binario portable ya firmado.
+if not exist "%INSTALLED_DIST_DIR%\%APP_EXE_NAME%" (
+    echo ERROR: No existe la distribucion standalone: "%INSTALLED_DIST_DIR%".
     goto :fail
 )
 if not exist "%LICENSE_FILE%" (
@@ -99,8 +67,6 @@ if not exist "%LICENSE_FILE%" (
     goto :fail
 )
 
-copy /y "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" "%STAGE_DIR%\%APP_EXE_NAME%" > nul
-if errorlevel 1 goto :fail
 > "%STAGE_DIR%\%INSTALL_MARKER_FILE%" echo installed
 copy /y "%LICENSE_FILE%" "%STAGE_DIR%\%LICENSE_FILE%" > nul
 if errorlevel 1 goto :fail
@@ -124,7 +90,7 @@ if exist "%OUTPUT_FOLDER%\%INSTALLER_NAME%" del /q "%OUTPUT_FOLDER%\%INSTALLER_N
 >> "%INSTALLER_SCRIPT%" echo AppSupportURL=%SUPPORT_URL%
 >> "%INSTALLER_SCRIPT%" echo AppUpdatesURL=%UPDATES_URL%
 >> "%INSTALLER_SCRIPT%" echo AppCopyright=%COPYRIGHT_TEXT%
->> "%INSTALLER_SCRIPT%" echo DefaultDirName={autopf}\%PRODUCT_NAME%
+>> "%INSTALLER_SCRIPT%" echo DefaultDirName={localappdata}\Programs\%PRODUCT_NAME%
 >> "%INSTALLER_SCRIPT%" echo DefaultGroupName=%PRODUCT_NAME%
 >> "%INSTALLER_SCRIPT%" echo OutputDir=%OUTPUT_FOLDER%
 >> "%INSTALLER_SCRIPT%" echo OutputBaseFilename=%INSTALLER_BASENAME%
@@ -134,7 +100,7 @@ if exist "%OUTPUT_FOLDER%\%INSTALLER_NAME%" del /q "%OUTPUT_FOLDER%\%INSTALLER_N
 >> "%INSTALLER_SCRIPT%" echo Compression=lzma
 >> "%INSTALLER_SCRIPT%" echo SolidCompression=yes
 >> "%INSTALLER_SCRIPT%" echo WizardStyle=modern
->> "%INSTALLER_SCRIPT%" echo PrivilegesRequired=admin
+>> "%INSTALLER_SCRIPT%" echo PrivilegesRequired=lowest
 >> "%INSTALLER_SCRIPT%" echo ArchitecturesAllowed=x64compatible
 >> "%INSTALLER_SCRIPT%" echo ArchitecturesInstallIn64BitMode=x64compatible
 >> "%INSTALLER_SCRIPT%" echo VersionInfoCompany=%COMPANY_NAME%
@@ -142,7 +108,7 @@ if exist "%OUTPUT_FOLDER%\%INSTALLER_NAME%" del /q "%OUTPUT_FOLDER%\%INSTALLER_N
 >> "%INSTALLER_SCRIPT%" echo VersionInfoVersion=%PRODUCT_VERSION%
 >> "%INSTALLER_SCRIPT%" echo VersionInfoProductName=%PRODUCT_NAME%
 >> "%INSTALLER_SCRIPT%" echo VersionInfoProductVersion=%PRODUCT_VERSION%
->> "%INSTALLER_SCRIPT%" echo UsePreviousAppDir=yes
+>> "%INSTALLER_SCRIPT%" echo UsePreviousAppDir=no
 >> "%INSTALLER_SCRIPT%" echo UsePreviousTasks=yes
 >> "%INSTALLER_SCRIPT%" echo DisableProgramGroupPage=yes
 >> "%INSTALLER_SCRIPT%" echo.
@@ -150,7 +116,7 @@ if exist "%OUTPUT_FOLDER%\%INSTALLER_NAME%" del /q "%OUTPUT_FOLDER%\%INSTALLER_N
 >> "%INSTALLER_SCRIPT%" echo Name: "desktopicon"; Description: "Crear acceso directo en el Escritorio"; GroupDescription: "Accesos directos:"
 >> "%INSTALLER_SCRIPT%" echo.
 >> "%INSTALLER_SCRIPT%" echo [Files]
->> "%INSTALLER_SCRIPT%" echo Source: "%STAGE_DIR%\%APP_EXE_NAME%"; DestDir: "{app}"; Flags: ignoreversion
+>> "%INSTALLER_SCRIPT%" echo Source: "%INSTALLED_DIST_DIR%\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 >> "%INSTALLER_SCRIPT%" echo Source: "%STAGE_DIR%\%INSTALL_MARKER_FILE%"; DestDir: "{app}"; Flags: ignoreversion
 >> "%INSTALLER_SCRIPT%" echo Source: "%STAGE_DIR%\%LICENSE_FILE%"; DestDir: "{app}"; Flags: ignoreversion
 >> "%INSTALLER_SCRIPT%" echo.
@@ -162,19 +128,12 @@ if exist "%OUTPUT_FOLDER%\%INSTALLER_NAME%" del /q "%OUTPUT_FOLDER%\%INSTALLER_N
 >> "%INSTALLER_SCRIPT%" echo Name: "{autoprograms}\%PRODUCT_NAME%"; Filename: "{app}\%APP_EXE_NAME%"; WorkingDir: "{app}"; IconFilename: "{app}\%APP_EXE_NAME%"
 >> "%INSTALLER_SCRIPT%" echo.
 >> "%INSTALLER_SCRIPT%" echo [Run]
->> "%INSTALLER_SCRIPT%" echo Filename: "{app}\%APP_EXE_NAME%"; Description: "Abrir %PRODUCT_NAME% ahora"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent unchecked runasoriginaluser
+>> "%INSTALLER_SCRIPT%" echo Filename: "{app}\%APP_EXE_NAME%"; Description: "Abrir %PRODUCT_NAME% ahora"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent unchecked
 
 "%ISCC_CMD%" "%INSTALLER_SCRIPT%"
 if errorlevel 1 goto :fail
 if not exist "%OUTPUT_FOLDER%\%INSTALLER_NAME%" goto :fail
 
-echo.
-echo =======================================================
-echo  Instalador generado correctamente!
-echo =======================================================
-
-echo.
-echo %OUTPUT_FOLDER%\%INSTALLER_NAME%
 call :cleanup
 endlocal
 exit /b 0
@@ -222,7 +181,5 @@ goto :eof
 call :cleanup
 endlocal
 exit /b 1
-
 :: $env:ISCC_PATH="C:\Users\renzi\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
-
 :: Seleccionar CRLF - Windows (\r\n).

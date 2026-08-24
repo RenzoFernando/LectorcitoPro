@@ -5,8 +5,16 @@ import tkinter.font as tkfont
 
 import customtkinter as ctk
 
-from view.ui_constants import MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT, SETTINGS_DIALOG_WIDTH, SETTINGS_DIALOG_HEIGHT, TAGS_DIALOG_WIDTH, TAGS_DIALOG_HEIGHT, PROFILES_DIALOG_WIDTH, PROFILES_DIALOG_HEIGHT
-
+from view.ui_constants import (
+    MAIN_WINDOW_HEIGHT,
+    MAIN_WINDOW_WIDTH,
+    PROFILES_DIALOG_HEIGHT,
+    PROFILES_DIALOG_WIDTH,
+    SETTINGS_DIALOG_HEIGHT,
+    SETTINGS_DIALOG_WIDTH,
+    TAGS_DIALOG_HEIGHT,
+    TAGS_DIALOG_WIDTH,
+)
 
 _STATE = {
     "user_scale": 1.0,
@@ -76,7 +84,9 @@ def scale_tk_value(widget, value):
     if isinstance(value, int):
         if value == 0:
             return 0
-        return max(1, int(round(value * scale))) if value > 0 else min(-1, int(round(value * scale)))
+        return (
+            max(1, int(round(value * scale))) if value > 0 else min(-1, int(round(value * scale)))
+        )
     if isinstance(value, float):
         return value * scale
     return value
@@ -91,7 +101,16 @@ def _font_object(widget, family: str, pixel_size: int, weight: str = "normal"):
     return tkfont.Font(root=widget, family=family, size=-max(1, int(pixel_size)), weight=weight)
 
 
-def fit_canvas_font(widget, texts, family: str, base_size: int, min_size: int, max_width: int, max_height: int | None = None, weight: str = "normal"):
+def fit_canvas_font(
+    widget,
+    texts,
+    family: str,
+    base_size: int,
+    min_size: int,
+    max_width: int,
+    max_height: int | None = None,
+    weight: str = "normal",
+):
     if isinstance(texts, str):
         texts = [texts]
     clean_texts = [str(text or "") for text in texts]
@@ -231,8 +250,12 @@ def _resolve_workarea(widget, prefer_pointer: bool):
 
 
 def _compute_user_scale(logical_width: float, logical_height: float) -> float:
-    critical_width = max(MAIN_WINDOW_WIDTH, SETTINGS_DIALOG_WIDTH, TAGS_DIALOG_WIDTH, PROFILES_DIALOG_WIDTH)
-    critical_height = max(MAIN_WINDOW_HEIGHT, SETTINGS_DIALOG_HEIGHT, TAGS_DIALOG_HEIGHT, PROFILES_DIALOG_HEIGHT)
+    critical_width = max(
+        MAIN_WINDOW_WIDTH, SETTINGS_DIALOG_WIDTH, TAGS_DIALOG_WIDTH, PROFILES_DIALOG_WIDTH
+    )
+    critical_height = max(
+        MAIN_WINDOW_HEIGHT, SETTINGS_DIALOG_HEIGHT, TAGS_DIALOG_HEIGHT, PROFILES_DIALOG_HEIGHT
+    )
     fit_width = max(1.0, logical_width - 48.0) / max(1.0, float(critical_width))
     fit_height = max(1.0, logical_height - 96.0) / max(1.0, float(critical_height))
     fit_scale = min(fit_width, fit_height)
@@ -251,9 +274,19 @@ def _compute_user_scale(logical_width: float, logical_height: float) -> float:
 def configure_application_scaling(root, prefer_pointer: bool = True) -> bool:
     current_user_scale = float(_STATE.get("user_scale", 1.0) or 1.0)
     combined_window_scale = get_window_scaling(root)
-    combined_widget_scale = _read_method_scaling(root, "_get_widget_scaling") or combined_window_scale
-    auto_window_scale = combined_window_scale / current_user_scale if current_user_scale > 0 else combined_window_scale
-    auto_widget_scale = combined_widget_scale / current_user_scale if current_user_scale > 0 else combined_widget_scale
+    combined_widget_scale = (
+        _read_method_scaling(root, "_get_widget_scaling") or combined_window_scale
+    )
+    auto_window_scale = (
+        combined_window_scale / current_user_scale
+        if current_user_scale > 0
+        else combined_window_scale
+    )
+    auto_widget_scale = (
+        combined_widget_scale / current_user_scale
+        if current_user_scale > 0
+        else combined_widget_scale
+    )
     auto_window_scale = max(0.1, auto_window_scale)
     auto_widget_scale = max(0.1, auto_widget_scale)
 

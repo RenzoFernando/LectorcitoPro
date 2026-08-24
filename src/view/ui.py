@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import customtkinter as ctk
-import tkinter as tk
 import ctypes
 import ctypes.util
 import datetime
@@ -9,44 +7,80 @@ import math
 import os
 import random
 import sys
+import tkinter as tk
 
-from PIL import Image, ImageDraw, ImageFilter, ImageTk, ImageStat
-from utils import resource_path
+import customtkinter as ctk
+from PIL import Image, ImageDraw, ImageFilter, ImageStat, ImageTk
 
+from app_logging import log_error, log_warning
 from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
 from i18n.translations import TRANSLATIONS, translate_default
-from view.dialogs import MessageDialog, _get_widget_window_rect, _get_widget_workarea, _get_centered_position
-from view.tooltip import CustomTooltip
-from view.ui_constants import *
-
-from view.ui_constants import (
-    FONT_FAMILY_PRIMARY,
-    VERSION, YEAR, AUTHOR, REPO_URL,
-    COLORS, BTN_W_MAIN, BTN_H_MAIN,
-    get_theme_tokens, get_button_tokens, hex_to_rgb, with_alpha,
-    MAIN_WINDOW_SHOW_DELAY_MS, MAIN_WINDOW_CENTER_RETRY_DELAY_MS, MAIN_WINDOW_CENTER_MAX_ATTEMPTS,
-    MAIN_WINDOW_INITIAL_ALPHA, MAIN_WINDOW_REVEAL_DELAY_MS, MAIN_WINDOW_REVEAL_OFFSET_Y, MAIN_WINDOW_REVEAL_STEP_PX,
-    MAIN_WINDOW_HIDDEN_PARK_OFFSET_PX, MAIN_WINDOW_FADE_IN_STEP, MAIN_WINDOW_FADE_IN_INTERVAL_MS, MAIN_WINDOW_FADE_OUT_STEP, MAIN_WINDOW_FADE_OUT_INTERVAL_MS,
-    MAIN_WINDOW_SOFT_REFRESH_ALPHA, MAIN_WINDOW_SWITCH_FADE_OUT_STEP, MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS,
-    MAIN_WINDOW_SWITCH_HOLD_MS, MAIN_WINDOW_SWITCH_REBUILD_DELAY_MS, MAIN_WINDOW_SWITCH_FADE_IN_STEP, MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS
+from platform_services import get_platform_service
+from utils import resource_path
+from view.dialogs import (
+    MessageDialog,
+    _get_centered_position,
+    _get_widget_window_rect,
+    _get_widget_workarea,
 )
-from view.ui_assets import load_sidebar_icons, load_logo, safe_set_window_icon
-from view.sidebars import LeftSidebar, RightSidebar, PillTextButton, BlendedRoundedFrame
-from view.status_panel import StatusPanel
 from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
+from view.sidebars import BlendedRoundedFrame, LeftSidebar, PillTextButton, RightSidebar
+from view.status_panel import StatusPanel
 from view.tags_dialog import TagsConfigDialog
-from view.ui_scaling import configure_application_scaling, refresh_application_scaling, get_application_workarea, get_widget_scaling, scale_tk_value, fit_canvas_font, measure_canvas_text, wrapped_line_count
-from platform_services import get_platform_service
-from app_logging import log_error, log_warning
-
+from view.tooltip import CustomTooltip
+from view.ui_assets import load_logo, load_sidebar_icons, safe_set_window_icon
+from view.ui_constants import *
+from view.ui_constants import (
+    AUTHOR,
+    BTN_H_MAIN,
+    BTN_W_MAIN,
+    COLORS,
+    FONT_FAMILY_PRIMARY,
+    MAIN_WINDOW_CENTER_MAX_ATTEMPTS,
+    MAIN_WINDOW_CENTER_RETRY_DELAY_MS,
+    MAIN_WINDOW_FADE_IN_INTERVAL_MS,
+    MAIN_WINDOW_FADE_IN_STEP,
+    MAIN_WINDOW_FADE_OUT_INTERVAL_MS,
+    MAIN_WINDOW_FADE_OUT_STEP,
+    MAIN_WINDOW_HIDDEN_PARK_OFFSET_PX,
+    MAIN_WINDOW_INITIAL_ALPHA,
+    MAIN_WINDOW_REVEAL_DELAY_MS,
+    MAIN_WINDOW_REVEAL_OFFSET_Y,
+    MAIN_WINDOW_REVEAL_STEP_PX,
+    MAIN_WINDOW_SHOW_DELAY_MS,
+    MAIN_WINDOW_SOFT_REFRESH_ALPHA,
+    MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS,
+    MAIN_WINDOW_SWITCH_FADE_IN_STEP,
+    MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS,
+    MAIN_WINDOW_SWITCH_FADE_OUT_STEP,
+    MAIN_WINDOW_SWITCH_HOLD_MS,
+    MAIN_WINDOW_SWITCH_REBUILD_DELAY_MS,
+    REPO_URL,
+    VERSION,
+    YEAR,
+    get_button_tokens,
+    get_theme_tokens,
+    hex_to_rgb,
+    with_alpha,
+)
+from view.ui_scaling import (
+    configure_application_scaling,
+    fit_canvas_font,
+    get_application_workarea,
+    get_widget_scaling,
+    measure_canvas_text,
+    refresh_application_scaling,
+    scale_tk_value,
+    wrapped_line_count,
+)
 
 # =============================================================================
 # INTERFAZ PRINCIPAL (MAIN WINDOW)
 # =============================================================================
 
-class LectorcitoApp(ctk.CTk):
 
+class LectorcitoApp(ctk.CTk):
     def __init__(self, cfg: dict, controller):
         super().__init__()
 
@@ -110,13 +144,20 @@ class LectorcitoApp(ctk.CTk):
         self.after_idle(self._refresh_adaptive_layout)
 
         self.after(MAIN_WINDOW_SHOW_DELAY_MS, self._precise_center_and_show)
-        self.after(MAIN_WINDOW_SHOW_DELAY_MS + MAIN_WINDOW_PRELOAD_DIALOGS_EXTRA_DELAY_MS, self._preload_persistent_dialogs)
+        self.after(
+            MAIN_WINDOW_SHOW_DELAY_MS + MAIN_WINDOW_PRELOAD_DIALOGS_EXTRA_DELAY_MS,
+            self._preload_persistent_dialogs,
+        )
 
     def _load_header_logo_assets(self):
         try:
             return {
-                "light": Image.open(resource_path(os.path.join("branding", "logo_oscuro.png"))).convert("RGBA"),
-                "dark": Image.open(resource_path(os.path.join("branding", "logo_claro.png"))).convert("RGBA")
+                "light": Image.open(
+                    resource_path(os.path.join("branding", "logo_oscuro.png"))
+                ).convert("RGBA"),
+                "dark": Image.open(
+                    resource_path(os.path.join("branding", "logo_claro.png"))
+                ).convert("RGBA"),
             }
         except Exception:
             return {"light": None, "dark": None}
@@ -125,7 +166,9 @@ class LectorcitoApp(ctk.CTk):
         return get_widget_scaling(self)
 
     def _get_header_logo_image(self):
-        base_logo = self._header_logo_assets.get("light" if self.current_theme == "Light" else "dark")
+        base_logo = self._header_logo_assets.get(
+            "light" if self.current_theme == "Light" else "dark"
+        )
         if base_logo is None:
             return None
 
@@ -145,7 +188,10 @@ class LectorcitoApp(ctk.CTk):
         return rendered
 
     def _schedule_header_refresh(self, event=None):
-        if event is not None and getattr(event, "widget", None) not in (getattr(self, "header_frame", None), getattr(self, "header_canvas", None)):
+        if event is not None and getattr(event, "widget", None) not in (
+            getattr(self, "header_frame", None),
+            getattr(self, "header_canvas", None),
+        ):
             return
         if self._header_refresh_after_id is not None:
             try:
@@ -153,7 +199,9 @@ class LectorcitoApp(ctk.CTk):
             except Exception:
                 pass
         try:
-            self._header_refresh_after_id = self.after(max(1, int(MAIN_WINDOW_BG_REFRESH_DELAY_MS)), self._refresh_header_canvas)
+            self._header_refresh_after_id = self.after(
+                max(1, int(MAIN_WINDOW_BG_REFRESH_DELAY_MS)), self._refresh_header_canvas
+            )
         except Exception:
             self._header_refresh_after_id = None
 
@@ -197,19 +245,22 @@ class LectorcitoApp(ctk.CTk):
             MAIN_WINDOW_GREETING_FONT_SIZE,
             MAIN_WINDOW_GREETING_MIN_FONT_SIZE,
             available_text_width,
-            weight="normal"
+            weight="normal",
         )
-        text_width, line_height = measure_canvas_text(self.header_canvas, self._header_greeting_text, font_spec)
-        line_count = 1 if text_width <= available_text_width else wrapped_line_count(
-            self.header_canvas,
-            self._header_greeting_text,
-            font_spec,
-            available_text_width
+        text_width, line_height = measure_canvas_text(
+            self.header_canvas, self._header_greeting_text, font_spec
+        )
+        line_count = (
+            1
+            if text_width <= available_text_width
+            else wrapped_line_count(
+                self.header_canvas, self._header_greeting_text, font_spec, available_text_width
+            )
         )
         text_height = max(line_height, line_height * line_count)
         desired_height = max(
             scale_tk_value(self, MAIN_WINDOW_HEADER_MIN_HEIGHT),
-            current_y + text_height + scale_tk_value(self, MAIN_WINDOW_HEADER_BOTTOM_INSET)
+            current_y + text_height + scale_tk_value(self, MAIN_WINDOW_HEADER_BOTTOM_INSET),
         )
 
         try:
@@ -228,7 +279,7 @@ class LectorcitoApp(ctk.CTk):
             font=font_spec,
             fill=theme["text_primary"],
             justify="center",
-            width=available_text_width
+            width=available_text_width,
         )
 
     def _schedule_adaptive_layout_refresh(self, event=None):
@@ -241,8 +292,7 @@ class LectorcitoApp(ctk.CTk):
                 pass
         try:
             self._adaptive_layout_after_id = self.after(
-                max(1, int(MAIN_WINDOW_ADAPTIVE_REFRESH_DELAY_MS)),
-                self._refresh_adaptive_layout
+                max(1, int(MAIN_WINDOW_ADAPTIVE_REFRESH_DELAY_MS)), self._refresh_adaptive_layout
             )
         except Exception:
             self._adaptive_layout_after_id = None
@@ -257,11 +307,11 @@ class LectorcitoApp(ctk.CTk):
             center_pady = scale_tk_value(self, MAIN_WINDOW_CENTER_PADY)
             self.left_container.grid_configure(
                 padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
-                pady=(left_pady[0], left_pady[1] + footer_clearance)
+                pady=(left_pady[0], left_pady[1] + footer_clearance),
             )
             self.right_container.grid_configure(
                 padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
-                pady=(right_pady[0], right_pady[1] + footer_clearance)
+                pady=(right_pady[0], right_pady[1] + footer_clearance),
             )
             self.center_container.grid_configure(
                 pady=(center_pady[0], center_pady[1] + footer_clearance)
@@ -276,11 +326,13 @@ class LectorcitoApp(ctk.CTk):
             )
             self.main_buttons_frame.pack_configure(
                 pady=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD),
-                padx=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD)
+                padx=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD),
             )
             for btn in self.main_buttons.values():
                 btn.pack_configure(pady=scale_tk_value(self, MAIN_WINDOW_BUTTON_SPACING))
-            self.progress_frame.grid_configure(pady=scale_tk_value(self, MAIN_WINDOW_STATUS_AREA_PADY))
+            self.progress_frame.grid_configure(
+                pady=scale_tk_value(self, MAIN_WINDOW_STATUS_AREA_PADY)
+            )
         except Exception:
             pass
 
@@ -298,15 +350,16 @@ class LectorcitoApp(ctk.CTk):
             panel_width = max(1, int(self.main_menu_frame.content_frame.winfo_width()))
             horizontal_padding = scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD) * 2
             logical_available_width = max(1, int((panel_width - horizontal_padding) / widget_scale))
-            button_width = max(MAIN_WINDOW_BUTTON_MIN_WIDTH, min(BTN_W_MAIN, logical_available_width))
+            button_width = max(
+                MAIN_WINDOW_BUTTON_MIN_WIDTH, min(BTN_W_MAIN, logical_available_width)
+            )
             for btn in self.main_buttons.values():
                 btn.configure(width=button_width)
             self.update_idletasks()
             widths = [max(1, int(btn.winfo_width())) for btn in self.main_buttons.values()]
             heights = [max(1, int(btn.winfo_height())) for btn in self.main_buttons.values()]
             available_width = max(
-                10,
-                min(widths) - scale_tk_value(self, PILL_TEXT_HORIZONTAL_INSET)
+                10, min(widths) - scale_tk_value(self, PILL_TEXT_HORIZONTAL_INSET)
             )
             available_height = max(8, int(min(heights) * 0.62))
             texts = [str(btn.cget("text") or "") for btn in self.main_buttons.values()]
@@ -318,7 +371,7 @@ class LectorcitoApp(ctk.CTk):
                 MAIN_WINDOW_BUTTON_MIN_FONT_SIZE,
                 available_width,
                 available_height,
-                "bold"
+                "bold",
             )
             for btn in self.main_buttons.values():
                 btn.configure(font=font_spec)
@@ -350,7 +403,9 @@ class LectorcitoApp(ctk.CTk):
             except Exception:
                 pass
         try:
-            self._linux_shape_after_id = self.after(max(1, int(delay)), self._apply_linux_window_shape)
+            self._linux_shape_after_id = self.after(
+                max(1, int(delay)), self._apply_linux_window_shape
+            )
         except Exception:
             self._linux_shape_after_id = None
 
@@ -379,14 +434,24 @@ class LectorcitoApp(ctk.CTk):
             x11.XCloseDisplay.argtypes = [ctypes.c_void_p]
             x11.XCloseDisplay.restype = ctypes.c_int
             x11.XQueryTree.argtypes = [
-                ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_ulong),
-                ctypes.POINTER(ctypes.POINTER(ctypes.c_ulong)), ctypes.POINTER(ctypes.c_uint)
+                ctypes.c_void_p,
+                ctypes.c_ulong,
+                ctypes.POINTER(ctypes.c_ulong),
+                ctypes.POINTER(ctypes.c_ulong),
+                ctypes.POINTER(ctypes.POINTER(ctypes.c_ulong)),
+                ctypes.POINTER(ctypes.c_uint),
             ]
             x11.XQueryTree.restype = ctypes.c_int
             x11.XGetGeometry.argtypes = [
-                ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_int),
-                ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_uint), ctypes.POINTER(ctypes.c_uint),
-                ctypes.POINTER(ctypes.c_uint), ctypes.POINTER(ctypes.c_uint)
+                ctypes.c_void_p,
+                ctypes.c_ulong,
+                ctypes.POINTER(ctypes.c_ulong),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_uint),
+                ctypes.POINTER(ctypes.c_uint),
+                ctypes.POINTER(ctypes.c_uint),
+                ctypes.POINTER(ctypes.c_uint),
             ]
             x11.XGetGeometry.restype = ctypes.c_int
             x11.XFree.argtypes = [ctypes.c_void_p]
@@ -394,11 +459,22 @@ class LectorcitoApp(ctk.CTk):
             x11.XFlush.argtypes = [ctypes.c_void_p]
             x11.XFlush.restype = ctypes.c_int
 
-            xext.XShapeQueryExtension.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+            xext.XShapeQueryExtension.argtypes = [
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int),
+            ]
             xext.XShapeQueryExtension.restype = ctypes.c_int
             xext.XShapeCombineRectangles.argtypes = [
-                ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-                ctypes.POINTER(XRectangle), ctypes.c_int, ctypes.c_int, ctypes.c_int
+                ctypes.c_void_p,
+                ctypes.c_ulong,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.POINTER(XRectangle),
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
             ]
             xext.XShapeCombineRectangles.restype = None
 
@@ -409,7 +485,9 @@ class LectorcitoApp(ctk.CTk):
             try:
                 event_base = ctypes.c_int()
                 error_base = ctypes.c_int()
-                if not xext.XShapeQueryExtension(display, ctypes.byref(event_base), ctypes.byref(error_base)):
+                if not xext.XShapeQueryExtension(
+                    display, ctypes.byref(event_base), ctypes.byref(error_base)
+                ):
                     return
 
                 current_window = int(self.winfo_id())
@@ -420,8 +498,12 @@ class LectorcitoApp(ctk.CTk):
                     children_return = ctypes.POINTER(ctypes.c_ulong)()
                     child_count = ctypes.c_uint()
                     status = x11.XQueryTree(
-                        display, ctypes.c_ulong(current_window), ctypes.byref(root_return), ctypes.byref(parent_return),
-                        ctypes.byref(children_return), ctypes.byref(child_count)
+                        display,
+                        ctypes.c_ulong(current_window),
+                        ctypes.byref(root_return),
+                        ctypes.byref(parent_return),
+                        ctypes.byref(children_return),
+                        ctypes.byref(child_count),
                     )
                     if children_return:
                         x11.XFree(ctypes.cast(children_return, ctypes.c_void_p))
@@ -445,9 +527,16 @@ class LectorcitoApp(ctk.CTk):
                 border_return = ctypes.c_uint()
                 depth_return = ctypes.c_uint()
                 if not x11.XGetGeometry(
-                        display, ctypes.c_ulong(outer_window), ctypes.byref(root_return), ctypes.byref(x_return),
-                        ctypes.byref(y_return), ctypes.byref(width_return), ctypes.byref(height_return),
-                        ctypes.byref(border_return), ctypes.byref(depth_return)):
+                    display,
+                    ctypes.c_ulong(outer_window),
+                    ctypes.byref(root_return),
+                    ctypes.byref(x_return),
+                    ctypes.byref(y_return),
+                    ctypes.byref(width_return),
+                    ctypes.byref(height_return),
+                    ctypes.byref(border_return),
+                    ctypes.byref(depth_return),
+                ):
                     return
 
                 width = int(width_return.value)
@@ -455,7 +544,9 @@ class LectorcitoApp(ctk.CTk):
                 if width <= 2 or height <= 2:
                     return
 
-                radius = max(6, min(scale_tk_value(self, CORNER_RADIUS_XL), width // 2, height // 2))
+                radius = max(
+                    6, min(scale_tk_value(self, CORNER_RADIUS_XL), width // 2, height // 2)
+                )
 
                 def row_inset(row):
                     if row < radius:
@@ -465,7 +556,10 @@ class LectorcitoApp(ctk.CTk):
                     else:
                         return 0
                     dy = radius - (local_row + 0.5)
-                    return max(0, int(math.ceil(radius - math.sqrt(max(0.0, (radius * radius) - (dy * dy))))))
+                    return max(
+                        0,
+                        int(math.ceil(radius - math.sqrt(max(0.0, (radius * radius) - (dy * dy))))),
+                    )
 
                 runs = []
                 run_start = 0
@@ -481,7 +575,10 @@ class LectorcitoApp(ctk.CTk):
                 rectangles = (XRectangle * len(runs))()
                 for index, (start_y, run_height, inset) in enumerate(runs):
                     rectangles[index] = XRectangle(
-                        int(inset), int(start_y), max(1, int(width - (inset * 2))), max(1, int(run_height))
+                        int(inset),
+                        int(start_y),
+                        max(1, int(width - (inset * 2))),
+                        max(1, int(run_height)),
                     )
 
                 xext.XShapeCombineRectangles(
@@ -512,7 +609,9 @@ class LectorcitoApp(ctk.CTk):
 
             self.attributes("-alpha", 0.0)
             self.deiconify()
-            self.after(MAIN_WINDOW_CENTER_RETRY_DELAY_MS, lambda: self._stabilize_initial_position(1))
+            self.after(
+                MAIN_WINDOW_CENTER_RETRY_DELAY_MS, lambda: self._stabilize_initial_position(1)
+            )
 
         except Exception:
             self.deiconify()
@@ -531,13 +630,20 @@ class LectorcitoApp(ctk.CTk):
             dy = target_cy - actual_cy
 
             if (abs(dx) > 1 or abs(dy) > 1) and attempt < MAIN_WINDOW_CENTER_MAX_ATTEMPTS:
-                self.geometry(f"{self._app_w}x{self._app_h}+{int(self.winfo_x()) + dx}+{int(self.winfo_y()) + dy}")
-                self.after(MAIN_WINDOW_CENTER_RETRY_DELAY_MS, lambda: self._stabilize_initial_position(attempt + 1))
+                self.geometry(
+                    f"{self._app_w}x{self._app_h}+{int(self.winfo_x()) + dx}+{int(self.winfo_y()) + dy}"
+                )
+                self.after(
+                    MAIN_WINDOW_CENTER_RETRY_DELAY_MS,
+                    lambda: self._stabilize_initial_position(attempt + 1),
+                )
                 return
 
             self._reveal_target_y = int(self.winfo_y())
             if MAIN_WINDOW_REVEAL_OFFSET_Y > 0:
-                self.geometry(f"{self._app_w}x{self._app_h}+{int(self.winfo_x())}+{self._reveal_target_y + MAIN_WINDOW_REVEAL_OFFSET_Y}")
+                self.geometry(
+                    f"{self._app_w}x{self._app_h}+{int(self.winfo_x())}+{self._reveal_target_y + MAIN_WINDOW_REVEAL_OFFSET_Y}"
+                )
         except Exception:
             self._reveal_target_y = None
         self._schedule_linux_window_shape(MAIN_WINDOW_CENTER_RETRY_DELAY_MS)
@@ -556,7 +662,9 @@ class LectorcitoApp(ctk.CTk):
                 current_y = int(self.winfo_y())
                 if current_y > target_y:
                     step = min(MAIN_WINDOW_REVEAL_STEP_PX, current_y - target_y)
-                    self.geometry(f"{self._app_w}x{self._app_h}+{int(self.winfo_x())}+{current_y - step}")
+                    self.geometry(
+                        f"{self._app_w}x{self._app_h}+{int(self.winfo_x())}+{current_y - step}"
+                    )
                 else:
                     self._reveal_target_y = current_y
             except Exception:
@@ -618,7 +726,9 @@ class LectorcitoApp(ctk.CTk):
         def add_band(bounds, color, alpha, blur):
             layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
             radius = max(1, int((bounds[3] - bounds[1]) * 0.52))
-            ImageDraw.Draw(layer).rounded_rectangle(bounds, radius=radius, fill=with_alpha(color, alpha))
+            ImageDraw.Draw(layer).rounded_rectangle(
+                bounds, radius=radius, fill=with_alpha(color, alpha)
+            )
             layer = layer.filter(ImageFilter.GaussianBlur(max(1, int(blur))))
             canvas.alpha_composite(layer)
 
@@ -635,8 +745,17 @@ class LectorcitoApp(ctk.CTk):
 
         for y in range(H):
             t = y / max(1, H - 1)
-            top_alpha = int(max(0.0, 1.0 - (t / top_limit)) * top_alpha_strength) if t <= top_limit else 0
-            bottom_alpha = int(max(0.0, (t - bottom_start) / max(0.001, 1.0 - bottom_start)) * bottom_alpha_strength) if t >= bottom_start else 0
+            top_alpha = (
+                int(max(0.0, 1.0 - (t / top_limit)) * top_alpha_strength) if t <= top_limit else 0
+            )
+            bottom_alpha = (
+                int(
+                    max(0.0, (t - bottom_start) / max(0.001, 1.0 - bottom_start))
+                    * bottom_alpha_strength
+                )
+                if t >= bottom_start
+                else 0
+            )
             if bottom_alpha > top_alpha:
                 depth_pixels[0, y] = (*bottom_rgb, bottom_alpha)
             else:
@@ -656,9 +775,24 @@ class LectorcitoApp(ctk.CTk):
         aura_alpha = 20 if is_light else 20
         aura_blur = int(H * 0.18)
 
-        add_ellipse((int(W * 0.54), -int(H * 0.24), int(W * 1.16), int(H * 0.26)), blue_color, aura_alpha, aura_blur)
-        add_ellipse((-int(W * 0.08), int(H * 0.60), int(W * 0.34), int(H * 1.00)), purple_color, aura_alpha, aura_blur)
-        add_ellipse((int(W * 0.82), int(H * 0.72), int(W * 1.10), int(H * 1.02)), combo_color, aura_alpha, aura_blur)
+        add_ellipse(
+            (int(W * 0.54), -int(H * 0.24), int(W * 1.16), int(H * 0.26)),
+            blue_color,
+            aura_alpha,
+            aura_blur,
+        )
+        add_ellipse(
+            (-int(W * 0.08), int(H * 0.60), int(W * 0.34), int(H * 1.00)),
+            purple_color,
+            aura_alpha,
+            aura_blur,
+        )
+        add_ellipse(
+            (int(W * 0.82), int(H * 0.72), int(W * 1.10), int(H * 1.02)),
+            combo_color,
+            aura_alpha,
+            aura_blur,
+        )
 
         return canvas.resize((width, height), resample)
 
@@ -744,7 +878,12 @@ class LectorcitoApp(ctk.CTk):
 
         try:
             if hasattr(self, "main_menu_frame") and self.main_menu_frame.winfo_exists():
-                self.main_menu_frame.configure(outside_bg=theme["bg_base"], fill_color=theme["bg_panel"], border_color=theme["card_border"], backdrop_provider=self.get_backdrop_patch)
+                self.main_menu_frame.configure(
+                    outside_bg=theme["bg_base"],
+                    fill_color=theme["bg_panel"],
+                    border_color=theme["card_border"],
+                    backdrop_provider=self.get_backdrop_patch,
+                )
         except Exception:
             pass
 
@@ -774,7 +913,11 @@ class LectorcitoApp(ctk.CTk):
         except Exception:
             return None, None
 
-        patch = Image.new("RGBA", (patch_width, patch_height), with_alpha(get_theme_tokens(self.current_theme)["bg_base"], 255))
+        patch = Image.new(
+            "RGBA",
+            (patch_width, patch_height),
+            with_alpha(get_theme_tokens(self.current_theme)["bg_base"], 255),
+        )
         source = self._background_image
         left = max(0, origin_x)
         top = max(0, origin_y)
@@ -808,7 +951,9 @@ class LectorcitoApp(ctk.CTk):
             except Exception:
                 pass
         try:
-            self._background_after_id = self.after(MAIN_WINDOW_BG_REFRESH_DELAY_MS, self._refresh_background_canvas)
+            self._background_after_id = self.after(
+                MAIN_WINDOW_BG_REFRESH_DELAY_MS, self._refresh_background_canvas
+            )
         except Exception:
             self._background_after_id = None
 
@@ -825,7 +970,11 @@ class LectorcitoApp(ctk.CTk):
         background_changed = False
 
         try:
-            if cache_key != self._background_cache_key or self._background_image is None or self._background_photo is None:
+            if (
+                cache_key != self._background_cache_key
+                or self._background_image is None
+                or self._background_photo is None
+            ):
                 self._background_image = self._build_atmosphere_image((width, height), theme)
                 self._background_photo = ImageTk.PhotoImage(self._background_image)
                 self._background_cache_key = cache_key
@@ -842,7 +991,9 @@ class LectorcitoApp(ctk.CTk):
         if self._background_photo is not None:
             self._background_canvas.create_image(0, 0, image=self._background_photo, anchor="nw")
         else:
-            self._background_canvas.create_rectangle(0, 0, width + 1, height + 1, outline="", fill=theme["bg_base"])
+            self._background_canvas.create_rectangle(
+                0, 0, width + 1, height + 1, outline="", fill=theme["bg_base"]
+            )
         self.tk.call("lower", self._background_canvas._w)
         self._refresh_surface_backdrops()
         self._refresh_local_surface_colors()
@@ -867,15 +1018,29 @@ class LectorcitoApp(ctk.CTk):
         center_pady = scale_tk_value(self, MAIN_WINDOW_CENTER_PADY)
 
         self.left_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.left_container.grid(row=0, column=0, sticky="ns", padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX), pady=(left_pady[0], left_pady[1] + footer_clearance))
+        self.left_container.grid(
+            row=0,
+            column=0,
+            sticky="ns",
+            padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
+            pady=(left_pady[0], left_pady[1] + footer_clearance),
+        )
         self._register_surface_backdrop(self.left_container)
 
         self.right_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.right_container.grid(row=0, column=2, sticky="ns", padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX), pady=(right_pady[0], right_pady[1] + footer_clearance))
+        self.right_container.grid(
+            row=0,
+            column=2,
+            sticky="ns",
+            padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
+            pady=(right_pady[0], right_pady[1] + footer_clearance),
+        )
         self._register_surface_backdrop(self.right_container)
 
         self.center_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.center_container.grid(row=0, column=1, sticky="nsew", pady=(center_pady[0], center_pady[1] + footer_clearance))
+        self.center_container.grid(
+            row=0, column=1, sticky="nsew", pady=(center_pady[0], center_pady[1] + footer_clearance)
+        )
         self.center_container.grid_columnconfigure(0, weight=1)
         self.center_container.grid_rowconfigure(3, weight=1)
         self._register_surface_backdrop(self.center_container)
@@ -884,8 +1049,18 @@ class LectorcitoApp(ctk.CTk):
         self._create_main_buttons(self.center_container)
         self._create_status_area(self.center_container)
 
-        self.left_sidebar = LeftSidebar(self.left_container, text=f"{APP_DISPLAY_NAME} v{VERSION}", height=LEFT_SIDEBAR_HEIGHT, backdrop_provider=self.get_backdrop_patch)
-        self.right_sidebar = RightSidebar(self.right_container, icons=self.icons, current_theme=self.current_theme, backdrop_provider=self.get_backdrop_patch)
+        self.left_sidebar = LeftSidebar(
+            self.left_container,
+            text=f"{APP_DISPLAY_NAME} v{VERSION}",
+            height=LEFT_SIDEBAR_HEIGHT,
+            backdrop_provider=self.get_backdrop_patch,
+        )
+        self.right_sidebar = RightSidebar(
+            self.right_container,
+            icons=self.icons,
+            current_theme=self.current_theme,
+            backdrop_provider=self.get_backdrop_patch,
+        )
         self._register_surface_backdrop(self.right_sidebar)
         self._register_surface_backdrop(self.right_sidebar._button_container)
         self._register_surface_backdrop(self.status_panel)
@@ -899,14 +1074,25 @@ class LectorcitoApp(ctk.CTk):
         logo_height = 0 if logo is None else int(logo.height)
         header_height = max(
             scale_tk_value(self, MAIN_WINDOW_HEADER_MIN_HEIGHT),
-            logo_height + scale_tk_value(self, MAIN_WINDOW_GREETING_FONT_SIZE + 24)
+            logo_height + scale_tk_value(self, MAIN_WINDOW_GREETING_FONT_SIZE + 24),
         )
 
-        self.header_frame = tk.Frame(parent, bg=theme_keys["bg_base"], bd=0, highlightthickness=0, height=header_height)
-        self.header_frame.grid(row=0, column=0, sticky="ew", pady=scale_tk_value(self, MAIN_WINDOW_HEADER_PADY))
+        self.header_frame = tk.Frame(
+            parent, bg=theme_keys["bg_base"], bd=0, highlightthickness=0, height=header_height
+        )
+        self.header_frame.grid(
+            row=0, column=0, sticky="ew", pady=scale_tk_value(self, MAIN_WINDOW_HEADER_PADY)
+        )
         self.header_frame.grid_propagate(False)
 
-        self.header_canvas = tk.Canvas(self.header_frame, height=header_height, highlightthickness=0, bd=0, relief="flat", bg=theme_keys["bg_base"])
+        self.header_canvas = tk.Canvas(
+            self.header_frame,
+            height=header_height,
+            highlightthickness=0,
+            bd=0,
+            relief="flat",
+            bg=theme_keys["bg_base"],
+        )
         self.header_canvas.pack(fill="both", expand=True)
         self.header_frame.bind("<Configure>", self._schedule_header_refresh, add="+")
         self.header_canvas.bind("<Configure>", self._schedule_header_refresh, add="+")
@@ -922,12 +1108,22 @@ class LectorcitoApp(ctk.CTk):
             border_width=MAIN_WINDOW_MAIN_MENU_BORDER_WIDTH,
             border_color=theme_keys["card_border"],
             content_inset=max(8, MAIN_WINDOW_MAIN_MENU_RADIUS // 2),
-            backdrop_provider=self.get_backdrop_patch
+            backdrop_provider=self.get_backdrop_patch,
         )
-        self.main_menu_frame.grid(row=1, column=0, sticky="ew", pady=(0, scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_BOTTOM_GAP)))
+        self.main_menu_frame.grid(
+            row=1,
+            column=0,
+            sticky="ew",
+            pady=(0, scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_BOTTOM_GAP)),
+        )
 
-        self.main_buttons_frame = ctk.CTkFrame(self.main_menu_frame.content_frame, fg_color="transparent", bg_color="transparent")
-        self.main_buttons_frame.pack(pady=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD), padx=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD))
+        self.main_buttons_frame = ctk.CTkFrame(
+            self.main_menu_frame.content_frame, fg_color="transparent", bg_color="transparent"
+        )
+        self.main_buttons_frame.pack(
+            pady=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD),
+            padx=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD),
+        )
 
         outside_bg = theme_keys["bg_panel"]
         btn_blue = get_button_tokens("blue")
@@ -939,7 +1135,11 @@ class LectorcitoApp(ctk.CTk):
             "height": BTN_H_MAIN,
             "outside_bg": outside_bg,
             "border_width": MAIN_WINDOW_BUTTON_BORDER_WIDTH,
-            "font": (FONT_FAMILY_PRIMARY, -scale_tk_value(self, MAIN_WINDOW_BUTTON_FONT_SIZE), "bold"),
+            "font": (
+                FONT_FAMILY_PRIMARY,
+                -scale_tk_value(self, MAIN_WINDOW_BUTTON_FONT_SIZE),
+                "bold",
+            ),
             "text_color": btn_blue["text"],
         }
 
@@ -959,9 +1159,15 @@ class LectorcitoApp(ctk.CTk):
         self.main_buttons = {
             "selpath": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
             "choose": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
-            "create_tree": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
-            "openlect": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
-            "openlast": PillTextButton(self.main_buttons_frame, **build_palette(btn_green), **common),
+            "create_tree": PillTextButton(
+                self.main_buttons_frame, **build_palette(btn_blue), **common
+            ),
+            "openlect": PillTextButton(
+                self.main_buttons_frame, **build_palette(btn_blue), **common
+            ),
+            "openlast": PillTextButton(
+                self.main_buttons_frame, **build_palette(btn_green), **common
+            ),
             "delete": PillTextButton(self.main_buttons_frame, **build_palette(btn_red), **common),
         }
 
@@ -972,11 +1178,15 @@ class LectorcitoApp(ctk.CTk):
     def _create_status_area(self, parent):
         theme_keys = get_theme_tokens(self.current_theme)
         self.progress_frame = tk.Frame(parent, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.progress_frame.grid(row=2, column=0, sticky="nsew", pady=scale_tk_value(self, MAIN_WINDOW_STATUS_AREA_PADY))
+        self.progress_frame.grid(
+            row=2, column=0, sticky="nsew", pady=scale_tk_value(self, MAIN_WINDOW_STATUS_AREA_PADY)
+        )
         self.progress_frame.grid_columnconfigure(0, weight=1)
         self._register_surface_backdrop(self.progress_frame)
 
-        self.status_panel = StatusPanel(self.progress_frame, min_visible_seconds=MAIN_WINDOW_STATUS_MIN_VISIBLE_SECONDS)
+        self.status_panel = StatusPanel(
+            self.progress_frame, min_visible_seconds=MAIN_WINDOW_STATUS_MIN_VISIBLE_SECONDS
+        )
         self.status_panel.grid(row=0, column=0, sticky="ew")
         self.status_panel.set_backdrop_provider(self.get_backdrop_patch)
 
@@ -984,13 +1194,24 @@ class LectorcitoApp(ctk.CTk):
 
     def _create_footer(self):
         theme_keys = get_theme_tokens(self.current_theme)
-        self.footer_frame = tk.Frame(self, height=scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT), bg=theme_keys["bg_footer"], bd=0, highlightthickness=0)
+        self.footer_frame = tk.Frame(
+            self,
+            height=scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT),
+            bg=theme_keys["bg_footer"],
+            bd=0,
+            highlightthickness=0,
+        )
         self.footer_frame.pack_propagate(False)
 
         self.footer_frame.place(relx=0.0, rely=1.0, anchor="sw", relwidth=1.0)
         self.footer_frame.lift()
 
-        self.footer_line = ctk.CTkFrame(self.footer_frame, height=MAIN_WINDOW_FOOTER_LINE_HEIGHT, corner_radius=0, bg_color=theme_keys["bg_footer"])
+        self.footer_line = ctk.CTkFrame(
+            self.footer_frame,
+            height=MAIN_WINDOW_FOOTER_LINE_HEIGHT,
+            corner_radius=0,
+            bg_color=theme_keys["bg_footer"],
+        )
         self.footer_line.pack(side="top", fill="x")
 
         self.lbl_copyright = ctk.CTkLabel(
@@ -998,7 +1219,7 @@ class LectorcitoApp(ctk.CTk):
             text="",
             font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_FOOTER_FONT_SIZE),
             fg_color="transparent",
-            bg_color=theme_keys["bg_footer"]
+            bg_color=theme_keys["bg_footer"],
         )
         self.lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -1012,7 +1233,11 @@ class LectorcitoApp(ctk.CTk):
         try:
             user = os.getlogin().lower().capitalize()
         except OSError:
-            user = self._tr("fallback_user") if hasattr(self, "_tr") else translate_default("fallback_user")
+            user = (
+                self._tr("fallback_user")
+                if hasattr(self, "_tr")
+                else translate_default("fallback_user")
+            )
         self._header_greeting_text = f"{self._tr(greet_key)} {user}{self._tr('welcome')}"
         self._schedule_header_refresh()
 
@@ -1087,7 +1312,12 @@ class LectorcitoApp(ctk.CTk):
             self.header_frame.configure(bg=theme_keys["bg_base"])
             self.header_canvas.configure(bg=theme_keys["bg_base"])
             self.progress_frame.configure(bg=theme_keys["bg_base"])
-            self.main_menu_frame.configure(outside_bg=theme_keys["bg_base"], fill_color=theme_keys["bg_panel"], border_color=theme_keys["card_border"], backdrop_provider=self.get_backdrop_patch)
+            self.main_menu_frame.configure(
+                outside_bg=theme_keys["bg_base"],
+                fill_color=theme_keys["bg_panel"],
+                border_color=theme_keys["card_border"],
+                backdrop_provider=self.get_backdrop_patch,
+            )
             self.main_buttons_frame.configure(bg_color="transparent")
         except Exception:
             pass
@@ -1100,8 +1330,14 @@ class LectorcitoApp(ctk.CTk):
 
         try:
             self.footer_frame.configure(bg=theme_keys["bg_footer"])
-            self.footer_line.configure(bg_color=theme_keys["bg_footer"], fg_color=theme_keys["separator_line"])
-            self.lbl_copyright.configure(bg_color=theme_keys["bg_footer"], fg_color="transparent", text_color=theme_keys["text_secondary"])
+            self.footer_line.configure(
+                bg_color=theme_keys["bg_footer"], fg_color=theme_keys["separator_line"]
+            )
+            self.lbl_copyright.configure(
+                bg_color=theme_keys["bg_footer"],
+                fg_color="transparent",
+                text_color=theme_keys["text_secondary"],
+            )
         except Exception:
             pass
 
@@ -1174,7 +1410,9 @@ class LectorcitoApp(ctk.CTk):
             pass
         try:
             self.attributes("-topmost", True)
-            self.after(MAIN_WINDOW_TOPMOST_RESET_DELAY_MS, lambda: self.attributes("-topmost", False))
+            self.after(
+                MAIN_WINDOW_TOPMOST_RESET_DELAY_MS, lambda: self.attributes("-topmost", False)
+            )
         except Exception:
             pass
         self._schedule_linux_window_shape(120)
@@ -1206,7 +1444,9 @@ class LectorcitoApp(ctk.CTk):
             alpha = float(self.attributes("-alpha"))
             if alpha > 0.0:
                 self.attributes("-alpha", max(alpha - MAIN_WINDOW_SWITCH_FADE_OUT_STEP, 0.0))
-                self.after(MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS, self._fade_out_for_profile_switch)
+                self.after(
+                    MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS, self._fade_out_for_profile_switch
+                )
             else:
                 self.after(MAIN_WINDOW_SWITCH_HOLD_MS, self._apply_profile_after_switch)
         except Exception:
@@ -1286,7 +1526,7 @@ class LectorcitoApp(ctk.CTk):
             excluded_files=self.controller.config.get("etiquetas_archivos_excluidos", []),
             media_extensions=self.controller.config.get("media_extensions", []),
             persistent=True,
-            defer_show=True
+            defer_show=True,
         )
 
     def _create_no_view_dialog(self):
@@ -1300,7 +1540,7 @@ class LectorcitoApp(ctk.CTk):
             extra_checkbox_text=self._tr("chk_use_gitignore"),
             extra_checkbox_value=self.controller.config.get("use_gitignore_exclusions", False),
             persistent=True,
-            defer_show=True
+            defer_show=True,
         )
 
     def _create_media_dialog(self):
@@ -1310,8 +1550,12 @@ class LectorcitoApp(ctk.CTk):
             current_files = [{"nombre": x, "estado": "activo"} for x in raw_exts]
         else:
             current_files = tags_stored
-        view_exts = {t["nombre"] for t in self.controller.config.get("etiquetas_extensiones_incluidas", [])}
-        no_view_items = {t["nombre"] for t in self.controller.config.get("etiquetas_archivos_excluidos", [])}
+        view_exts = {
+            t["nombre"] for t in self.controller.config.get("etiquetas_extensiones_incluidas", [])
+        }
+        no_view_items = {
+            t["nombre"] for t in self.controller.config.get("etiquetas_archivos_excluidos", [])
+        }
         return TagsConfigDialog(
             parent=self,
             title=self._tr("dlg_etiqueta_title"),
@@ -1321,7 +1565,7 @@ class LectorcitoApp(ctk.CTk):
             initial_files=current_files,
             forbidden_items=view_exts.union(no_view_items),
             persistent=True,
-            defer_show=True
+            defer_show=True,
         )
 
     def _create_profiles_dialog(self):
@@ -1334,7 +1578,7 @@ class LectorcitoApp(ctk.CTk):
             profiles_meta=profiles,
             active_id=active_id,
             persistent=True,
-            defer_show=True
+            defer_show=True,
         )
 
     def _create_settings_dialog(self):
@@ -1343,7 +1587,7 @@ class LectorcitoApp(ctk.CTk):
             current_extension=self.controller.config.get("report_extension", ".md"),
             current_exe_path=self.controller.config.get("custom_exe_path", ""),
             persistent=True,
-            defer_show=True
+            defer_show=True,
         )
 
     def _get_or_create_dialog(self, key, factory):
@@ -1369,10 +1613,7 @@ class LectorcitoApp(ctk.CTk):
             self.get_profiles_dialog()
             self.get_settings_dialog()
         except Exception as error:
-            log_warning(
-                str(error),
-                operation="preload_persistent_dialogs"
-            )
+            log_warning(str(error), operation="preload_persistent_dialogs")
 
     def get_view_dialog(self):
         return self._get_or_create_dialog("view", self._create_view_dialog)
@@ -1389,11 +1630,9 @@ class LectorcitoApp(ctk.CTk):
     def get_settings_dialog(self):
         return self._get_or_create_dialog("settings", self._create_settings_dialog)
 
-
     # =========================================================================
     # ESTADO Y CONTROL
     # =========================================================================
-
 
     def _cancel_modal_fail_safe(self):
         if self._modal_fail_safe_after_id:
@@ -1406,7 +1645,9 @@ class LectorcitoApp(ctk.CTk):
     def _schedule_modal_fail_safe(self):
         self._cancel_modal_fail_safe()
         try:
-            self._modal_fail_safe_after_id = self.after(MAIN_WINDOW_MODAL_FAIL_SAFE_DELAY_MS, self._modal_fail_safe_check)
+            self._modal_fail_safe_after_id = self.after(
+                MAIN_WINDOW_MODAL_FAIL_SAFE_DELAY_MS, self._modal_fail_safe_check
+            )
         except Exception:
             self._modal_fail_safe_after_id = None
 
@@ -1442,8 +1683,9 @@ class LectorcitoApp(ctk.CTk):
     def set_progress(self, percentage, file_context=None):
         self.status_panel.set_progress(percentage, file_context)
 
-    def toggle_ui_for_processing(self, is_active: bool, mode: str = "determinate", text: str = None,
-                                 final_status: str = None):
+    def toggle_ui_for_processing(
+        self, is_active: bool, mode: str = "determinate", text: str = None, final_status: str = None
+    ):
         CustomTooltip.hide_global()
         if self._is_modal_open:
             return
@@ -1483,19 +1725,19 @@ class LectorcitoApp(ctk.CTk):
     def show_message(self, title_key: str, message_key: str, *args):
         CustomTooltip.hide_global()
         try:
+
             def _on_message_closed():
                 try:
                     if getattr(self.status_panel, "_mode", "") == "done":
                         self.status_panel.back_to_idle()
                 except Exception:
                     pass
-            MessageDialog(self, self._tr(title_key), self._tr(message_key, *args), on_close=_on_message_closed)
-        except Exception as error:
-            log_error(
-                "Error mostrando dialogo de mensaje.",
-                error,
-                operation="show_message"
+
+            MessageDialog(
+                self, self._tr(title_key), self._tr(message_key, *args), on_close=_on_message_closed
             )
+        except Exception as error:
+            log_error("Error mostrando dialogo de mensaje.", error, operation="show_message")
             self.restore_ui_from_modal()
 
     def show_app_info(self):
@@ -1506,5 +1748,5 @@ class LectorcitoApp(ctk.CTk):
                 log_warning(
                     "No se pudo abrir el manual de usuario.",
                     operation="show_app_info",
-                    file_path=APP_WEBSITE_URL
+                    file_path=APP_WEBSITE_URL,
                 )

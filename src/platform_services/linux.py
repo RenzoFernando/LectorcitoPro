@@ -17,10 +17,14 @@ class LinuxPlatformService(PlatformService):
         return os.path.join(self._xdg_home("XDG_CONFIG_HOME", ".config"), vendor_name, app_name)
 
     def get_user_data_dir(self, app_name: str, vendor_name: str) -> str:
-        return os.path.join(self._xdg_home("XDG_DATA_HOME", os.path.join(".local", "share")), vendor_name, app_name)
+        return os.path.join(
+            self._xdg_home("XDG_DATA_HOME", os.path.join(".local", "share")), vendor_name, app_name
+        )
 
     def get_user_state_dir(self, app_name: str, vendor_name: str) -> str:
-        return os.path.join(self._xdg_home("XDG_STATE_HOME", os.path.join(".local", "state")), vendor_name, app_name)
+        return os.path.join(
+            self._xdg_home("XDG_STATE_HOME", os.path.join(".local", "state")), vendor_name, app_name
+        )
 
     def _xdg_home(self, variable_name: str, fallback_relative: str) -> str:
         configured = str(os.environ.get(variable_name, "") or "").strip()
@@ -29,7 +33,7 @@ class LinuxPlatformService(PlatformService):
         return os.path.abspath(os.path.join(os.path.expanduser("~"), fallback_relative))
 
     def is_path_compatible(self, path: str) -> bool:
-        clean_path = str(path or "").strip().replace('"', '')
+        clean_path = str(path or "").strip().replace('"', "")
         if not clean_path:
             return False
         drive, _ = ntpath.splitdrive(clean_path)
@@ -68,10 +72,7 @@ class LinuxPlatformService(PlatformService):
         return "lbl_system_shortcuts_linux"
 
     def get_shortcut_label_keys(self) -> dict:
-        return {
-            "desktop": "btn_shortcut_desktop_linux",
-            "start": "btn_shortcut_start_linux"
-        }
+        return {"desktop": "btn_shortcut_desktop_linux", "start": "btn_shortcut_start_linux"}
 
     def open_folder(self, path: str) -> bool:
         return self._open_linux_path(path)
@@ -98,7 +99,7 @@ class LinuxPlatformService(PlatformService):
                     command,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
-                    start_new_session=True
+                    start_new_session=True,
                 )
                 return True
             except Exception:
@@ -116,14 +117,18 @@ class LinuxPlatformService(PlatformService):
         start_instruction: str = "",
         display_name: str = "",
         desktop_id: str = "",
-        icon_path: str = ""
+        icon_path: str = "",
     ) -> PlatformActionResult:
         if not self.supports_shortcut_mode(mode):
-            return PlatformActionResult(False, status="unsupported", error=f"Unsupported Linux shortcut mode: {mode}")
+            return PlatformActionResult(
+                False, status="unsupported", error=f"Unsupported Linux shortcut mode: {mode}"
+            )
 
         target_path = self.normalize_launcher_path(target_path)
         if not self.is_valid_launcher(target_path):
-            return PlatformActionResult(False, status="invalid_target", error="Invalid Linux launcher path.")
+            return PlatformActionResult(
+                False, status="invalid_target", error="Invalid Linux launcher path."
+            )
 
         try:
             resolved_desktop_id = self._sanitize_desktop_id(desktop_id or app_name)
@@ -132,7 +137,7 @@ class LinuxPlatformService(PlatformService):
                 target_path=target_path,
                 display_name=display_name or app_name,
                 description=description,
-                icon_path=installed_icon
+                icon_path=installed_icon,
             )
 
             if mode == "desktop":
@@ -141,7 +146,9 @@ class LinuxPlatformService(PlatformService):
                 destination = os.path.join(destination_dir, f"{resolved_desktop_id}.desktop")
                 status = "linux_desktop_created"
             else:
-                destination_dir = os.path.join(self._xdg_home("XDG_DATA_HOME", os.path.join(".local", "share")), "applications")
+                destination_dir = os.path.join(
+                    self._xdg_home("XDG_DATA_HOME", os.path.join(".local", "share")), "applications"
+                )
                 os.makedirs(destination_dir, exist_ok=True)
                 destination = os.path.join(destination_dir, f"{resolved_desktop_id}.desktop")
                 status = "linux_menu_created"
@@ -183,7 +190,7 @@ class LinuxPlatformService(PlatformService):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL,
                     text=True,
-                    check=False
+                    check=False,
                 )
                 candidate = str(result.stdout or "").strip()
                 if candidate and os.path.abspath(os.path.expanduser(candidate)) != home_dir:
@@ -217,14 +224,16 @@ class LinuxPlatformService(PlatformService):
             "icons",
             "hicolor",
             "256x256",
-            "apps"
+            "apps",
         )
         os.makedirs(icon_dir, exist_ok=True)
         destination = os.path.join(icon_dir, f"{desktop_id}.png")
         shutil.copy2(source, destination)
         return destination
 
-    def _build_desktop_entry(self, target_path: str, display_name: str, description: str, icon_path: str) -> str:
+    def _build_desktop_entry(
+        self, target_path: str, display_name: str, description: str, icon_path: str
+    ) -> str:
         if target_path.lower().endswith(".py"):
             exec_value = f"{self._desktop_exec_quote(sys.executable)} {self._desktop_exec_quote(target_path)}"
             try_exec = self._desktop_exec_quote(sys.executable)
@@ -245,18 +254,30 @@ class LinuxPlatformService(PlatformService):
             f"Path={self._desktop_string(working_dir)}",
             "Terminal=false",
             "Categories=Development;Utility;",
-            "StartupNotify=true"
+            "StartupNotify=true",
         ]
         if icon_path:
             lines.insert(7, f"Icon={self._desktop_string(icon_path)}")
         return "\n".join(lines) + "\n"
 
     def _desktop_exec_quote(self, value: str) -> str:
-        escaped = str(value).replace("\\", "\\\\").replace('"', '\\"').replace("`", "\\`").replace("$", "\\$")
+        escaped = (
+            str(value)
+            .replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("`", "\\`")
+            .replace("$", "\\$")
+        )
         return f'"{escaped}"'
 
     def _desktop_string(self, value: str) -> str:
-        return str(value or "").replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+        return (
+            str(value or "")
+            .replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+        )
 
     def _write_desktop_entry(self, destination: str, content: str):
         temp_path = f"{destination}.tmp"
@@ -275,7 +296,7 @@ class LinuxPlatformService(PlatformService):
                 [gio, "set", destination, "metadata::trusted", "true"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                check=False
+                check=False,
             )
         except Exception:
             pass
@@ -289,7 +310,7 @@ class LinuxPlatformService(PlatformService):
                 [update_desktop_database, applications_dir],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                check=False
+                check=False,
             )
         except Exception:
             pass

@@ -1,0 +1,9 @@
+build/
+dist/
+downloads/
+node_modules/
+.tools/
+.venv/
+.venv-build/
+.venv-linux/
+.ruff_cache/

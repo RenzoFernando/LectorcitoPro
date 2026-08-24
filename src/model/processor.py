@@ -1,14 +1,15 @@
 import os
 import threading
+
+from app_logging import log_error
 from i18n.translations import TRANSLATIONS
 from model.renderer_factory import get_report_renderer
 from model.scanner import ProjectScanner
-from app_logging import log_error
-
 
 # =============================================================================
 # UTILIDADES DEL PROCESADOR
 # =============================================================================
+
 
 def _get_tr(config: dict, key: str, *args) -> str:
     lang = config.get("language", "es")
@@ -93,10 +94,7 @@ def _renderer_labels(config: dict, report_extension: str) -> dict[str, str]:
 
 
 def _next_report_path(
-        output_path: str,
-        filename_prefix: str,
-        project_name: str,
-        report_extension: str
+    output_path: str, filename_prefix: str, project_name: str, report_extension: str
 ) -> str:
     version = 1
     while True:
@@ -111,12 +109,13 @@ def _next_report_path(
 # GENERACION DE REPORTE COMPLETO
 # =============================================================================
 
+
 def generate_report(
-        source_folder: str,
-        output_path: str,
-        config: dict,
-        cancel_event: threading.Event,
-        progress_callback: callable
+    source_folder: str,
+    output_path: str,
+    config: dict,
+    cancel_event: threading.Event,
+    progress_callback: callable,
 ) -> tuple[str, str | None]:
     source_folder = os.path.abspath(source_folder)
     report_extension = config.get("report_extension", ".md")
@@ -130,10 +129,7 @@ def generate_report(
 
     filename_prefix = _get_filename_prefix(config, "rep_filename_prefix", "Reporte")
     final_report_path = _next_report_path(
-        output_path,
-        filename_prefix,
-        project.name,
-        report_extension
+        output_path, filename_prefix, project.name, report_extension
     )
 
     processed_files = 0
@@ -141,9 +137,7 @@ def generate_report(
     try:
         with open(final_report_path, "w", encoding="utf-8") as outfile:
             renderer = get_report_renderer(
-                report_extension,
-                outfile,
-                _renderer_labels(config, report_extension)
+                report_extension, outfile, _renderer_labels(config, report_extension)
             )
             renderer.write_header(_get_tr(config, "rep_title"), project)
             renderer.write_toc(project)
@@ -176,7 +170,7 @@ def generate_report(
             "Error generando reporte.",
             error,
             operation="generate_report",
-            file_path=final_report_path
+            file_path=final_report_path,
         )
         if os.path.exists(final_report_path):
             try:
@@ -186,7 +180,7 @@ def generate_report(
                     "No se pudo eliminar el reporte incompleto.",
                     cleanup_error,
                     operation="generate_report_cleanup",
-                    file_path=final_report_path
+                    file_path=final_report_path,
                 )
         return "error", None
 
@@ -199,7 +193,7 @@ def generate_report(
                     "No se pudo eliminar el reporte cancelado.",
                     cleanup_error,
                     operation="generate_report_cancel_cleanup",
-                    file_path=final_report_path
+                    file_path=final_report_path,
                 )
         return "cancelled", None
 
@@ -210,8 +204,9 @@ def generate_report(
 # GENERACION DE ARBOL
 # =============================================================================
 
+
 def generate_tree_report(
-        source_folder: str, output_path: str, config: dict
+    source_folder: str, output_path: str, config: dict
 ) -> tuple[str, str | None]:
     source_folder = os.path.abspath(source_folder)
     project_name = os.path.basename(os.path.normpath(source_folder))
@@ -221,10 +216,7 @@ def generate_tree_report(
 
     filename_prefix = _get_filename_prefix(config, "rep_tree_filename_prefix", "Arbol")
     final_report_path = _next_report_path(
-        output_path,
-        filename_prefix,
-        project_name,
-        report_extension
+        output_path, filename_prefix, project_name, report_extension
     )
 
     try:
@@ -233,15 +225,10 @@ def generate_tree_report(
 
         with open(final_report_path, "w", encoding="utf-8") as outfile:
             renderer = get_report_renderer(
-                report_extension,
-                outfile,
-                _renderer_labels(config, report_extension)
+                report_extension, outfile, _renderer_labels(config, report_extension)
             )
             renderer.write_tree(
-                _get_tr(config, "rep_md_tree_title"),
-                project_name,
-                source_folder,
-                tree_text
+                _get_tr(config, "rep_md_tree_title"), project_name, source_folder, tree_text
             )
         return "success", final_report_path
     except Exception as error:
@@ -249,6 +236,6 @@ def generate_tree_report(
             "Error generando arbol.",
             error,
             operation="generate_tree_report",
-            file_path=final_report_path
+            file_path=final_report_path,
         )
         return "error", None

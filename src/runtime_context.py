@@ -1,14 +1,18 @@
 import os
 import sys
 
+
 def is_pyinstaller_frozen() -> bool:
     return bool(getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"))
+
 
 def is_nuitka_compiled() -> bool:
     return globals().get("__compiled__") is not None
 
+
 def is_frozen_runtime() -> bool:
     return bool(getattr(sys, "frozen", False) or is_nuitka_compiled())
+
 
 def get_runtime_kind() -> str:
     if is_pyinstaller_frozen():
@@ -17,6 +21,7 @@ def get_runtime_kind() -> str:
         return "nuitka"
     return "development"
 
+
 def get_runtime_executable_candidates() -> list[str]:
     candidates = []
     if getattr(sys, "frozen", False):
@@ -24,7 +29,9 @@ def get_runtime_executable_candidates() -> list[str]:
 
     if is_nuitka_compiled():
         compiled_info = globals().get("__compiled__")
-        original_argv0 = getattr(compiled_info, "original_argv0", "") if compiled_info is not None else ""
+        original_argv0 = (
+            getattr(compiled_info, "original_argv0", "") if compiled_info is not None else ""
+        )
         if original_argv0:
             candidates.append(original_argv0)
         if sys.argv:
@@ -43,6 +50,7 @@ def get_runtime_executable_candidates() -> list[str]:
             seen.add(key)
             result.append(resolved)
     return result
+
 
 def get_resource_base_candidates(module_file: str) -> list[str]:
     candidates = []

@@ -1,8 +1,41 @@
 import customtkinter as ctk
+
 from app_meta import APP_EXECUTABLE_NAME
-from view.dialogs import BaseDialog, _style_button, _get_color_tuple, _style_entry
-from view.ui_constants import FONT_FAMILY_PRIMARY, get_button_tokens, SETTINGS_DIALOG_WIDTH, SETTINGS_DIALOG_HEIGHT, SETTINGS_DIALOG_MAIN_PADX, SETTINGS_DIALOG_MAIN_PADY, SETTINGS_DIALOG_CONTENT_PADX, SETTINGS_DIALOG_CONTENT_PADY, SETTINGS_DIALOG_SECTION_FONT_SIZE, SETTINGS_DIALOG_SECTION_PADY, SETTINGS_DIALOG_FORMAT_SHELL_BORDER_WIDTH, SETTINGS_DIALOG_FORMAT_SHELL_RADIUS, SETTINGS_DIALOG_FORMAT_SHELL_PADY, SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH, SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT, SETTINGS_DIALOG_FORMAT_BUTTON_PAD, SETTINGS_DIALOG_EXE_LABEL_PADY, SETTINGS_DIALOG_EXAMPLE_FONT_SIZE, SETTINGS_DIALOG_EXAMPLE_PADY, SETTINGS_DIALOG_ENTRY_PADY, SETTINGS_DIALOG_SEPARATOR_HEIGHT, SETTINGS_DIALOG_SEPARATOR_PADY, SETTINGS_DIALOG_SHORTCUTS_LABEL_PADY, SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, SETTINGS_DIALOG_TRANSFER_LABEL_PADY, SETTINGS_DIALOG_TRANSFER_BUTTON_PADY, SETTINGS_DIALOG_TRANSFER_LAST_BUTTON_PADY, SETTINGS_DIALOG_TOGGLE_RADIUS, SETTINGS_DIALOG_TOGGLE_BORDER_WIDTH, SETTINGS_DIALOG_TOGGLE_FONT_SIZE
 from i18n.translations import translate_default
+from view.dialogs import BaseDialog, _get_color_tuple, _style_button, _style_entry
+from view.ui_constants import (
+    FONT_FAMILY_PRIMARY,
+    SETTINGS_DIALOG_CONTENT_PADX,
+    SETTINGS_DIALOG_CONTENT_PADY,
+    SETTINGS_DIALOG_ENTRY_PADY,
+    SETTINGS_DIALOG_EXAMPLE_FONT_SIZE,
+    SETTINGS_DIALOG_EXAMPLE_PADY,
+    SETTINGS_DIALOG_EXE_LABEL_PADY,
+    SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT,
+    SETTINGS_DIALOG_FORMAT_BUTTON_PAD,
+    SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH,
+    SETTINGS_DIALOG_FORMAT_SHELL_BORDER_WIDTH,
+    SETTINGS_DIALOG_FORMAT_SHELL_PADY,
+    SETTINGS_DIALOG_FORMAT_SHELL_RADIUS,
+    SETTINGS_DIALOG_HEIGHT,
+    SETTINGS_DIALOG_MAIN_PADX,
+    SETTINGS_DIALOG_MAIN_PADY,
+    SETTINGS_DIALOG_SECTION_FONT_SIZE,
+    SETTINGS_DIALOG_SECTION_PADY,
+    SETTINGS_DIALOG_SEPARATOR_HEIGHT,
+    SETTINGS_DIALOG_SEPARATOR_PADY,
+    SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY,
+    SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY,
+    SETTINGS_DIALOG_SHORTCUTS_LABEL_PADY,
+    SETTINGS_DIALOG_TOGGLE_BORDER_WIDTH,
+    SETTINGS_DIALOG_TOGGLE_FONT_SIZE,
+    SETTINGS_DIALOG_TOGGLE_RADIUS,
+    SETTINGS_DIALOG_TRANSFER_BUTTON_PADY,
+    SETTINGS_DIALOG_TRANSFER_LABEL_PADY,
+    SETTINGS_DIALOG_TRANSFER_LAST_BUTTON_PADY,
+    SETTINGS_DIALOG_WIDTH,
+    get_button_tokens,
+)
 
 # =============================================================================
 # DIALOGO DE CONFIGURACION GENERAL
@@ -20,8 +53,19 @@ def _tr_text(parent, key: str, *args):
 
 
 class SettingsDialog(BaseDialog):
-    def __init__(self, parent, current_extension: str = ".md", current_exe_path: str = "", on_save_callback=None,
-                 on_shortcut_callback=None, on_export_callback=None, on_import_callback=None, platform_capabilities=None, persistent: bool = False, defer_show: bool = False):
+    def __init__(
+        self,
+        parent,
+        current_extension: str = ".md",
+        current_exe_path: str = "",
+        on_save_callback=None,
+        on_shortcut_callback=None,
+        on_export_callback=None,
+        on_import_callback=None,
+        platform_capabilities=None,
+        persistent: bool = False,
+        defer_show: bool = False,
+    ):
         title = _tr_text(parent, "dlg_settings_title")
         super().__init__(parent, title, persistent=persistent, defer_show=defer_show)
 
@@ -38,16 +82,23 @@ class SettingsDialog(BaseDialog):
         self.geometry(f"{SETTINGS_DIALOG_WIDTH}x{SETTINGS_DIALOG_HEIGHT}")
 
         self.main_frame = self._create_card_frame()
-        self.main_frame.pack_configure(padx=SETTINGS_DIALOG_MAIN_PADX, pady=SETTINGS_DIALOG_MAIN_PADY)
+        self.main_frame.pack_configure(
+            padx=SETTINGS_DIALOG_MAIN_PADX, pady=SETTINGS_DIALOG_MAIN_PADY
+        )
 
         self.content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.content_frame.pack(fill="both", expand=True, padx=SETTINGS_DIALOG_CONTENT_PADX, pady=SETTINGS_DIALOG_CONTENT_PADY)
+        self.content_frame.pack(
+            fill="both",
+            expand=True,
+            padx=SETTINGS_DIALOG_CONTENT_PADX,
+            pady=SETTINGS_DIALOG_CONTENT_PADY,
+        )
 
         self.lbl_report_format = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_report_format"),
             font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "bold"),
-            text_color=_get_color_tuple("text")
+            text_color=_get_color_tuple("text"),
         )
         self.lbl_report_format.pack(pady=SETTINGS_DIALOG_SECTION_PADY, anchor="w")
 
@@ -57,7 +108,7 @@ class SettingsDialog(BaseDialog):
             fg_color=_get_color_tuple("bg_panel"),
             border_width=SETTINGS_DIALOG_FORMAT_SHELL_BORDER_WIDTH,
             border_color=_get_color_tuple("border_subtle"),
-            corner_radius=SETTINGS_DIALOG_FORMAT_SHELL_RADIUS
+            corner_radius=SETTINGS_DIALOG_FORMAT_SHELL_RADIUS,
         )
         self.format_shell.pack(pady=SETTINGS_DIALOG_FORMAT_SHELL_PADY, anchor="w")
 
@@ -66,24 +117,32 @@ class SettingsDialog(BaseDialog):
             text=_tr_text(self.parent_view, "btn_format_txt"),
             width=SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH,
             height=SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT,
-            command=lambda: self._on_format_change(".txt")
+            command=lambda: self._on_format_change(".txt"),
         )
-        self.btn_fmt_txt.pack(side="left", padx=SETTINGS_DIALOG_FORMAT_BUTTON_PAD, pady=SETTINGS_DIALOG_FORMAT_BUTTON_PAD)
+        self.btn_fmt_txt.pack(
+            side="left",
+            padx=SETTINGS_DIALOG_FORMAT_BUTTON_PAD,
+            pady=SETTINGS_DIALOG_FORMAT_BUTTON_PAD,
+        )
 
         self.btn_fmt_md = ctk.CTkButton(
             self.format_shell,
             text=_tr_text(self.parent_view, "btn_format_md"),
             width=SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH,
             height=SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT,
-            command=lambda: self._on_format_change(".md")
+            command=lambda: self._on_format_change(".md"),
         )
-        self.btn_fmt_md.pack(side="left", padx=(0, SETTINGS_DIALOG_FORMAT_BUTTON_PAD), pady=SETTINGS_DIALOG_FORMAT_BUTTON_PAD)
+        self.btn_fmt_md.pack(
+            side="left",
+            padx=(0, SETTINGS_DIALOG_FORMAT_BUTTON_PAD),
+            pady=SETTINGS_DIALOG_FORMAT_BUTTON_PAD,
+        )
 
         self.lbl_exe_path = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_exe_path", APP_EXECUTABLE_NAME),
             font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "bold"),
-            text_color=_get_color_tuple("text")
+            text_color=_get_color_tuple("text"),
         )
         self.lbl_exe_path.pack(pady=SETTINGS_DIALOG_EXE_LABEL_PADY, anchor="w")
 
@@ -91,26 +150,29 @@ class SettingsDialog(BaseDialog):
             self.content_frame,
             text=self.parent_view._tr("lbl_exe_example", APP_EXECUTABLE_NAME),
             font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_EXAMPLE_FONT_SIZE, "normal"),
-            text_color=_get_color_tuple("text_secondary")
+            text_color=_get_color_tuple("text_secondary"),
         )
         self.lbl_exe_example.pack(pady=SETTINGS_DIALOG_EXAMPLE_PADY, anchor="w")
 
         self.entry_exe = ctk.CTkEntry(
-            self.content_frame,
-            placeholder_text=self.parent_view._tr("ph_exe_path")
+            self.content_frame, placeholder_text=self.parent_view._tr("ph_exe_path")
         )
         _style_entry(self.entry_exe)
         self.entry_exe.pack(pady=SETTINGS_DIALOG_ENTRY_PADY, fill="x")
         self.entry_exe.insert(0, self.current_exe_path)
 
-        self.system_section_separator = ctk.CTkFrame(self.content_frame, height=SETTINGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line"))
+        self.system_section_separator = ctk.CTkFrame(
+            self.content_frame,
+            height=SETTINGS_DIALOG_SEPARATOR_HEIGHT,
+            fg_color=_get_color_tuple("separator_line"),
+        )
         self.system_section_separator.pack(fill="x", pady=SETTINGS_DIALOG_SEPARATOR_PADY)
 
         self.lbl_system_shortcuts = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_system_shortcuts"),
             font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "bold"),
-            text_color=_get_color_tuple("text")
+            text_color=_get_color_tuple("text"),
         )
         self.lbl_system_shortcuts.pack(pady=SETTINGS_DIALOG_SHORTCUTS_LABEL_PADY, anchor="w")
 
@@ -120,7 +182,7 @@ class SettingsDialog(BaseDialog):
         self.btn_desktop = ctk.CTkButton(
             self.shortcuts_frame,
             text=self.parent_view._tr("btn_shortcut_desktop"),
-            command=lambda: self._trigger_shortcut("desktop")
+            command=lambda: self._trigger_shortcut("desktop"),
         )
         _style_button(self.btn_desktop, "blue")
         self.btn_desktop.pack(pady=SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, fill="x")
@@ -128,7 +190,7 @@ class SettingsDialog(BaseDialog):
         self.btn_start = ctk.CTkButton(
             self.shortcuts_frame,
             text=self.parent_view._tr("btn_shortcut_start"),
-            command=lambda: self._trigger_shortcut("start")
+            command=lambda: self._trigger_shortcut("start"),
         )
         _style_button(self.btn_start, "blue")
         self.btn_start.pack(pady=SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, fill="x")
@@ -136,7 +198,7 @@ class SettingsDialog(BaseDialog):
         self.btn_taskbar = ctk.CTkButton(
             self.shortcuts_frame,
             text=self.parent_view._tr("btn_shortcut_taskbar"),
-            command=lambda: self._trigger_shortcut("taskbar")
+            command=lambda: self._trigger_shortcut("taskbar"),
         )
         _style_button(self.btn_taskbar, "blue")
         self.btn_taskbar.pack(pady=SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, fill="x")
@@ -144,19 +206,23 @@ class SettingsDialog(BaseDialog):
         self.btn_pin_start = ctk.CTkButton(
             self.shortcuts_frame,
             text=self.parent_view._tr("btn_shortcut_pin_start"),
-            command=lambda: self._trigger_shortcut("start_pin")
+            command=lambda: self._trigger_shortcut("start_pin"),
         )
         _style_button(self.btn_pin_start, "blue")
         self.btn_pin_start.pack(pady=SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, fill="x")
 
-        self.transfer_separator = ctk.CTkFrame(self.content_frame, height=SETTINGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line"))
+        self.transfer_separator = ctk.CTkFrame(
+            self.content_frame,
+            height=SETTINGS_DIALOG_SEPARATOR_HEIGHT,
+            fg_color=_get_color_tuple("separator_line"),
+        )
         self.transfer_separator.pack(fill="x", pady=SETTINGS_DIALOG_SEPARATOR_PADY)
 
         self.lbl_config_transfer = ctk.CTkLabel(
             self.content_frame,
             text=self.parent_view._tr("lbl_config_transfer"),
             font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "bold"),
-            text_color=_get_color_tuple("text")
+            text_color=_get_color_tuple("text"),
         )
         self.lbl_config_transfer.pack(pady=SETTINGS_DIALOG_TRANSFER_LABEL_PADY, anchor="w")
 
@@ -166,7 +232,7 @@ class SettingsDialog(BaseDialog):
         self.btn_export_config = ctk.CTkButton(
             self.transfer_frame,
             text=self.parent_view._tr("btn_export_config"),
-            command=self._trigger_export
+            command=self._trigger_export,
         )
         _style_button(self.btn_export_config, "blue")
         self.btn_export_config.pack(pady=SETTINGS_DIALOG_TRANSFER_BUTTON_PADY, fill="x")
@@ -176,7 +242,7 @@ class SettingsDialog(BaseDialog):
             self.transfer_frame,
             text=self.parent_view._tr("btn_import_config"),
             command=self._trigger_import,
-            height=action_button_height
+            height=action_button_height,
         )
         _style_button(self.btn_import_config, "green")
         self.btn_import_config.configure(height=action_button_height)
@@ -192,7 +258,7 @@ class SettingsDialog(BaseDialog):
                 "supports_launcher_configuration": True,
                 "shortcut_modes": ("desktop", "start", "taskbar", "start_pin"),
                 "system_shortcuts_label_key": "lbl_system_shortcuts",
-                "shortcut_label_keys": {}
+                "shortcut_label_keys": {},
             }
         source = capabilities if isinstance(capabilities, dict) else {}
         shortcut_modes = source.get("shortcut_modes", ())
@@ -203,14 +269,20 @@ class SettingsDialog(BaseDialog):
             shortcut_label_keys = {}
         return {
             "platform": str(source.get("platform", "generic")),
-            "supports_launcher_configuration": bool(source.get("supports_launcher_configuration", False)),
+            "supports_launcher_configuration": bool(
+                source.get("supports_launcher_configuration", False)
+            ),
             "shortcut_modes": tuple(shortcut_modes or ()),
-            "system_shortcuts_label_key": str(source.get("system_shortcuts_label_key", "lbl_system_shortcuts")),
-            "shortcut_label_keys": dict(shortcut_label_keys)
+            "system_shortcuts_label_key": str(
+                source.get("system_shortcuts_label_key", "lbl_system_shortcuts")
+            ),
+            "shortcut_label_keys": dict(shortcut_label_keys),
         }
 
     def _apply_platform_capabilities(self):
-        supports_launcher = bool(self.platform_capabilities.get("supports_launcher_configuration", False))
+        supports_launcher = bool(
+            self.platform_capabilities.get("supports_launcher_configuration", False)
+        )
         shortcut_modes = set(self.platform_capabilities.get("shortcut_modes", ()))
         has_system_integration = supports_launcher or bool(shortcut_modes)
 
@@ -223,7 +295,7 @@ class SettingsDialog(BaseDialog):
             "desktop": self.btn_desktop,
             "start": self.btn_start,
             "taskbar": self.btn_taskbar,
-            "start_pin": self.btn_pin_start
+            "start_pin": self.btn_pin_start,
         }
         for mode, button in button_modes.items():
             if mode not in shortcut_modes:
@@ -254,7 +326,7 @@ class SettingsDialog(BaseDialog):
                 fg_color=blue["bg"] if is_selected else _get_color_tuple("bg_dialog"),
                 hover_color=blue["hover"] if is_selected else neutral["hover"],
                 border_color=blue["border"] if is_selected else _get_color_tuple("border_subtle"),
-                text_color=blue["text"] if is_selected else _get_color_tuple("text")
+                text_color=blue["text"] if is_selected else _get_color_tuple("text"),
             )
 
     def refresh_texts(self):
@@ -264,15 +336,29 @@ class SettingsDialog(BaseDialog):
             pass
         self.lbl_report_format.configure(text=self.parent_view._tr("lbl_report_format"))
         self.lbl_exe_path.configure(text=self.parent_view._tr("lbl_exe_path", APP_EXECUTABLE_NAME))
-        self.lbl_exe_example.configure(text=self.parent_view._tr("lbl_exe_example", APP_EXECUTABLE_NAME))
+        self.lbl_exe_example.configure(
+            text=self.parent_view._tr("lbl_exe_example", APP_EXECUTABLE_NAME)
+        )
         self.entry_exe.configure(placeholder_text=self.parent_view._tr("ph_exe_path"))
-        system_label_key = self.platform_capabilities.get("system_shortcuts_label_key", "lbl_system_shortcuts")
+        system_label_key = self.platform_capabilities.get(
+            "system_shortcuts_label_key", "lbl_system_shortcuts"
+        )
         shortcut_label_keys = self.platform_capabilities.get("shortcut_label_keys", {})
         self.lbl_system_shortcuts.configure(text=self.parent_view._tr(system_label_key))
-        self.btn_desktop.configure(text=self.parent_view._tr(shortcut_label_keys.get("desktop", "btn_shortcut_desktop")))
-        self.btn_start.configure(text=self.parent_view._tr(shortcut_label_keys.get("start", "btn_shortcut_start")))
-        self.btn_taskbar.configure(text=self.parent_view._tr(shortcut_label_keys.get("taskbar", "btn_shortcut_taskbar")))
-        self.btn_pin_start.configure(text=self.parent_view._tr(shortcut_label_keys.get("start_pin", "btn_shortcut_pin_start")))
+        self.btn_desktop.configure(
+            text=self.parent_view._tr(shortcut_label_keys.get("desktop", "btn_shortcut_desktop"))
+        )
+        self.btn_start.configure(
+            text=self.parent_view._tr(shortcut_label_keys.get("start", "btn_shortcut_start"))
+        )
+        self.btn_taskbar.configure(
+            text=self.parent_view._tr(shortcut_label_keys.get("taskbar", "btn_shortcut_taskbar"))
+        )
+        self.btn_pin_start.configure(
+            text=self.parent_view._tr(
+                shortcut_label_keys.get("start_pin", "btn_shortcut_pin_start")
+            )
+        )
         self.lbl_config_transfer.configure(text=self.parent_view._tr("lbl_config_transfer"))
         self.btn_export_config.configure(text=self.parent_view._tr("btn_export_config"))
         self.btn_import_config.configure(text=self.parent_view._tr("btn_import_config"))
@@ -280,7 +366,16 @@ class SettingsDialog(BaseDialog):
         self.btn_fmt_md.configure(text=_tr_text(self.parent_view, "btn_format_md"))
         self._apply_format_button_styles()
 
-    def load_state(self, current_extension: str, current_exe_path: str, on_save_callback=None, on_shortcut_callback=None, on_export_callback=None, on_import_callback=None, platform_capabilities=None):
+    def load_state(
+        self,
+        current_extension: str,
+        current_exe_path: str,
+        on_save_callback=None,
+        on_shortcut_callback=None,
+        on_export_callback=None,
+        on_import_callback=None,
+        platform_capabilities=None,
+    ):
         self.selected_extension = current_extension
         self.current_exe_path = current_exe_path or ""
         self.on_save_callback = on_save_callback
@@ -288,7 +383,9 @@ class SettingsDialog(BaseDialog):
         self.on_export_callback = on_export_callback
         self.on_import_callback = on_import_callback
         if platform_capabilities is not None:
-            self.platform_capabilities = self._normalize_platform_capabilities(platform_capabilities)
+            self.platform_capabilities = self._normalize_platform_capabilities(
+                platform_capabilities
+            )
         self.result = None
         self.fmt_var.set(self.selected_extension)
         self.entry_exe.delete(0, "end")
@@ -317,7 +414,11 @@ class SettingsDialog(BaseDialog):
     def _trigger_shortcut(self, shortcut_type):
         if shortcut_type not in self.platform_capabilities.get("shortcut_modes", ()):
             return
-        current_path_input = self.entry_exe.get().strip().replace('"', '') if self.platform_capabilities.get("supports_launcher_configuration", False) else ""
+        current_path_input = (
+            self.entry_exe.get().strip().replace('"', "")
+            if self.platform_capabilities.get("supports_launcher_configuration", False)
+            else ""
+        )
         if self.on_shortcut_callback:
             self.on_shortcut_callback(shortcut_type, current_path_input, parent_window=self)
 
@@ -331,17 +432,40 @@ class SettingsDialog(BaseDialog):
 
     def _on_ok(self):
         final_ext = self.fmt_var.get()
-        final_path = self.entry_exe.get().strip().replace('"', '') if self.platform_capabilities.get("supports_launcher_configuration", False) else self.current_exe_path
+        final_path = (
+            self.entry_exe.get().strip().replace('"', "")
+            if self.platform_capabilities.get("supports_launcher_configuration", False)
+            else self.current_exe_path
+        )
         self.result = (final_ext, final_path)
         if self.on_save_callback:
             self.on_save_callback(final_ext, final_path)
         self._close_with_fade_out()
 
     @classmethod
-    def ask(cls, parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback, on_export_callback=None, on_import_callback=None, platform_capabilities=None):
+    def ask(
+        cls,
+        parent,
+        current_extension,
+        current_exe_path,
+        on_save_callback,
+        on_shortcut_callback,
+        on_export_callback=None,
+        on_import_callback=None,
+        platform_capabilities=None,
+    ):
         dialog = None
         try:
-            dialog = cls(parent, current_extension, current_exe_path, on_save_callback, on_shortcut_callback, on_export_callback, on_import_callback, platform_capabilities)
+            dialog = cls(
+                parent,
+                current_extension,
+                current_exe_path,
+                on_save_callback,
+                on_shortcut_callback,
+                on_export_callback,
+                on_import_callback,
+                platform_capabilities,
+            )
             parent.wait_window(dialog)
             return dialog.result
         except Exception:

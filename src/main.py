@@ -1,18 +1,19 @@
-import sys
 import os
+import sys
 import tkinter as tk
 from tkinter import messagebox
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from controller.controller import LectorcitoController
-from app_meta import APP_DISPLAY_NAME
-from i18n.translations import translate_default
 import utils
+from app_meta import APP_DISPLAY_NAME
+from controller.controller import LectorcitoController
+from i18n.translations import translate_default
 
 # =============================================================================
 # PUNTO DE ENTRADA
 # =============================================================================
+
 
 def main():
     utils.setup_logging()
@@ -36,10 +37,13 @@ def main():
         try:
             root = tk.Tk()
             root.withdraw()
-            messagebox.showerror(translate_default("critical_error_title", APP_DISPLAY_NAME), error_msg)
+            messagebox.showerror(
+                translate_default("critical_error_title", APP_DISPLAY_NAME), error_msg
+            )
             root.destroy()
         except Exception:
             print(error_msg)
+
 
 # =============================================================================
 # MAIN

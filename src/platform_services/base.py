@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
 import sys
 import webbrowser
+from dataclasses import dataclass
 from pathlib import Path
 
 from runtime_context import get_runtime_executable_candidates, is_frozen_runtime, is_nuitka_compiled
@@ -23,7 +23,7 @@ class PlatformService:
     def normalize_launcher_path(self, path) -> str:
         if path is None:
             return ""
-        clean_path = str(path).strip().replace('"', '')
+        clean_path = str(path).strip().replace('"', "")
         if not clean_path:
             return ""
         return os.path.abspath(os.path.expandvars(os.path.expanduser(clean_path)))
@@ -47,7 +47,9 @@ class PlatformService:
         return ""
 
     def get_install_marker_path(self, marker_file: str, executable_path: str = "") -> str:
-        resolved_path = self.normalize_launcher_path(executable_path) or self.get_runtime_executable()
+        resolved_path = (
+            self.normalize_launcher_path(executable_path) or self.get_runtime_executable()
+        )
         if not resolved_path:
             return ""
         return os.path.join(os.path.dirname(resolved_path), marker_file)
@@ -95,11 +97,12 @@ class PlatformService:
             "supports_launcher_configuration": self.supports_launcher_configuration(),
             "shortcut_modes": self.supported_shortcut_modes(),
             "system_shortcuts_label_key": self.get_system_shortcuts_label_key(),
-            "shortcut_label_keys": self.get_shortcut_label_keys()
+            "shortcut_label_keys": self.get_shortcut_label_keys(),
         }
 
     def get_user_config_dir(self, app_name: str, vendor_name: str) -> str:
         from appdirs import user_config_dir
+
         return user_config_dir(app_name, vendor_name, roaming=True)
 
     def get_user_data_dir(self, app_name: str, vendor_name: str) -> str:
@@ -112,7 +115,9 @@ class PlatformService:
         clean_path = str(path or "").strip()
         return bool(clean_path)
 
-    def resolve_readings_path(self, use_default_path: bool, custom_path: str, default_path: str) -> tuple[str, bool]:
+    def resolve_readings_path(
+        self, use_default_path: bool, custom_path: str, default_path: str
+    ) -> tuple[str, bool]:
         if use_default_path:
             return os.path.abspath(os.path.expanduser(default_path)), True
         clean_custom = str(custom_path or "").strip()
@@ -164,6 +169,8 @@ class PlatformService:
         start_instruction: str = "",
         display_name: str = "",
         desktop_id: str = "",
-        icon_path: str = ""
+        icon_path: str = "",
     ) -> PlatformActionResult:
-        return PlatformActionResult(False, status="unsupported", error=f"Unsupported platform action: {mode}")
+        return PlatformActionResult(
+            False, status="unsupported", error=f"Unsupported platform action: {mode}"
+        )

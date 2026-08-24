@@ -7,22 +7,25 @@ name = "lectorcito-pro"
 dynamic = ["version"]
 requires-python = ">=3.11,<3.14"
 dependencies = [
-  "appdirs==1.4.4",
-  "customtkinter==5.2.2",
-  "pillow==12.1.0",
+    "appdirs==1.4.4",
+    "customtkinter==5.2.2",
+    "pillow==12.1.0",
 ]
 
 [project.optional-dependencies]
 windows = [
-  "pywin32==311",
+    "pywin32==311",
 ]
 build = [
-  "Nuitka==2.8.10",
+    "Nuitka==2.8.10",
+]
+quality = [
+    "ruff==0.16.3",
 ]
 dev = [
-  "debugpy==1.8.20",
-  "ipython==9.10.0",
-  "ipykernel==7.2.0",
+    "debugpy==1.8.20",
+    "ipython==9.10.0",
+    "ipykernel==7.2.0",
 ]
 
 [tool.setuptools.dynamic]
@@ -33,3 +36,28 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+    "build",
+    "dist",
+    "downloads",
+    "node_modules",
+    ".tools",
+    ".venv",
+    ".venv-build",
+    ".venv-linux",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F821", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/main.py" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

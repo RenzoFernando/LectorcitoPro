@@ -26,6 +26,7 @@ set "ENTRY_POINT=src/main.py"
 set "VENV_PYTHON=.venv-build\Scripts\python.exe"
 set "PYTHONUTF8=1"
 set "PYTHONIOENCODING=utf-8"
+set "PORTABLE_BUILD_DIR=build\windows\portable"
 
 echo.
 echo =======================================================
@@ -119,10 +120,9 @@ echo.
 
 REM --- Limpieza de compilaciones anteriores ---
 echo Limpiando artefactos anteriores...
-if exist "dist" rmdir /s /q dist
-if exist "%APP_NAME%.dist" rmdir /s /q "%APP_NAME%.dist"
-if exist "%APP_NAME%.build" rmdir /s /q "%APP_NAME%.build"
-if exist "%APP_NAME%.onefile-build" rmdir /s /q "%APP_NAME%.onefile-build"
+if exist "%PORTABLE_BUILD_DIR%" rmdir /s /q "%PORTABLE_BUILD_DIR%"
+if not exist "build\windows" mkdir "build\windows"
+mkdir "%PORTABLE_BUILD_DIR%"
 if exist "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" del /q "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" > nul 2>&1
 if exist "%OUTPUT_FOLDER%\%LICENSE_FILE%" del /q "%OUTPUT_FOLDER%\%LICENSE_FILE%" > nul 2>&1
 echo Limpieza completada.
@@ -156,7 +156,7 @@ REM --enable-plugin=tk-inter : Necesario para interfaces graficas
     --enable-plugin=tk-inter ^
     --include-package=customtkinter ^
     --include-data-dir="%RESOURCES_FOLDER%=%RESOURCES_FOLDER%" ^
-    --output-dir=dist ^
+    --output-dir="%PORTABLE_BUILD_DIR%" ^
     --remove-output ^
     "%ENTRY_POINT%"
 if %errorlevel% neq 0 (
@@ -180,13 +180,11 @@ echo.
 REM --- Organizacion del archivo ejecutable ---
 echo Moviendo artefacto portable a la carpeta '%OUTPUT_FOLDER%'...
 if not exist "%OUTPUT_FOLDER%" mkdir "%OUTPUT_FOLDER%"
-move "dist\%APP_EXE_NAME%" "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" > nul
+move "%PORTABLE_BUILD_DIR%\%APP_EXE_NAME%" "%OUTPUT_FOLDER%\%PORTABLE_ARTIFACT_NAME%" > nul
 if %errorlevel% neq 0 (
     echo.
-    echo ERROR: No se pudo mover el archivo. Busquelo en la carpeta 'dist\'.
-    if exist "dist" rmdir /s /q dist
-    if exist "%APP_NAME%.build" rmdir /s /q "%APP_NAME%.build"
-    if exist "%APP_NAME%.onefile-build" rmdir /s /q "%APP_NAME%.onefile-build"
+    echo ERROR: No se pudo mover el archivo desde '%PORTABLE_BUILD_DIR%'.
+    if exist "%PORTABLE_BUILD_DIR%" rmdir /s /q "%PORTABLE_BUILD_DIR%"
     endlocal
     exit /b 1
 ) else (
@@ -196,9 +194,7 @@ if %errorlevel% neq 0 (
 echo.
 
 REM --- Limpieza final ---
-if exist "dist" rmdir /s /q dist
-if exist "%APP_NAME%.build" rmdir /s /q "%APP_NAME%.build"
-if exist "%APP_NAME%.onefile-build" rmdir /s /q "%APP_NAME%.onefile-build"
+if exist "%PORTABLE_BUILD_DIR%" rmdir /s /q "%PORTABLE_BUILD_DIR%"
 endlocal
 exit /b 0
 

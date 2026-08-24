@@ -1,8 +1,9 @@
 import os
 from fnmatch import fnmatchcase
+
+from app_logging import log_error, log_warning
 from file_rules import matches_file_rule
 from model.report_model import ReportFile, ReportFolder, ReportProject
-from app_logging import log_error, log_warning
 from text_io import read_text_file
 
 
@@ -69,11 +70,7 @@ class ProjectScanner:
                 if parsed is not None:
                     rules.append(parsed)
         except OSError as error:
-            log_warning(
-                str(error),
-                operation="load_gitignore",
-                file_path=gitignore_path
-            )
+            log_warning(str(error), operation="load_gitignore", file_path=gitignore_path)
             return []
 
         return rules
@@ -87,11 +84,13 @@ class ProjectScanner:
         parts = [part for part in normalized_path.split("/") if part]
         candidates = []
         for index in range(len(parts)):
-            candidates.append("/".join(parts[:index + 1]))
+            candidates.append("/".join(parts[: index + 1]))
         return candidates
 
     @staticmethod
-    def _match_gitignore_path(pattern: str, anchored: bool, has_slash: bool, candidate: str) -> bool:
+    def _match_gitignore_path(
+        pattern: str, anchored: bool, has_slash: bool, candidate: str
+    ) -> bool:
         candidate = candidate.replace("\\", "/").strip("/")
         if not candidate:
             return False
@@ -110,10 +109,7 @@ class ProjectScanner:
         return False
 
     def _is_gitignore_excluded(
-            self,
-            rel_path: str,
-            is_dir: bool,
-            gitignore_rules: list[tuple[bool, bool, bool, str, bool]]
+        self, rel_path: str, is_dir: bool, gitignore_rules: list[tuple[bool, bool, bool, str, bool]]
     ) -> bool:
         if not gitignore_rules:
             return False
@@ -136,8 +132,8 @@ class ProjectScanner:
         for negate, dir_only, anchored, pattern, has_slash in gitignore_rules:
             candidates_to_check = dir_candidates if dir_only else path_candidates
             if any(
-                    self._match_gitignore_path(pattern, anchored, has_slash, candidate)
-                    for candidate in candidates_to_check
+                self._match_gitignore_path(pattern, anchored, has_slash, candidate)
+                for candidate in candidates_to_check
             ):
                 ignored = not negate
 
@@ -146,8 +142,7 @@ class ProjectScanner:
     def scan_project(self, source_folder: str) -> ReportProject:
         source_folder = os.path.abspath(source_folder)
         project = ReportProject(
-            name=os.path.basename(os.path.normpath(source_folder)),
-            source_path=source_folder
+            name=os.path.basename(os.path.normpath(source_folder)), source_path=source_folder
         )
         gitignore_rules = self._load_gitignore_rules(source_folder)
 
@@ -156,12 +151,11 @@ class ProjectScanner:
                 relative_root = os.path.relpath(root, source_folder)
                 relative_root = "" if relative_root == "." else relative_root
                 dirs[:] = [
-                    directory for directory in dirs
+                    directory
+                    for directory in dirs
                     if directory not in self.excluded_folders
                     and not self._is_gitignore_excluded(
-                        os.path.join(relative_root, directory),
-                        True,
-                        gitignore_rules
+                        os.path.join(relative_root, directory), True, gitignore_rules
                     )
                 ]
                 filenames.sort()
@@ -171,9 +165,7 @@ class ProjectScanner:
                     if matches_file_rule(filename, self.excluded_files):
                         continue
                     if self._is_gitignore_excluded(
-                            os.path.join(relative_root, filename),
-                            False,
-                            gitignore_rules
+                        os.path.join(relative_root, filename), False, gitignore_rules
                     ):
                         continue
 
@@ -188,7 +180,7 @@ class ProjectScanner:
                             filename=filename,
                             absolute_path=absolute_path,
                             relative_path=os.path.relpath(absolute_path, source_folder),
-                            kind="text" if is_text else "media"
+                            kind="text" if is_text else "media",
                         )
                     )
 
@@ -197,7 +189,7 @@ class ProjectScanner:
                         ReportFolder(
                             relative_path=relative_root,
                             important=os.path.basename(root) in self.important_folders,
-                            files=report_files
+                            files=report_files,
                         )
                     )
         except OSError as error:
@@ -205,7 +197,7 @@ class ProjectScanner:
                 "Error recorriendo el proyecto.",
                 error,
                 operation="scan_project",
-                file_path=source_folder
+                file_path=source_folder,
             )
             return ReportProject(name=project.name, source_path=project.source_path)
 
@@ -226,7 +218,7 @@ class ProjectScanner:
                 "Error leyendo archivo de proyecto.",
                 error,
                 operation="read_project_file",
-                file_path=report_file.absolute_path
+                file_path=report_file.absolute_path,
             )
         return report_file
 
@@ -239,26 +231,22 @@ class ProjectScanner:
             prefix="",
             output_lines=lines,
             source_folder=source_folder,
-            gitignore_rules=gitignore_rules
+            gitignore_rules=gitignore_rules,
         )
         return "\n".join(lines) + "\n"
 
     def _build_tree_recursive(
-            self,
-            current_path: str,
-            prefix: str,
-            output_lines: list[str],
-            source_folder: str,
-            gitignore_rules: list[tuple[bool, bool, bool, str, bool]]
+        self,
+        current_path: str,
+        prefix: str,
+        output_lines: list[str],
+        source_folder: str,
+        gitignore_rules: list[tuple[bool, bool, bool, str, bool]],
     ):
         try:
             elements = sorted(os.listdir(current_path))
         except OSError as error:
-            log_warning(
-                str(error),
-                operation="build_tree",
-                file_path=current_path
-            )
+            log_warning(str(error), operation="build_tree", file_path=current_path)
             return
 
         filtered_elements = []
@@ -266,16 +254,15 @@ class ProjectScanner:
             element_path = os.path.join(current_path, element)
             relative_path = os.path.relpath(element_path, source_folder)
             if os.path.isdir(element_path):
-                if (
-                        element not in self.excluded_folders
-                        and not self._is_gitignore_excluded(relative_path, True, gitignore_rules)
+                if element not in self.excluded_folders and not self._is_gitignore_excluded(
+                    relative_path, True, gitignore_rules
                 ):
                     filtered_elements.append(element)
             else:
                 if (
-                        not matches_file_rule(element, self.excluded_files)
-                        and not self._is_gitignore_excluded(relative_path, False, gitignore_rules)
-                        and matches_file_rule(element, self.valid_extensions)
+                    not matches_file_rule(element, self.excluded_files)
+                    and not self._is_gitignore_excluded(relative_path, False, gitignore_rules)
+                    and matches_file_rule(element, self.valid_extensions)
                 ):
                     filtered_elements.append(element)
 
@@ -287,9 +274,5 @@ class ProjectScanner:
             if os.path.isdir(element_path):
                 extension = "│   " if pointer == "├── " else "    "
                 self._build_tree_recursive(
-                    element_path,
-                    prefix + extension,
-                    output_lines,
-                    source_folder,
-                    gitignore_rules
+                    element_path, prefix + extension, output_lines, source_folder, gitignore_rules
                 )

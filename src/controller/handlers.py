@@ -1,22 +1,31 @@
 import os
 import shutil
-import customtkinter
 from tkinter import filedialog
 
+import customtkinter
+
 import config
-from app_meta import APP_DISPLAY_NAME, APP_NAME_INTERNAL, APP_INSTALL_MARKER_FILE, APP_LINUX_DESKTOP_ID
+from app_logging import log_error, log_warning
+from app_meta import (
+    APP_DISPLAY_NAME,
+    APP_INSTALL_MARKER_FILE,
+    APP_LINUX_DESKTOP_ID,
+    APP_NAME_INTERNAL,
+)
 from file_rules import canonical_file_rule, normalize_file_rule_list, normalize_file_tag_list
-from view.dialogs import ConfirmDialog, ChoiceDialog, ExternalLinkDialog, MessageDialog
-from view.tags_dialog import TagsConfigDialog
+from i18n.translations import translate_default
+from platform_services import get_platform_service
+from view.dialogs import ChoiceDialog, ConfirmDialog, ExternalLinkDialog, MessageDialog
 from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
-from i18n.translations import translate_default
-from view.ui_constants import PROFILE_SWITCH_FADE_DELAY_MS, RESTORE_FADE_DELAY_MS
+from view.tags_dialog import TagsConfigDialog
 from view.ui_assets import get_app_icon_png_path
-from app_logging import log_error, log_warning
-from platform_services import get_platform_service
+from view.ui_constants import PROFILE_SWITCH_FADE_DELAY_MS, RESTORE_FADE_DELAY_MS
 
-def _get_effective_launcher_path(controller, provided_path=None, persist_changes=True, allow_script_fallback=False):
+
+def _get_effective_launcher_path(
+    controller, provided_path=None, persist_changes=True, allow_script_fallback=False
+):
     platform = controller.platform
     manual_path = platform.normalize_launcher_path(provided_path)
     saved_path = platform.normalize_launcher_path(controller.config.get("custom_exe_path", ""))
@@ -27,12 +36,19 @@ def _get_effective_launcher_path(controller, provided_path=None, persist_changes
         return manual_path
 
     if installed_path:
-        if persist_changes and platform.normalize_compare_path(saved_path) != platform.normalize_compare_path(installed_path):
+        if persist_changes and platform.normalize_compare_path(
+            saved_path
+        ) != platform.normalize_compare_path(installed_path):
             controller.config["custom_exe_path"] = installed_path
             save_preferences_silent(controller)
         return installed_path
 
-    if saved_path and runtime_path and platform.normalize_compare_path(saved_path) == platform.normalize_compare_path(runtime_path):
+    if (
+        saved_path
+        and runtime_path
+        and platform.normalize_compare_path(saved_path)
+        == platform.normalize_compare_path(runtime_path)
+    ):
         saved_path = ""
         if persist_changes and controller.config.get("custom_exe_path", ""):
             controller.config["custom_exe_path"] = ""
@@ -51,6 +67,7 @@ def _get_effective_launcher_path(controller, provided_path=None, persist_changes
 # MANEJADORES DE RUTAS Y ARCHIVOS
 # =============================================================================
 
+
 def select_destination_path(controller):
     choice = ChoiceDialog.ask(
         parent=controller.view,
@@ -59,7 +76,7 @@ def select_destination_path(controller):
         option1_text=controller.view._tr("dlg_dest_choice_op1"),
         option2_text=controller.view._tr("dlg_dest_choice_op2"),
         option1_value="default",
-        option2_value="custom"
+        option2_value="custom",
     )
 
     if choice == "default":
@@ -67,10 +84,14 @@ def select_destination_path(controller):
         controller.view.show_message("info_title", "dest_set_default_msg")
 
     elif choice == "custom":
-        path = filedialog.askdirectory(parent=controller.view, title=controller.view._tr("btn_sel_lecturas"))
+        path = filedialog.askdirectory(
+            parent=controller.view, title=controller.view._tr("btn_sel_lecturas")
+        )
         if path:
             custom_path = os.path.join(path, "Lecturas")
-            controller.config.update({"use_default_path": False, "custom_lecturas_path": custom_path})
+            controller.config.update(
+                {"use_default_path": False, "custom_lecturas_path": custom_path}
+            )
             controller.view.show_message("info_title", "dest_set_custom_msg", custom_path)
 
     controller._update_active_lecturas_path()
@@ -84,7 +105,7 @@ def open_destination_folder(controller):
             log_warning(
                 "No se pudo abrir la carpeta de lecturas.",
                 operation="open_destination_folder",
-                file_path=path
+                file_path=path,
             )
     else:
         controller.view.show_message("info_title", "msg_select_dest")
@@ -149,7 +170,7 @@ def open_last_report(controller):
             log_warning(
                 "No se pudo abrir el ultimo reporte.",
                 operation="open_last_report",
-                file_path=latest_report_path
+                file_path=latest_report_path,
             )
     else:
         controller.view.show_message("info_title", "msg_no_report_yet")
@@ -161,8 +182,11 @@ def delete_all_readings(controller):
         controller.view.show_message("info_title", "msg_select_dest")
         return
 
-    if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_del_title"),
-                         controller.view._tr("confirm_del_prompt")):
+    if ConfirmDialog.ask(
+        controller.view,
+        controller.view._tr("confirm_del_title"),
+        controller.view._tr("confirm_del_prompt"),
+    ):
         try:
             shutil.rmtree(path)
             os.makedirs(path, exist_ok=True)
@@ -170,10 +194,7 @@ def delete_all_readings(controller):
             controller.view.show_message("info_title", "msg_delete_success", os.path.basename(path))
         except Exception as e:
             log_error(
-                "Error eliminando lecturas.",
-                e,
-                operation="delete_all_readings",
-                file_path=path
+                "Error eliminando lecturas.", e, operation="delete_all_readings", file_path=path
             )
             controller.view.show_message("error_title", "msg_delete_error", str(e))
 
@@ -181,6 +202,7 @@ def delete_all_readings(controller):
 # =============================================================================
 # MANEJADORES DE FILTROS (TAGS)
 # =============================================================================
+
 
 def show_view_config_dialog(controller):
     current_folders = controller.config.get("etiquetas_carpetas_importantes", [])
@@ -200,7 +222,7 @@ def show_view_config_dialog(controller):
         allow_autodetect=True,
         excluded_folders=excl_folders,
         excluded_files=excl_files,
-        media_extensions=media_exts
+        media_extensions=media_exts,
     )
     dialog.present()
     result = dialog.wait_result()
@@ -225,7 +247,7 @@ def show_no_view_config_dialog(controller):
         files_prompt=controller.view._tr("dlg_nover_file_prompt"),
         initial_files=current_files,
         extra_checkbox_text=controller.view._tr("chk_use_gitignore"),
-        extra_checkbox_value=use_gitignore_exclusions
+        extra_checkbox_value=use_gitignore_exclusions,
     )
     dialog.present()
     result = dialog.wait_result()
@@ -247,8 +269,14 @@ def show_etiqueta_config_dialog(controller):
     else:
         current_files = tags_stored
 
-    view_exts = {canonical_file_rule(t["nombre"]) for t in controller.config.get("etiquetas_extensiones_incluidas", [])}
-    no_view_items = {canonical_file_rule(t["nombre"]) for t in controller.config.get("etiquetas_archivos_excluidos", [])}
+    view_exts = {
+        canonical_file_rule(t["nombre"])
+        for t in controller.config.get("etiquetas_extensiones_incluidas", [])
+    }
+    no_view_items = {
+        canonical_file_rule(t["nombre"])
+        for t in controller.config.get("etiquetas_archivos_excluidos", [])
+    }
     forbidden_set = view_exts.union(no_view_items)
 
     dialog = controller.view.get_media_dialog()
@@ -258,7 +286,7 @@ def show_etiqueta_config_dialog(controller):
         initial_folders=None,
         files_prompt=controller.view._tr("dlg_etiqueta_file_prompt"),
         initial_files=current_files,
-        forbidden_items=forbidden_set
+        forbidden_items=forbidden_set,
     )
     dialog.present()
     result = dialog.wait_result()
@@ -278,11 +306,14 @@ def show_etiqueta_config_dialog(controller):
 # MANEJADORES DE AJUSTES Y SHORTCUTS
 # =============================================================================
 
+
 def show_settings_dialog(controller):
     current_ext = controller.config.get("report_extension", ".md")
     current_exe = controller.config.get("custom_exe_path", "")
     if controller.platform.supports_launcher_configuration():
-        current_exe = _get_effective_launcher_path(controller, persist_changes=True, allow_script_fallback=False)
+        current_exe = _get_effective_launcher_path(
+            controller, persist_changes=True, allow_script_fallback=False
+        )
 
     def on_save(new_ext, new_exe_path):
         _update_settings_values(controller, new_ext, new_exe_path)
@@ -304,7 +335,7 @@ def show_settings_dialog(controller):
         on_shortcut_callback=on_shortcut,
         on_export_callback=on_export,
         on_import_callback=on_import,
-        platform_capabilities=controller.platform.get_capabilities()
+        platform_capabilities=controller.platform.get_capabilities(),
     )
     dialog.present()
     dialog.wait_result()
@@ -320,24 +351,32 @@ def _export_app_configuration(controller, parent_window=None):
         filetypes=[
             (controller.view._tr("filetype_config_json"), f"*{config.EXPORT_FILE_EXTENSION}"),
             (controller.view._tr("filetype_json"), "*.json"),
-            (controller.view._tr("filetype_all"), "*.*")
-        ]
+            (controller.view._tr("filetype_all"), "*.*"),
+        ],
     )
     if not file_path:
         return
     try:
         config.export_config_to_file(file_path, controller.config)
-        msg_parent = parent_window if parent_window and parent_window.winfo_exists() else controller.view
-        msg_parent.after(120, lambda: _show_msg_safe(msg_parent, "info_title", "msg_export_success", file_path))
+        msg_parent = (
+            parent_window if parent_window and parent_window.winfo_exists() else controller.view
+        )
+        msg_parent.after(
+            120, lambda: _show_msg_safe(msg_parent, "info_title", "msg_export_success", file_path)
+        )
     except Exception as e:
         log_error(
-            "Error exportando configuracion.",
-            e,
-            operation="export_config",
-            file_path=file_path
+            "Error exportando configuracion.", e, operation="export_config", file_path=file_path
         )
-        msg_parent = parent_window if parent_window and parent_window.winfo_exists() else controller.view
-        msg_parent.after(120, lambda: _show_msg_safe(msg_parent, "error_title", "msg_export_error", str(e)))
+        msg_parent = (
+            parent_window if parent_window and parent_window.winfo_exists() else controller.view
+        )
+        msg_parent.after(
+            120,
+            lambda error_message=str(e): _show_msg_safe(
+                msg_parent, "error_title", "msg_export_error", error_message
+            ),
+        )
 
 
 def _import_app_configuration(controller, parent_window=None):
@@ -347,8 +386,8 @@ def _import_app_configuration(controller, parent_window=None):
         filetypes=[
             (controller.view._tr("filetype_config_json"), f"*{config.EXPORT_FILE_EXTENSION}"),
             (controller.view._tr("filetype_json"), "*.json"),
-            (controller.view._tr("filetype_all"), "*.*")
-        ]
+            (controller.view._tr("filetype_all"), "*.*"),
+        ],
     )
     if not file_path:
         return
@@ -357,19 +396,23 @@ def _import_app_configuration(controller, parent_window=None):
         runtime_config = config.import_config_from_file(file_path)
     except Exception as e:
         log_error(
-            "Error importando configuracion.",
-            e,
-            operation="import_config",
-            file_path=file_path
+            "Error importando configuracion.", e, operation="import_config", file_path=file_path
         )
-        msg_parent = parent_window if parent_window and parent_window.winfo_exists() else controller.view
-        msg_parent.after(120, lambda: _show_msg_safe(msg_parent, "error_title", "msg_import_error", str(e)))
+        msg_parent = (
+            parent_window if parent_window and parent_window.winfo_exists() else controller.view
+        )
+        msg_parent.after(
+            120,
+            lambda error_message=str(e): _show_msg_safe(
+                msg_parent, "error_title", "msg_import_error", error_message
+            ),
+        )
         return
 
     confirmed = ConfirmDialog.ask(
         controller.view,
         controller.view._tr("confirm_import_config_title"),
-        controller.view._tr("confirm_import_config_prompt")
+        controller.view._tr("confirm_import_config_prompt"),
     )
     if not confirmed:
         return
@@ -381,7 +424,9 @@ def _import_app_configuration(controller, parent_window=None):
             pass
 
     controller.view.prepare_soft_refresh()
-    controller.view.after(RESTORE_FADE_DELAY_MS, lambda: _execute_import_config(controller, runtime_config, file_path))
+    controller.view.after(
+        RESTORE_FADE_DELAY_MS, lambda: _execute_import_config(controller, runtime_config, file_path)
+    )
 
 
 def _execute_import_config(controller, runtime_config, file_path):
@@ -401,14 +446,21 @@ def _execute_import_config(controller, runtime_config, file_path):
             "Error aplicando configuracion importada.",
             e,
             operation="apply_imported_config",
-            file_path=file_path
+            file_path=file_path,
         )
         controller.view.complete_soft_refresh()
-        controller.view.after(120, lambda: controller.view.show_message("error_title", "msg_import_error", str(e)))
+        controller.view.after(
+            120,
+            lambda error_message=str(e): controller.view.show_message(
+                "error_title", "msg_import_error", error_message
+            ),
+        )
         return
 
     controller.view.after(180, controller.view.complete_soft_refresh)
-    controller.view.after(320, lambda: controller.view.show_message("info_title", "msg_import_success", file_path))
+    controller.view.after(
+        320, lambda: controller.view.show_message("info_title", "msg_import_success", file_path)
+    )
 
 
 def _update_settings_values(controller, new_ext, new_exe_path):
@@ -425,14 +477,20 @@ def _update_settings_values(controller, new_ext, new_exe_path):
         if installed_path:
             clean_path = installed_path
 
-        current_saved_path = controller.platform.normalize_launcher_path(controller.config.get("custom_exe_path", ""))
+        current_saved_path = controller.platform.normalize_launcher_path(
+            controller.config.get("custom_exe_path", "")
+        )
         runtime_path = controller.platform.get_runtime_executable()
 
         if clean_path and runtime_path and not installed_path:
-            if controller.platform.normalize_compare_path(clean_path) == controller.platform.normalize_compare_path(runtime_path):
+            if controller.platform.normalize_compare_path(
+                clean_path
+            ) == controller.platform.normalize_compare_path(runtime_path):
                 clean_path = ""
 
-        if controller.platform.normalize_compare_path(current_saved_path) != controller.platform.normalize_compare_path(clean_path):
+        if controller.platform.normalize_compare_path(
+            current_saved_path
+        ) != controller.platform.normalize_compare_path(clean_path):
             controller.config["custom_exe_path"] = clean_path
             changed = True
 
@@ -447,7 +505,12 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
     if not platform.supports_shortcut_mode(mode):
         msg_parent.after(
             300,
-            lambda: _show_msg_safe(msg_parent, "error_title", "msg_shortcut_error", f"Unsupported platform action: {mode}")
+            lambda: _show_msg_safe(
+                msg_parent,
+                "error_title",
+                "msg_shortcut_error",
+                f"Unsupported platform action: {mode}",
+            ),
         )
         return
 
@@ -457,16 +520,18 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
     if manual_path:
         target_path = manual_path
         if not platform.is_valid_launcher(target_path):
-            msg_parent.after(300, lambda: _show_msg_safe(msg_parent, "error_title", "msg_path_invalid"))
+            msg_parent.after(
+                300, lambda: _show_msg_safe(msg_parent, "error_title", "msg_path_invalid")
+            )
             return
-        if platform.normalize_compare_path(saved_path) != platform.normalize_compare_path(target_path):
+        if platform.normalize_compare_path(saved_path) != platform.normalize_compare_path(
+            target_path
+        ):
             controller.config["custom_exe_path"] = target_path
             save_preferences_silent(controller)
     else:
         target_path = _get_effective_launcher_path(
-            controller,
-            persist_changes=True,
-            allow_script_fallback=True
+            controller, persist_changes=True, allow_script_fallback=True
         )
 
     if not target_path or not platform.is_valid_launcher(target_path):
@@ -482,14 +547,16 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
         start_instruction=controller.view._tr("lnk_name_start"),
         display_name=APP_DISPLAY_NAME,
         desktop_id=APP_LINUX_DESKTOP_ID,
-        icon_path=get_app_icon_png_path()
+        icon_path=get_app_icon_png_path(),
     )
 
     if not result.success:
         error_text = result.error or result.status or mode
         msg_parent.after(
             300,
-            lambda text=error_text: _show_msg_safe(msg_parent, "error_title", "msg_shortcut_error", text)
+            lambda text=error_text: _show_msg_safe(
+                msg_parent, "error_title", "msg_shortcut_error", text
+            ),
         )
         return
 
@@ -501,7 +568,7 @@ def _create_system_shortcut(controller, mode, user_exe_path, parent_window=None)
         "taskbar_manual": "msg_shortcut_manual_taskbar",
         "start_manual": "msg_shortcut_manual_start",
         "linux_desktop_created": "msg_shortcut_linux_desktop_ok",
-        "linux_menu_created": "msg_shortcut_linux_menu_ok"
+        "linux_menu_created": "msg_shortcut_linux_menu_ok",
     }
     msg_key = message_map.get(result.status)
     if msg_key:
@@ -522,11 +589,7 @@ def _show_msg_safe(parent, title_key, msg_key, *args):
         else:
             MessageDialog(parent, translate_default(title_key), translate_default(msg_key, *args))
     except Exception as error:
-        log_error(
-            "Error mostrando mensaje seguro.",
-            error,
-            operation="show_safe_message"
-        )
+        log_error("Error mostrando mensaje seguro.", error, operation="show_safe_message")
         try:
             if hasattr(parent, "restore_ui_from_modal"):
                 parent.restore_ui_from_modal()
@@ -553,21 +616,34 @@ def _resolve_translation(parent, key_or_text, *args):
     return str(key_or_text)
 
 
-def open_external_link_with_confirmation(parent, url, title_key, message_key, target_label=None, continue_key=None, cancel_key=None, platform_service=None):
+def open_external_link_with_confirmation(
+    parent,
+    url,
+    title_key,
+    message_key,
+    target_label=None,
+    continue_key=None,
+    cancel_key=None,
+    platform_service=None,
+):
     if not url:
         return False
     try:
         title = _resolve_translation(parent, title_key)
         message = _resolve_translation(parent, message_key)
-        continue_text = _resolve_translation(parent, continue_key or "btn_continue_external") or translate_default(continue_key or "btn_continue_external")
-        cancel_text = _resolve_translation(parent, cancel_key or "btn_cancel_simple") or translate_default(cancel_key or "btn_cancel_simple")
+        continue_text = _resolve_translation(
+            parent, continue_key or "btn_continue_external"
+        ) or translate_default(continue_key or "btn_continue_external")
+        cancel_text = _resolve_translation(
+            parent, cancel_key or "btn_cancel_simple"
+        ) or translate_default(cancel_key or "btn_cancel_simple")
         should_open = ExternalLinkDialog.ask(
             parent=parent,
             title=title,
             message=message,
             target_label=target_label,
             continue_text=continue_text,
-            cancel_text=cancel_text
+            cancel_text=cancel_text,
         )
         if not should_open:
             return False
@@ -577,7 +653,7 @@ def open_external_link_with_confirmation(parent, url, title_key, message_key, ta
         log_warning(
             "El sistema no pudo abrir el enlace externo.",
             operation="open_external_url",
-            file_path=str(url)
+            file_path=str(url),
         )
         return False
     except Exception as error:
@@ -585,7 +661,7 @@ def open_external_link_with_confirmation(parent, url, title_key, message_key, ta
             "Error abriendo enlace externo.",
             error,
             operation="open_external_url",
-            file_path=str(url)
+            file_path=str(url),
         )
         try:
             if hasattr(parent, "restore_ui_from_modal"):
@@ -599,6 +675,7 @@ def open_external_link_with_confirmation(parent, url, title_key, message_key, ta
 # MANEJADORES DE PERFILES
 # =============================================================================
 
+
 def manage_profiles(controller):
     _open_profiles_dialog_safe(controller)
 
@@ -608,10 +685,7 @@ def _apply_runtime_config(controller, runtime_config):
     try:
         controller.view.config = controller.config
     except Exception as error:
-        log_warning(
-            str(error),
-            operation="apply_runtime_config"
-        )
+        log_warning(str(error), operation="apply_runtime_config")
 
 
 def _save_meta_immediate(controller, profiles_snapshot, active_id=None):
@@ -627,9 +701,17 @@ def _save_meta_immediate(controller, profiles_snapshot, active_id=None):
 
     current_active_id = controller.config.get("_active_profile_id", "default")
     if current_active_id in clean_meta:
-        clean_meta[current_active_id] = config.extract_profile_from_runtime_config(controller.config, current_active_id)
+        clean_meta[current_active_id] = config.extract_profile_from_runtime_config(
+            controller.config, current_active_id
+        )
 
-    target_active_id = active_id if active_id in clean_meta else current_active_id if current_active_id in clean_meta else "default"
+    target_active_id = (
+        active_id
+        if active_id in clean_meta
+        else current_active_id
+        if current_active_id in clean_meta
+        else "default"
+    )
     runtime_config = config.build_runtime_config(clean_meta, target_active_id)
     _apply_runtime_config(controller, runtime_config)
     save_preferences_silent(controller)
@@ -646,7 +728,7 @@ def _open_profiles_dialog_safe(controller):
     dialog.load_state(
         profiles_meta=profiles,
         active_id=active_id,
-        on_save_callback=lambda p, a: _save_meta_immediate(controller, p, a)
+        on_save_callback=lambda p, a: _save_meta_immediate(controller, p, a),
     )
     dialog.present()
     result = dialog.wait_result()
@@ -659,7 +741,7 @@ def _open_profiles_dialog_safe(controller):
 def _switch_profile_sequence(controller, new_active_id, new_profiles_meta):
     controller.view.switch_profile_animated(
         apply_callback=lambda: _load_profile_data(controller, new_active_id, new_profiles_meta),
-        complete_callback=lambda: _show_app_after_switch(controller, new_active_id)
+        complete_callback=lambda: _show_app_after_switch(controller, new_active_id),
     )
 
 
@@ -668,7 +750,9 @@ def _load_profile_data(controller, new_active_id, new_profiles_meta):
         merged_profiles = config.clone_profiles_meta(new_profiles_meta)
         current_active_id = controller.config.get("_active_profile_id", "default")
         if current_active_id in merged_profiles:
-            merged_profiles[current_active_id] = config.extract_profile_from_runtime_config(controller.config, current_active_id)
+            merged_profiles[current_active_id] = config.extract_profile_from_runtime_config(
+                controller.config, current_active_id
+            )
 
         runtime_config = config.build_runtime_config(merged_profiles, new_active_id)
         _apply_runtime_config(controller, runtime_config)
@@ -685,10 +769,7 @@ def _load_profile_data(controller, new_active_id, new_profiles_meta):
 
     except Exception as e:
         log_error(
-            "Error cargando perfil.",
-            e,
-            operation="load_profile",
-            file_path=str(new_active_id)
+            "Error cargando perfil.", e, operation="load_profile", file_path=str(new_active_id)
         )
 
 
@@ -700,9 +781,13 @@ def _show_app_after_switch(controller, new_active_id):
 # MANEJADORES DE RESTAURACION Y OTROS
 # =============================================================================
 
+
 def restore_default_settings(controller):
-    if ConfirmDialog.ask(controller.view, controller.view._tr("confirm_restore_title"),
-                         controller.view._tr("confirm_restore_prompt")):
+    if ConfirmDialog.ask(
+        controller.view,
+        controller.view._tr("confirm_restore_title"),
+        controller.view._tr("confirm_restore_prompt"),
+    ):
         controller.view.prepare_soft_refresh()
         controller.view.after(RESTORE_FADE_DELAY_MS, lambda: _execute_restore(controller))
 
@@ -710,7 +795,9 @@ def restore_default_settings(controller):
 def _execute_restore(controller):
     try:
         config.delete_config_file()
-        runtime_config = config.build_runtime_config({"default": config.DEFAULT_CONFIG_VALUES}, "default")
+        runtime_config = config.build_runtime_config(
+            {"default": config.DEFAULT_CONFIG_VALUES}, "default"
+        )
         _apply_runtime_config(controller, runtime_config)
         controller._update_active_lecturas_path()
 
@@ -723,20 +810,16 @@ def _execute_restore(controller):
         controller.view.apply_theme()
         save_preferences_silent(controller)
     except Exception as e:
-        log_error(
-            "Error restaurando configuracion.",
-            e,
-            operation="restore_default_settings"
-        )
+        log_error("Error restaurando configuracion.", e, operation="restore_default_settings")
 
     controller.view.after(300, lambda: _finish_restore(controller))
 
 
 def _finish_restore(controller):
     controller.view.complete_soft_refresh()
-    controller.view.after(100, lambda:
-    controller.view.show_message("info_title", "msg_restore_success")
-                          )
+    controller.view.after(
+        100, lambda: controller.view.show_message("info_title", "msg_restore_success")
+    )
 
 
 def save_preferences_silent(controller):

@@ -1,232 +1,204 @@
-# GUÍA MAESTRA DE COMPILACIÓN Y RELEASE
+# Compilación y release
 
-## 1. Resultado oficial de la Versión 10
+## Objetivo
 
-El flujo de release genera exactamente tres artefactos de aplicación dentro de `downloads/`:
-
-* `LectorcitoPro-Portable.exe` — portable para Windows.
-* `LectorcitoPro-Setup.exe` — instalador para Windows.
-* `LectorcitoPro-Linux-x86_64` — portable Onefile para Linux x86_64.
-
-Linux utiliza un único binario portable. No se genera un segundo instalador Linux.
-
-## 2. Punto único de entrada
-
-Desde la raíz del proyecto se ejecuta únicamente:
+El release de Lectorcito Pro se genera desde Windows con un único punto de entrada:
 
 ```powershell
 .\release.bat
 ```
 
-`release.bat` delega la orquestación a `scripts/release.ps1`. No es necesario ejecutar manualmente los scripts internos durante un release normal.
+El flujo valida y autocorrige el código antes de iniciar cualquier compilación. Los tres artefactos finales parten del mismo código fuente validado y ninguno reutiliza otro artefacto previamente construido.
 
-## 3. Orden del release integral
+## Requisitos
 
-El flujo se ejecuta en este orden:
+- Windows 10 u 11.
+- Python 3.11 o 3.12 compatible con el entorno de build de Windows.
+- Inno Setup 6.
+- WSL con una distribución Linux compatible y Python 3.11, 3.12 o 3.13 para el artefacto Linux.
+- Conexión a Internet cuando sea necesario preparar dependencias o herramientas que todavía no estén en caché.
 
-1. Validación de estructura y disponibilidad de WSL.
-2. Setup limpio del entorno Windows.
-3. Build de `LectorcitoPro-Portable.exe`.
-4. Firma y verificación del portable Windows.
-5. Build de `LectorcitoPro-Setup.exe` reutilizando el portable ya firmado como binario instalado.
-6. Firma y verificación del instalador Windows.
-7. Setup y build Linux mediante WSL.
-8. Verificación de los tres artefactos.
-9. Cálculo de SHA-256.
-10. Resumen final.
+`release.bat` prepara el entorno `.venv-build`; no es necesario ejecutar manualmente los scripts internos para un release normal.
 
-Si una etapa falla, el flujo se detiene y devuelve un código de error.
+## Calidad integral antes del build
 
-## 4. Requisitos de Windows
+La calidad se ejecuta antes de compilar cualquier artefacto y tiene dos fases.
 
-* Windows 10 o Windows 11.
-* Python 3.11 o 3.12.
-* Acceso a Internet para instalar dependencias cuando sea necesario.
-* Inno Setup 6.
-* PowerShell con `New-SelfSignedCertificate` disponible para el esquema de firma local actual.
-* WSL con al menos una distribución Linux instalada para generar el artefacto Linux desde el mismo `release.bat`.
+### Fase de autocorrección
 
-Para el binario Linux con mayor compatibilidad entre Ubuntu, Kali y Arch x86_64, se recomienda utilizar una distribución Ubuntu LTS como entorno de compilación WSL.
+1. Sincronización de metadata web desde `src/app_meta.py`.
+2. Ruff con correcciones automáticas seguras.
+3. Ruff Format.
+4. Prettier con escritura sobre formatos compatibles.
+5. ESLint con `--fix` sobre `resources/js/**/*.js`.
 
-## 5. Requisitos de Linux
+Los cambios efectuados por los formatters permanecen en el working tree.
 
-El script `scripts/linux/setup.sh` reconoce automáticamente sistemas basados en:
+### Fase de validación estricta
 
-* `apt-get`, como Ubuntu y Kali.
-* `pacman`, como Arch Linux.
+1. Ruff lint final.
+2. Ruff format check.
+3. ESLint final sin modificaciones.
+4. Prettier check.
+5. Validación de `pyproject.toml` con `tomllib`.
+6. Compilación sintáctica de Python.
+7. Validación sintáctica de los scripts PowerShell.
 
-Instala o verifica las herramientas necesarias para Python, Tk, compilación nativa, `patchelf`, `ccache`, `xdg-utils` y utilidades de escritorio.
+Si cualquiera de estas comprobaciones falla, el release se detiene antes de compilar.
 
-## 6. Dependencias Python
+## Herramientas de calidad
 
-Las dependencias se separan por responsabilidad:
+Ruff se instala dentro de `.venv-build` desde `requirements/quality.txt`.
 
-```text
-requirements/
-├── runtime.txt
-├── windows.txt
-├── linux.txt
-├── build.txt
-└── dev.txt
-```
+Prettier y ESLint se instalan como dependencias de desarrollo definidas en `package.json`. `scripts/windows/setup_node.ps1` utiliza Node.js 24.19.0: reutiliza una instalación compatible si está disponible o prepara una copia portable verificada por SHA-256 dentro de `.tools/`. Ni `.tools/` ni `node_modules/` forman parte del runtime ni de los artefactos finales.
 
-`requirements.txt` en la raíz instala únicamente el runtime común y se conserva como punto de entrada simple para desarrollo.
+## Arquitectura de Windows
 
-Windows instala `requirements/windows.txt` junto con `requirements/build.txt`. Linux instala `requirements/linux.txt` junto con `requirements/build.txt`. Las herramientas de Jupyter, IPython y depuración quedan fuera del runtime productivo y solo viven en `requirements/dev.txt`.
-
-La versión declarada en `pyproject.toml` admite Python 3.11, 3.12 y 3.13. El setup Windows utiliza 3.11 o 3.12; el setup Linux admite también 3.13.
-
-Cuando se modifique `src/app_meta.py`, la metadata web se sincroniza explícitamente con:
-
-```powershell
-python src/app_meta.py
-```
-
-Importar `app_meta` desde la aplicación ya no modifica archivos.
-
-## 7. Artefacto Linux
-
-El artefacto Linux oficial es:
+Portable e Instalable son compilaciones distintas:
 
 ```text
-LectorcitoPro-Linux-x86_64
+src/main.py
+    |
+    +--> Nuitka --mode=onefile
+    |       |
+    |       +--> downloads/LectorcitoPro-Portable.exe
+    |
+    +--> Nuitka --mode=standalone
+            |
+            +--> build/windows/installed-app/LectorcitoPro.dist/
+                    |
+                    +--> Inno Setup
+                            |
+                            +--> downloads/LectorcitoPro-Setup.exe
 ```
 
-Se genera con Nuitka en modo Onefile y contiene la aplicación en un único archivo distribuible.
+`Portable != Installed executable`.
 
-Después de descargarlo en Linux puede ser necesario ejecutar:
+El instalador no contiene una copia renombrada de `LectorcitoPro-Portable.exe`. Inno Setup empaqueta recursivamente la distribución standalone generada específicamente para la aplicación instalada.
 
-```bash
-chmod +x LectorcitoPro-Linux-x86_64
-./LectorcitoPro-Linux-x86_64
-```
+## Windows Portable
 
-No se genera `.exe`, `.tar.gz`, `.deb`, `.rpm` ni un segundo instalador Linux dentro del flujo oficial.
+`scripts/windows/build_portable.bat` compila `src/main.py` con Nuitka Onefile. Utiliza:
 
-## 8. Firma de Windows
+- metadata centralizada de `src/app_meta.py`;
+- el icono oficial;
+- el plugin de Tk;
+- `customtkinter`;
+- la carpeta `resources/`.
 
-La firma actual continúa utilizando un certificado autofirmado local.
-
-El flujo integral firma primero el portable. Después el instalador reutiliza ese mismo binario firmado como ejecutable interno y, finalmente, el propio instalador también se firma.
-
-Esto permite que:
-
-* `LectorcitoPro-Portable.exe` quede firmado.
-* El `LectorcitoPro.exe` contenido dentro del instalador provenga del mismo binario firmado.
-* `LectorcitoPro-Setup.exe` quede firmado después de ser empaquetado.
-
-El autofirmado local sirve para validación y pruebas, pero no sustituye un certificado público de confianza para SmartScreen.
-
-## 9. Logs
-
-Cada ejecución crea una carpeta con timestamp:
+El directorio temporal de este build es `build/windows/portable/`. El resultado final es:
 
 ```text
-build/release_logs/
-└── YYYYMMDD-HHMMSS/
-    ├── 01-setup-windows.log
-    ├── 02-build-portable.log
-    ├── 03-sign-portable.log
-    ├── 04-build-installer.log
-    ├── 05-sign-installer.log
-    ├── 06-linux-release.log
-    └── 07-summary.log
+downloads/LectorcitoPro-Portable.exe
 ```
 
-El resumen final incluye la ruta y SHA-256 de cada artefacto.
+## Windows Installed App
 
-## 10. Scripts internos
-
-Los scripts internos quedan organizados así:
+`scripts/windows/build_installed_app.bat` vuelve a compilar `src/main.py`, esta vez con Nuitka Standalone. Su salida esperada es:
 
 ```text
-scripts/
-├── release.ps1
-├── windows/
-│   ├── setup.bat
-│   ├── build_portable.bat
-│   ├── build_installer.bat
-│   └── sign_application.ps1
-└── linux/
-    ├── setup.sh
-    ├── build.sh
-    └── release.sh
+build/windows/installed-app/LectorcitoPro.dist/
+    LectorcitoPro.exe
+    ...dependencias del runtime...
+    resources/
 ```
 
-Durante un release normal no deben ejecutarse manualmente.
+Esta distribución es independiente del Portable y se conserva hasta que Inno Setup termina de empaquetarla.
 
-## 11. Ejecución manual de emergencia
+## Windows Installer
 
-### Windows setup
+`scripts/windows/build_installer.bat` requiere la distribución standalone anterior y genera un script temporal de Inno Setup dentro de `build/windows/installer/`.
 
-```powershell
-.\scripts\windows\setup.bat
+La instalación es por usuario:
+
+```ini
+PrivilegesRequired=lowest
+DefaultDirName={localappdata}\Programs\Lectorcito Pro
 ```
 
-### Windows portable
+El instalador crea los accesos directos del usuario actual y copia recursivamente la distribución standalone, además de `LICENSE` y el marker de instalación utilizado por la lógica existente de la aplicación.
 
-```powershell
-.\scripts\windows\build_portable.bat
+El resultado final es:
+
+```text
+downloads/LectorcitoPro-Setup.exe
 ```
 
-### Firmar portable
+> Las releases actualmente se distribuyen sin firma de código hasta disponer de una identidad de firma pública legítima. El proyecto no genera ni instala certificados autofirmados como sustituto.
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\sign_application.ps1 -Mode Portable
+## Linux
+
+El empaquetado Linux conserva su arquitectura actual. El release general sigue invocando:
+
+```text
+scripts/linux/setup.sh
+scripts/linux/build.sh
+scripts/linux/release.sh
 ```
 
-### Windows installer
+El artefacto continúa siendo Nuitka Onefile:
 
-El instalador requiere que el portable exista previamente y esté firmado.
-
-```powershell
-.\scripts\windows\build_installer.bat
+```text
+downloads/LectorcitoPro-Linux-x86_64
 ```
 
-### Firmar instalador
+Este refactor no convierte Linux a Standalone ni agrega formatos adicionales.
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\sign_application.ps1 -Mode Installer
+## Orden del release
+
+`release.bat` delega en `scripts/release.ps1`, que ejecuta:
+
+1. Setup Windows.
+2. Calidad integral y autofix.
+3. Validación estricta.
+4. Build Windows Portable Onefile.
+5. Build Windows Installed App Standalone.
+6. Build Windows Installer.
+7. Preparación del sistema Linux en WSL.
+8. Build Linux Portable Onefile.
+9. Verificación de artefactos.
+10. SHA-256 y resumen final.
+
+Un fallo en cualquier etapa impide continuar a las etapas posteriores.
+
+## Directorios de trabajo
+
+```text
+build/
+    release_logs/
+    windows/
+        portable/
+        installed-app/
+        installer/
+    linux/
 ```
 
-### Linux dentro de Linux o WSL
+`downloads/` contiene exclusivamente los artefactos finales:
 
-```bash
-bash scripts/linux/release.sh
+```text
+downloads/
+    LectorcitoPro-Portable.exe
+    LectorcitoPro-Setup.exe
+    LectorcitoPro-Linux-x86_64
 ```
 
-## 12. Solución de problemas
+Los logs se guardan por ejecución en `build/release_logs/YYYYMMDD-HHMMSS/`. Una ejecución exitosa elimina los temporales de compilación de Windows y Linux, pero conserva los logs y los cambios aplicados por Ruff, Prettier y ESLint.
 
-### WSL no está instalado
+## Resumen y hashes
 
-El release integral se detendrá antes de compilar. Instala WSL y una distribución Linux y vuelve a ejecutar `release.bat`.
+El resumen final registra como mínimo:
 
-### Inno Setup no está instalado
+- versión de la aplicación;
+- Python utilizado en Windows;
+- Nuitka utilizado en Windows;
+- Python utilizado en Linux;
+- ruta y SHA-256 del Portable Windows;
+- ruta y SHA-256 del Installer Windows;
+- ruta y SHA-256 del Portable Linux;
+- ruta de los logs.
 
-Instala Inno Setup 6 o define `ISCC_PATH` antes de ejecutar el release:
+También se verifica que el ejecutable standalone instalado y el Portable no sean el mismo archivo byte por byte.
 
-```powershell
-$env:ISCC_PATH="C:\Users\TuUsuario\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
-.\release.bat
-```
+## Validación manual de release candidata
 
-### Nuitka falla descargando herramientas
-
-Conserva las soluciones manuales de caché de Nuitka utilizadas anteriormente para MinGW64 y Dependency Walker. Después vuelve a ejecutar `release.bat`.
-
-### La firma falla
-
-El detalle queda registrado en `build/release_logs/<timestamp>/03-sign-portable.log` o `05-sign-installer.log`.
-
-### El build Linux falla
-
-Revisa `build/release_logs/<timestamp>/06-linux-release.log`. Si quieres aislar el problema, abre la distribución WSL y ejecuta:
-
-```bash
-cd /ruta/al/proyecto
-bash scripts/linux/release.sh
-```
-
-## 13. Carpeta de salida
-
-Se conserva `downloads/` como carpeta oficial de salida porque ya forma parte de la metadata y del flujo de publicación del proyecto. La infraestructura interna queda separada en `scripts/` y `build/`, mientras `downloads/` contiene únicamente los artefactos que se distribuyen.
+Además de las verificaciones automáticas del pipeline, una release candidata debe probarse en Windows 10 y Windows 11, preferentemente también en Windows Sandbox o una VM limpia. Deben comprobarse el Portable, la instalación por usuario, los accesos directos, la ejecución de la aplicación instalada, la desinstalación y las funciones principales de generación de reportes.

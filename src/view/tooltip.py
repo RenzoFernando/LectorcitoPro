@@ -1,12 +1,35 @@
 import sys
 import weakref
-import customtkinter as ctk
 from tkinter import TclError
-from view.ui_constants import FONT_FAMILY_PRIMARY, get_theme_tokens, get_button_tokens, TOOLTIP_TRANSPARENT_COLOR, TOOLTIP_FRAME_CORNER_RADIUS, TOOLTIP_FRAME_BORDER_WIDTH, TOOLTIP_FONT_SIZE, TOOLTIP_WRAP_LENGTH, TOOLTIP_LABEL_PADX, TOOLTIP_LABEL_PADY, TOOLTIP_FADE_IN_STEP, TOOLTIP_FADE_OUT_STEP, TOOLTIP_FADE_INTERVAL_MS, TOOLTIP_AUTOHIDE_SECONDS, TOOLTIP_DEFAULT_DELAY_MS, TOOLTIP_DEFAULT_GAP, TOOLTIP_WINDOW_PAD, TOOLTIP_FALLBACK_WIDTH, TOOLTIP_FALLBACK_HEIGHT
+
+import customtkinter as ctk
+
+from view.ui_constants import (
+    FONT_FAMILY_PRIMARY,
+    TOOLTIP_AUTOHIDE_SECONDS,
+    TOOLTIP_DEFAULT_DELAY_MS,
+    TOOLTIP_DEFAULT_GAP,
+    TOOLTIP_FADE_IN_STEP,
+    TOOLTIP_FADE_INTERVAL_MS,
+    TOOLTIP_FADE_OUT_STEP,
+    TOOLTIP_FALLBACK_HEIGHT,
+    TOOLTIP_FALLBACK_WIDTH,
+    TOOLTIP_FONT_SIZE,
+    TOOLTIP_FRAME_BORDER_WIDTH,
+    TOOLTIP_FRAME_CORNER_RADIUS,
+    TOOLTIP_LABEL_PADX,
+    TOOLTIP_LABEL_PADY,
+    TOOLTIP_TRANSPARENT_COLOR,
+    TOOLTIP_WINDOW_PAD,
+    TOOLTIP_WRAP_LENGTH,
+    get_button_tokens,
+    get_theme_tokens,
+)
 
 # =============================================================================
 # DETECCION DE PANTALLA
 # =============================================================================
+
 
 def _is_windows() -> bool:
     return sys.platform.startswith("win")
@@ -76,6 +99,7 @@ def _get_monitor_workarea_for_point(x: int, y: int, widget):
 # =============================================================================
 # VENTANA COMPARTIDA DEL TOOLTIP
 # =============================================================================
+
 
 class _SharedTooltipWindow:
     _instance = None
@@ -313,10 +337,10 @@ class _SharedTooltipWindow:
         pad = TOOLTIP_WINDOW_PAD
         gap = int(gap)
 
-        space_right = (right - (wx + ww))
-        space_left = (wx - left)
-        space_bottom = (bottom - (wy + wh))
-        space_top = (wy - top)
+        space_right = right - (wx + ww)
+        space_left = wx - left
+        space_bottom = bottom - (wy + wh)
+        space_top = wy - top
 
         pl = placement.lower().strip() if placement else "auto"
         if pl == "auto":
@@ -355,11 +379,19 @@ class _SharedTooltipWindow:
 # CLASE WRAPPER (USO PUBLICO)
 # =============================================================================
 
+
 class CustomTooltip:
     _active_tooltip = None
     _instances = weakref.WeakSet()
 
-    def __init__(self, widget, text: str, delay: int = TOOLTIP_DEFAULT_DELAY_MS, placement: str = "auto", gap: int = TOOLTIP_DEFAULT_GAP):
+    def __init__(
+        self,
+        widget,
+        text: str,
+        delay: int = TOOLTIP_DEFAULT_DELAY_MS,
+        placement: str = "auto",
+        gap: int = TOOLTIP_DEFAULT_GAP,
+    ):
         self.widget = widget
         self._text = text or ""
         self.delay = int(delay) if delay is not None else 500

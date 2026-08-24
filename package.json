@@ -1,0 +1,11 @@
+{
+    "name": "lectorcito-pro-quality",
+    "private": true,
+    "version": "1.0.0",
+    "type": "module",
+    "devDependencies": {
+        "@eslint/js": "10.0.1",
+        "eslint": "10.9.0",
+        "prettier": "3.9.6"
+    }
+}

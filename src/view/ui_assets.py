@@ -1,14 +1,17 @@
 import os
 import sys
+
 import customtkinter as ctk
-from PIL import Image, ImageTk, ImageOps
-from utils import resource_path
-from view.ui_constants import SIDEBAR_ICON_SIZE, THEME_TOGGLE_ICON_SIZE, LOGO_TARGET_WIDTH
+from PIL import Image, ImageOps, ImageTk
+
 from app_logging import log_warning
+from utils import resource_path
+from view.ui_constants import LOGO_TARGET_WIDTH, SIDEBAR_ICON_SIZE, THEME_TOGGLE_ICON_SIZE
 
 # =============================================================================
 # GESTION DE RECURSOS VISUALES
 # =============================================================================
+
 
 def get_app_icon_path() -> str:
     return resource_path(os.path.join("branding", "lector.ico"))
@@ -20,7 +23,17 @@ def get_app_icon_png_path() -> str:
 
 def load_sidebar_icons(size=SIDEBAR_ICON_SIZE) -> dict:
     icons = {}
-    icon_keys = ["ver", "nover", "etiqueta", "traducir", "restaurar", "perfil", "github", "info", "ajustes"]
+    icon_keys = [
+        "ver",
+        "nover",
+        "etiqueta",
+        "traducir",
+        "restaurar",
+        "perfil",
+        "github",
+        "info",
+        "ajustes",
+    ]
 
     for key in icon_keys:
         try:
@@ -42,8 +55,12 @@ def load_sidebar_icons(size=SIDEBAR_ICON_SIZE) -> dict:
         sun_inverse.putalpha(sun_image.getchannel("A"))
         moon_inverse.putalpha(moon_image.getchannel("A"))
 
-        icons["sun"] = ctk.CTkImage(light_image=sun_image, dark_image=sun_inverse, size=THEME_TOGGLE_ICON_SIZE)
-        icons["moon"] = ctk.CTkImage(light_image=moon_inverse, dark_image=moon_image, size=THEME_TOGGLE_ICON_SIZE)
+        icons["sun"] = ctk.CTkImage(
+            light_image=sun_image, dark_image=sun_inverse, size=THEME_TOGGLE_ICON_SIZE
+        )
+        icons["moon"] = ctk.CTkImage(
+            light_image=moon_inverse, dark_image=moon_image, size=THEME_TOGGLE_ICON_SIZE
+        )
     except Exception as e:
         log_warning(str(e), operation="load_theme_icons")
         icons["sun"] = None

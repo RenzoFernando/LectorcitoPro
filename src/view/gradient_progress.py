@@ -1,12 +1,25 @@
 from __future__ import annotations
-import customtkinter as ctk
-from tkinter import Canvas
+
 import math
-from view.ui_constants import PROGRESS_DEFAULT_STOPS, PROGRESS_DEFAULT_TRACK, PROGRESS_DEFAULT_BORDER, NEUTRAL_WHITE, PROGRESS_CANVAS_TICK_MS, PROGRESS_CAPSULE_SEGMENTS, PROGRESS_MIN_BODY_SEGMENTS, PROGRESS_POINT_SEGMENTS
+from tkinter import Canvas
+
+import customtkinter as ctk
+
+from view.ui_constants import (
+    NEUTRAL_WHITE,
+    PROGRESS_CANVAS_TICK_MS,
+    PROGRESS_CAPSULE_SEGMENTS,
+    PROGRESS_DEFAULT_BORDER,
+    PROGRESS_DEFAULT_STOPS,
+    PROGRESS_DEFAULT_TRACK,
+    PROGRESS_MIN_BODY_SEGMENTS,
+    PROGRESS_POINT_SEGMENTS,
+)
 
 # =============================================================================
 # UTILIDADES DE COLOR
 # =============================================================================
+
 
 def _hex_to_rgb(h: str) -> tuple[int, int, int]:
     h = h.lstrip("#")
@@ -32,6 +45,7 @@ def _lerp_color(c1: str, c2: str, t: float) -> str:
 
 DEFAULT_STOPS = list(PROGRESS_DEFAULT_STOPS)
 
+
 def gradient_color_at(t: float, stops: list[tuple[float, str]] | None = None) -> str:
     stops = list(stops or DEFAULT_STOPS)
     t = max(0.0, min(1.0, float(t)))
@@ -49,18 +63,30 @@ def gradient_color_at(t: float, stops: list[tuple[float, str]] | None = None) ->
 def rounded_rect_points(x1: int, y1: int, x2: int, y2: int, r: int) -> list[int]:
     r = max(0, min(r, (x2 - x1) // 2, (y2 - y1) // 2))
     pts = [
-        x1 + r, y1,
-        x2 - r, y1,
-        x2, y1,
-        x2, y1 + r,
-        x2, y2 - r,
-        x2, y2,
-        x2 - r, y2,
-        x1 + r, y2,
-        x1, y2,
-        x1, y2 - r,
-        x1, y1 + r,
-        x1, y1
+        x1 + r,
+        y1,
+        x2 - r,
+        y1,
+        x2,
+        y1,
+        x2,
+        y1 + r,
+        x2,
+        y2 - r,
+        x2,
+        y2,
+        x2 - r,
+        y2,
+        x1 + r,
+        y2,
+        x1,
+        y2,
+        x1,
+        y2 - r,
+        x1,
+        y1 + r,
+        x1,
+        y1,
     ]
     return pts
 
@@ -69,7 +95,10 @@ def rounded_rect_points(x1: int, y1: int, x2: int, y2: int, r: int) -> list[int]
 # FUNCIONES DE DIBUJO AVANZADO
 # =============================================================================
 
-def _capsule_points(x1: float, y1: float, x2: float, y2: float, r: float, segments: int = PROGRESS_POINT_SEGMENTS) -> list[float]:
+
+def _capsule_points(
+    x1: float, y1: float, x2: float, y2: float, r: float, segments: int = PROGRESS_POINT_SEGMENTS
+) -> list[float]:
     """Genera los puntos de un polígono con forma de cápsula perfectamente ovalada."""
     # Asegurar que el radio no sea mayor que la mitad de la dimensión más pequeña
     if x2 - x1 < 2 * r:
@@ -105,6 +134,7 @@ def _capsule_points(x1: float, y1: float, x2: float, y2: float, r: float, segmen
 # =============================================================================
 # WIDGET BARRA DE PROGRESO
 # =============================================================================
+
 
 class GradientProgressBar(ctk.CTkFrame):
     def __init__(self, parent, height: int = 12, corner_radius: int = 8):
@@ -198,7 +228,9 @@ class GradientProgressBar(ctk.CTkFrame):
         points = _capsule_points(x1, y1, x2, y2, r_, segments=PROGRESS_CAPSULE_SEGMENTS)
         self._canvas.create_polygon(points, outline=outline, fill=fill, smooth=True)
 
-    def _draw_gradient_capsule(self, x1: float, y1: float, x2: float, y2: float, t_start: float, t_end: float):
+    def _draw_gradient_capsule(
+        self, x1: float, y1: float, x2: float, y2: float, t_start: float, t_end: float
+    ):
         if x2 <= x1 or y2 <= y1:
             return
 
@@ -229,7 +261,9 @@ class GradientProgressBar(ctk.CTkFrame):
             rel = ((px - x1) / width) if width > 0 else 0.0
             t = t_start + ((t_end - t_start) * rel)
             color = gradient_color_at(t, self._gradient_stops)
-            self._canvas.create_rectangle(ix, int(math.floor(top)), ix + 2, int(math.ceil(bottom)), outline='', fill=color)
+            self._canvas.create_rectangle(
+                ix, int(math.floor(top)), ix + 2, int(math.ceil(bottom)), outline="", fill=color
+            )
 
     def _draw_track(self, w: int, h: int):
         self._canvas.delete("all")
@@ -312,10 +346,14 @@ class GradientProgressBar(ctk.CTkFrame):
                 color = gradient_color_at(t, self._gradient_stops)
 
                 # int(nx + 1) para solapamiento de 1px, necesario para degradado central
-                self._canvas.create_rectangle(int(x), y1, int(math.ceil(nx + 1)), y2, outline="", fill=color)
+                self._canvas.create_rectangle(
+                    int(x), y1, int(math.ceil(nx + 1)), y2, outline="", fill=color
+                )
                 x = nx
 
-            self._canvas.create_rectangle(int(rect_x2 - 1), y1, x2, y2, outline="", fill=right_color)
+            self._canvas.create_rectangle(
+                int(rect_x2 - 1), y1, x2, y2, outline="", fill=right_color
+            )
 
     def _draw_fill_indeterminate(self, w: int, h: int):
         usable_w = w - 4
@@ -348,7 +386,9 @@ class GradientProgressBar(ctk.CTkFrame):
         r = inner_h / 2.0
 
         if fill_w <= inner_h:
-            color = gradient_color_at(((sx + ex) / 2.0) / max(1.0, float(usable_w)), self._gradient_stops)
+            color = gradient_color_at(
+                ((sx + ex) / 2.0) / max(1.0, float(usable_w)), self._gradient_stops
+            )
             # Óvalo centrado para anchos pequeños
             cx = (absolute_x1 + absolute_x2) // 2
             self._draw_capsule_polygon(cx - r, y1, cx + r, y2, color)
@@ -361,8 +401,12 @@ class GradientProgressBar(ctk.CTkFrame):
         right_color = gradient_color_at(t_end, self._gradient_stops)
 
         # Casquetes ovalados
-        self._canvas.create_oval(absolute_x1, y1, absolute_x1 + 2 * r + 1, y2, outline="", fill=left_color)
-        self._canvas.create_oval(absolute_x2 - 2 * r - 1, y1, absolute_x2, y2, outline="", fill=right_color)
+        self._canvas.create_oval(
+            absolute_x1, y1, absolute_x1 + 2 * r + 1, y2, outline="", fill=left_color
+        )
+        self._canvas.create_oval(
+            absolute_x2 - 2 * r - 1, y1, absolute_x2, y2, outline="", fill=right_color
+        )
 
         # Cuerpo degradado
         rect_x1 = absolute_x1 + r - 1
@@ -382,10 +426,14 @@ class GradientProgressBar(ctk.CTkFrame):
                 t = (mid - 2.0) / max(1.0, float(usable_w))
                 color = gradient_color_at(t, self._gradient_stops)
                 # int(nx + 1) para solapamiento de 1px
-                self._canvas.create_rectangle(int(x), y1, int(math.ceil(nx + 1)), y2, outline="", fill=color)
+                self._canvas.create_rectangle(
+                    int(x), y1, int(math.ceil(nx + 1)), y2, outline="", fill=color
+                )
                 x = nx
 
-            self._canvas.create_rectangle(int(rect_x2 - 1), y1, absolute_x2, y2, outline="", fill=right_color)
+            self._canvas.create_rectangle(
+                int(rect_x2 - 1), y1, absolute_x2, y2, outline="", fill=right_color
+            )
 
     def _redraw(self):
         try:

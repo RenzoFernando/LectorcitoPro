@@ -1,6 +1,9 @@
 import os
 
-from app_logging import configure_logging, log_error as _log_error, log_info as _log_info, log_warning as _log_warning
+from app_logging import configure_logging
+from app_logging import log_error as _log_error
+from app_logging import log_info as _log_info
+from app_logging import log_warning as _log_warning
 from runtime_context import get_resource_base_candidates
 
 try:
@@ -12,6 +15,7 @@ except ImportError:
 # =============================================================================
 # GESTION DE RECURSOS
 # =============================================================================
+
 
 def resource_path(relative_path: str) -> str:
     normalized_relative = os.path.normpath(str(relative_path or "").lstrip("\\/"))
@@ -26,8 +30,10 @@ def resource_path(relative_path: str) -> str:
         # Nuitka o Modo Desarrollo
         alternate = os.path.join(base_path, normalized_relative)
         # Si estamos en 'src', los resources suelen estar un nivel arriba
-        if os.path.basename(base_path) == 'src':
-            alternate = os.path.join(os.path.abspath(os.path.join(base_path, "..")), "resources", normalized_relative)
+        if os.path.basename(base_path) == "src":
+            alternate = os.path.join(
+                os.path.abspath(os.path.join(base_path, "..")), "resources", normalized_relative
+            )
         # Nuitka mantiene la estructura interna 'src' al compilar
         if os.path.exists(alternate):
             return alternate
@@ -38,6 +44,7 @@ def resource_path(relative_path: str) -> str:
 # =============================================================================
 # SISTEMA DE LOGS
 # =============================================================================
+
 
 def setup_logging():
     if not config:

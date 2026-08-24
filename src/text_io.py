@@ -8,6 +8,7 @@ _UTF16_BE_BOM = b"\xfe\xff"
 _UTF32_LE_BOM = b"\xff\xfe\x00\x00"
 _UTF32_BE_BOM = b"\x00\x00\xfe\xff"
 
+
 def read_text_file(file_path: str) -> str:
     raw = Path(file_path).read_bytes()
 
@@ -29,7 +30,7 @@ def read_text_file(file_path: str) -> str:
             log_warning(
                 f"Se utilizó encoding alternativo: {encoding}",
                 operation="read_text_file",
-                file_path=str(file_path)
+                file_path=str(file_path),
             )
             return text
         except UnicodeDecodeError:
@@ -39,6 +40,6 @@ def read_text_file(file_path: str) -> str:
     log_warning(
         "Se utilizó UTF-8 con reemplazo de caracteres inválidos.",
         operation="read_text_file",
-        file_path=str(file_path)
+        file_path=str(file_path),
     )
     return text

@@ -1,16 +1,69 @@
-import customtkinter as ctk
 import copy
 import os
 from tkinter import filedialog
-from file_rules import file_rules_conflict, matches_file_rule, normalize_file_rule, normalize_file_tag_list
-from view.dialogs import BaseDialog, ConfirmDialog, _get_color_tuple, _style_button, _style_checkbox, _style_entry, _style_scrollable
-from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, mix_color, NEUTRAL_WHITE, TAGS_DIALOG_WIDTH, TAGS_DIALOG_HEIGHT, TAGS_DIALOG_TAG_FONT_SIZE, TAGS_DIALOG_EXTRA_CHECKBOX_PADX, TAGS_DIALOG_EXTRA_CHECKBOX_PADY, TAGS_DIALOG_SEPARATOR_HEIGHT, TAGS_DIALOG_SEPARATOR_PADY, TAGS_DIALOG_BUTTON_FRAME_PADY, TAGS_DIALOG_ACTION_BUTTON_WIDTH, TAGS_DIALOG_ACTION_BUTTON_PADX, TAGS_DIALOG_LAYOUT_REFRESH_DELAY_MS, TAGS_DIALOG_SECTION_LABEL_FONT_SIZE, TAGS_DIALOG_SECTION_LABEL_PADY, TAGS_DIALOG_SECTION_LABEL_PADX, TAGS_DIALOG_SCROLL_PADX, TAGS_DIALOG_SCROLL_BORDER_WIDTH, TAGS_DIALOG_INPUT_PADX, TAGS_DIALOG_INPUT_PADY, TAGS_DIALOG_AUTODETECT_BUTTON_WIDTH, TAGS_DIALOG_AUTODETECT_BUTTON_HEIGHT, TAGS_DIALOG_AUTODETECT_BUTTON_PADX, TAGS_DIALOG_ROW_PADY, TAGS_DIALOG_PILL_SPACING, TAGS_DIALOG_WRAP_SAFETY_PX, TAGS_DIALOG_PILL_RADIUS, TAGS_DIALOG_PILL_LABEL_PADX, TAGS_DIALOG_PILL_LABEL_PADY, TAGS_DIALOG_PILL_CLOSE_SIZE, TAGS_DIALOG_PILL_CLOSE_RADIUS, TAGS_DIALOG_PILL_CLOSE_PADX, TAGS_DIALOG_PILL_CLOSE_PADY, DIALOG_BUTTON_FONT_SIZE
-from i18n.translations import translate_default
+
+import customtkinter as ctk
+
 from app_logging import log_error
+from file_rules import (
+    file_rules_conflict,
+    matches_file_rule,
+    normalize_file_rule,
+    normalize_file_tag_list,
+)
+from i18n.translations import translate_default
+from view.dialogs import (
+    BaseDialog,
+    ConfirmDialog,
+    _get_color_tuple,
+    _style_button,
+    _style_checkbox,
+    _style_entry,
+    _style_scrollable,
+)
+from view.ui_constants import (
+    COLORS,
+    DIALOG_BUTTON_FONT_SIZE,
+    FONT_FAMILY_PRIMARY,
+    NEUTRAL_WHITE,
+    TAGS_DIALOG_ACTION_BUTTON_PADX,
+    TAGS_DIALOG_ACTION_BUTTON_WIDTH,
+    TAGS_DIALOG_AUTODETECT_BUTTON_HEIGHT,
+    TAGS_DIALOG_AUTODETECT_BUTTON_PADX,
+    TAGS_DIALOG_AUTODETECT_BUTTON_WIDTH,
+    TAGS_DIALOG_BUTTON_FRAME_PADY,
+    TAGS_DIALOG_EXTRA_CHECKBOX_PADX,
+    TAGS_DIALOG_EXTRA_CHECKBOX_PADY,
+    TAGS_DIALOG_HEIGHT,
+    TAGS_DIALOG_INPUT_PADX,
+    TAGS_DIALOG_INPUT_PADY,
+    TAGS_DIALOG_LAYOUT_REFRESH_DELAY_MS,
+    TAGS_DIALOG_PILL_CLOSE_PADX,
+    TAGS_DIALOG_PILL_CLOSE_PADY,
+    TAGS_DIALOG_PILL_CLOSE_RADIUS,
+    TAGS_DIALOG_PILL_CLOSE_SIZE,
+    TAGS_DIALOG_PILL_LABEL_PADX,
+    TAGS_DIALOG_PILL_LABEL_PADY,
+    TAGS_DIALOG_PILL_RADIUS,
+    TAGS_DIALOG_PILL_SPACING,
+    TAGS_DIALOG_ROW_PADY,
+    TAGS_DIALOG_SCROLL_BORDER_WIDTH,
+    TAGS_DIALOG_SCROLL_PADX,
+    TAGS_DIALOG_SECTION_LABEL_FONT_SIZE,
+    TAGS_DIALOG_SECTION_LABEL_PADX,
+    TAGS_DIALOG_SECTION_LABEL_PADY,
+    TAGS_DIALOG_SEPARATOR_HEIGHT,
+    TAGS_DIALOG_SEPARATOR_PADY,
+    TAGS_DIALOG_TAG_FONT_SIZE,
+    TAGS_DIALOG_WIDTH,
+    TAGS_DIALOG_WRAP_SAFETY_PX,
+    mix_color,
+)
 
 # =============================================================================
 # DIALOGO DE CONFIGURACION DE ETIQUETAS
-# ============================================================================= 
+# =============================================================================
+
 
 def _tr_text(parent, key: str, *args):
     tr_callable = getattr(parent, "_tr", None)
@@ -21,29 +74,39 @@ def _tr_text(parent, key: str, *args):
             pass
     return translate_default(key, *args)
 
-class TagsConfigDialog(BaseDialog):
 
-    def __init__(self, parent, title: str,
-                 folders_prompt: str | None, initial_folders: list | None,
-                 files_prompt: str, initial_files: list,
-                 allow_autodetect: bool = False,
-                 excluded_folders: list = None,
-                 excluded_files: list = None,
-                 media_extensions: list = None,
-                 forbidden_items: set = None,
-                 extra_checkbox_text: str | None = None,
-                 extra_checkbox_value: bool = False,
-                 persistent: bool = False,
-                 defer_show: bool = False):
+class TagsConfigDialog(BaseDialog):
+    def __init__(
+        self,
+        parent,
+        title: str,
+        folders_prompt: str | None,
+        initial_folders: list | None,
+        files_prompt: str,
+        initial_files: list,
+        allow_autodetect: bool = False,
+        excluded_folders: list = None,
+        excluded_files: list = None,
+        media_extensions: list = None,
+        forbidden_items: set = None,
+        extra_checkbox_text: str | None = None,
+        extra_checkbox_value: bool = False,
+        persistent: bool = False,
+        defer_show: bool = False,
+    ):
         super().__init__(parent, title, persistent=persistent, defer_show=defer_show)
 
-        self.single_mode = (folders_prompt is None)
+        self.single_mode = folders_prompt is None
         self.allow_autodetect = allow_autodetect
 
         self.excluded_folders = excluded_folders if excluded_folders else []
         self.excluded_files = normalize_file_tag_list(excluded_files if excluded_files else [])
-        self.media_extensions = [normalize_file_rule(ext) for ext in media_extensions] if media_extensions else []
-        self.forbidden_items = {normalize_file_rule(item) for item in forbidden_items} if forbidden_items else set()
+        self.media_extensions = (
+            [normalize_file_rule(ext) for ext in media_extensions] if media_extensions else []
+        )
+        self.forbidden_items = (
+            {normalize_file_rule(item) for item in forbidden_items} if forbidden_items else set()
+        )
         self.extra_checkbox_text = extra_checkbox_text
         self.extra_checkbox_value = bool(extra_checkbox_value)
 
@@ -97,18 +160,40 @@ class TagsConfigDialog(BaseDialog):
                 text=self.extra_checkbox_text,
                 variable=self.extra_checkbox_var,
                 onvalue=True,
-                offvalue=False
+                offvalue=False,
             )
             _style_checkbox(self.extra_checkbox)
-            self.extra_checkbox.grid(row=6, column=0, sticky="w", padx=TAGS_DIALOG_EXTRA_CHECKBOX_PADX, pady=TAGS_DIALOG_EXTRA_CHECKBOX_PADY)
+            self.extra_checkbox.grid(
+                row=6,
+                column=0,
+                sticky="w",
+                padx=TAGS_DIALOG_EXTRA_CHECKBOX_PADX,
+                pady=TAGS_DIALOG_EXTRA_CHECKBOX_PADY,
+            )
             separator_row = 7
             button_row = 8
 
-        separator = ctk.CTkFrame(self.main_frame, height=TAGS_DIALOG_SEPARATOR_HEIGHT, fg_color=_get_color_tuple("separator_line"))
-        separator.grid(row=separator_row, column=0, sticky="ew", padx=TAGS_DIALOG_INPUT_PADX, pady=TAGS_DIALOG_SEPARATOR_PADY)
+        separator = ctk.CTkFrame(
+            self.main_frame,
+            height=TAGS_DIALOG_SEPARATOR_HEIGHT,
+            fg_color=_get_color_tuple("separator_line"),
+        )
+        separator.grid(
+            row=separator_row,
+            column=0,
+            sticky="ew",
+            padx=TAGS_DIALOG_INPUT_PADX,
+            pady=TAGS_DIALOG_SEPARATOR_PADY,
+        )
 
         button_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        button_frame.grid(row=button_row, column=0, padx=TAGS_DIALOG_INPUT_PADX, pady=TAGS_DIALOG_BUTTON_FRAME_PADY, sticky="ew")
+        button_frame.grid(
+            row=button_row,
+            column=0,
+            padx=TAGS_DIALOG_INPUT_PADX,
+            pady=TAGS_DIALOG_BUTTON_FRAME_PADY,
+            sticky="ew",
+        )
         button_frame.grid_columnconfigure((0, 1), weight=1)
 
         txt_ok = _tr_text(self._parent, "btn_ok")
@@ -161,9 +246,7 @@ class TagsConfigDialog(BaseDialog):
         if not self._has_unsaved_changes():
             return True
         confirmed = ConfirmDialog.ask(
-            self,
-            self._tr("confirm_discard_tags_title"),
-            self._tr("confirm_discard_tags_prompt")
+            self, self._tr("confirm_discard_tags_title"), self._tr("confirm_discard_tags_prompt")
         )
         if not confirmed:
             try:
@@ -184,12 +267,24 @@ class TagsConfigDialog(BaseDialog):
         if widget is None:
             return
         try:
-            widget.bind("<MouseWheel>", lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf), add="+")
+            widget.bind(
+                "<MouseWheel>",
+                lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf),
+                add="+",
+            )
         except Exception:
             pass
         try:
-            widget.bind("<Button-4>", lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf), add="+")
-            widget.bind("<Button-5>", lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf), add="+")
+            widget.bind(
+                "<Button-4>",
+                lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf),
+                add="+",
+            )
+            widget.bind(
+                "<Button-5>",
+                lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf),
+                add="+",
+            )
         except Exception:
             pass
         try:
@@ -327,17 +422,33 @@ class TagsConfigDialog(BaseDialog):
         self.ok_button.configure(text=_tr_text(self._parent, "btn_ok"))
         self.cancel_button.configure(text=_tr_text(self._parent, "btn_cancel_simple"))
 
-    def load_state(self, title, folders_prompt, initial_folders, files_prompt, initial_files,
-                   allow_autodetect=False, excluded_folders=None, excluded_files=None, media_extensions=None,
-                   forbidden_items=None, extra_checkbox_text=None, extra_checkbox_value=False):
+    def load_state(
+        self,
+        title,
+        folders_prompt,
+        initial_folders,
+        files_prompt,
+        initial_files,
+        allow_autodetect=False,
+        excluded_folders=None,
+        excluded_files=None,
+        media_extensions=None,
+        forbidden_items=None,
+        extra_checkbox_text=None,
+        extra_checkbox_value=False,
+    ):
         self.current_title = title
         self.folders_prompt = folders_prompt
         self.files_prompt = files_prompt
         self.allow_autodetect = allow_autodetect
         self.excluded_folders = excluded_folders if excluded_folders else []
         self.excluded_files = normalize_file_tag_list(excluded_files if excluded_files else [])
-        self.media_extensions = [normalize_file_rule(ext) for ext in media_extensions] if media_extensions else []
-        self.forbidden_items = {normalize_file_rule(item) for item in forbidden_items} if forbidden_items else set()
+        self.media_extensions = (
+            [normalize_file_rule(ext) for ext in media_extensions] if media_extensions else []
+        )
+        self.forbidden_items = (
+            {normalize_file_rule(item) for item in forbidden_items} if forbidden_items else set()
+        )
         self.extra_checkbox_text = extra_checkbox_text
         self.extra_checkbox_value = bool(extra_checkbox_value)
         self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
@@ -389,7 +500,7 @@ class TagsConfigDialog(BaseDialog):
         try:
             size = (
                 max(1, int(getattr(event, "width", self.winfo_width()))),
-                max(1, int(getattr(event, "height", self.winfo_height())))
+                max(1, int(getattr(event, "height", self.winfo_height()))),
             )
         except Exception:
             size = (max(1, int(self.winfo_width())), max(1, int(self.winfo_height())))
@@ -402,7 +513,9 @@ class TagsConfigDialog(BaseDialog):
             except Exception:
                 pass
         try:
-            self._resize_after_id = self.after(TAGS_DIALOG_LAYOUT_REFRESH_DELAY_MS, self._schedule_layout_refresh)
+            self._resize_after_id = self.after(
+                TAGS_DIALOG_LAYOUT_REFRESH_DELAY_MS, self._schedule_layout_refresh
+            )
         except Exception:
             self._resize_after_id = None
 
@@ -473,7 +586,9 @@ class TagsConfigDialog(BaseDialog):
         except Exception:
             label_width = max(8, int(len(str(tag_name)) * TAGS_DIALOG_TAG_FONT_SIZE * 0.72))
         label_width += self._get_horizontal_padding_total(TAGS_DIALOG_PILL_LABEL_PADX)
-        close_width = TAGS_DIALOG_PILL_CLOSE_SIZE + self._get_horizontal_padding_total(TAGS_DIALOG_PILL_CLOSE_PADX)
+        close_width = TAGS_DIALOG_PILL_CLOSE_SIZE + self._get_horizontal_padding_total(
+            TAGS_DIALOG_PILL_CLOSE_PADX
+        )
         return label_width + close_width + 6
 
     def _refresh_layout_when_ready(self):
@@ -503,22 +618,22 @@ class TagsConfigDialog(BaseDialog):
             self._schedule_layout_refresh(delay=40)
 
     def _build_tag_colors(self):
-        blue_btn = COLORS['button']['blue']
+        blue_btn = COLORS["button"]["blue"]
         bg_panel = _get_color_tuple("bg_panel")
         border_subtle = _get_color_tuple("border_subtle")
         text_secondary = _get_color_tuple("text_secondary")
 
         inactive_fg = (
             mix_color(bg_panel[0], text_secondary[0], 0.12),
-            mix_color(bg_panel[1], NEUTRAL_WHITE, 0.08)
+            mix_color(bg_panel[1], NEUTRAL_WHITE, 0.08),
         )
         inactive_border = (
             mix_color(border_subtle[0], text_secondary[0], 0.30),
-            mix_color(border_subtle[1], NEUTRAL_WHITE, 0.22)
+            mix_color(border_subtle[1], NEUTRAL_WHITE, 0.22),
         )
         inactive_hover = (
             mix_color(inactive_fg[0], text_secondary[0], 0.12),
-            mix_color(inactive_fg[1], NEUTRAL_WHITE, 0.10)
+            mix_color(inactive_fg[1], NEUTRAL_WHITE, 0.10),
         )
 
         return {
@@ -527,23 +642,32 @@ class TagsConfigDialog(BaseDialog):
                 "hover": blue_btn["hover"],
                 "text": COLORS["light"]["text_on_accent"],
                 "border": blue_btn["bg"],
-                "border_width": 0
+                "border_width": 0,
             },
             "inactivo": {
                 "fg": inactive_fg,
                 "hover": inactive_hover,
                 "text": text_secondary,
                 "border": inactive_border,
-                "border_width": 1
-            }
+                "border_width": 1,
+            },
         }
 
     def _create_tag_section(self, section_index, prompt, section_id, text_color):
         base_row = section_index * 3
-        label = ctk.CTkLabel(self.main_frame, text=prompt, font=(FONT_FAMILY_PRIMARY, TAGS_DIALOG_SECTION_LABEL_FONT_SIZE, "bold"), text_color=text_color)
+        label = ctk.CTkLabel(
+            self.main_frame,
+            text=prompt,
+            font=(FONT_FAMILY_PRIMARY, TAGS_DIALOG_SECTION_LABEL_FONT_SIZE, "bold"),
+            text_color=text_color,
+        )
         label.grid(
-            row=base_row, column=0,
-            sticky="w", pady=TAGS_DIALOG_SECTION_LABEL_PADY, padx=TAGS_DIALOG_SECTION_LABEL_PADX)
+            row=base_row,
+            column=0,
+            sticky="w",
+            pady=TAGS_DIALOG_SECTION_LABEL_PADY,
+            padx=TAGS_DIALOG_SECTION_LABEL_PADX,
+        )
         if section_id == "folders":
             self.lbl_folders_prompt = label
         else:
@@ -554,14 +678,20 @@ class TagsConfigDialog(BaseDialog):
             label_text="",
             fg_color=_get_color_tuple("inner_area"),
             border_width=TAGS_DIALOG_SCROLL_BORDER_WIDTH,
-            border_color=_get_color_tuple("card_border")
+            border_color=_get_color_tuple("card_border"),
         )
         _style_scrollable(scroll_frame)
         scroll_frame.grid(row=base_row + 1, column=0, sticky="nsew", padx=TAGS_DIALOG_SCROLL_PADX)
         self._configure_mousewheel_for_scrollable(scroll_frame)
 
         input_container = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        input_container.grid(row=base_row + 2, column=0, sticky="ew", pady=TAGS_DIALOG_INPUT_PADY, padx=TAGS_DIALOG_INPUT_PADX)
+        input_container.grid(
+            row=base_row + 2,
+            column=0,
+            sticky="ew",
+            pady=TAGS_DIALOG_INPUT_PADY,
+            padx=TAGS_DIALOG_INPUT_PADX,
+        )
 
         ph_text = _tr_text(self._parent, "placeholder_tags")
 
@@ -572,11 +702,15 @@ class TagsConfigDialog(BaseDialog):
         if section_id == "folders":
             self.folders_scroll_frame = scroll_frame
             self.folders_entry = entry
-            entry.bind("<Return>", lambda event: self._add_tag(entry, self.folders_list, is_folder=True))
+            entry.bind(
+                "<Return>", lambda event: self._add_tag(entry, self.folders_list, is_folder=True)
+            )
         else:
             self.files_scroll_frame = scroll_frame
             self.files_entry = entry
-            entry.bind("<Return>", lambda event: self._add_tag(entry, self.files_list, is_folder=False))
+            entry.bind(
+                "<Return>", lambda event: self._add_tag(entry, self.files_list, is_folder=False)
+            )
 
             if self.allow_autodetect:
                 txt_auto = _tr_text(self._parent, "btn_autodetect")
@@ -585,7 +719,7 @@ class TagsConfigDialog(BaseDialog):
                     text=txt_auto,
                     width=TAGS_DIALOG_AUTODETECT_BUTTON_WIDTH,
                     height=TAGS_DIALOG_AUTODETECT_BUTTON_HEIGHT,
-                    command=self._on_autodetect
+                    command=self._on_autodetect,
                 )
                 _style_button(btn_auto, "blue")
                 btn_auto.pack(side="left", padx=TAGS_DIALOG_AUTODETECT_BUTTON_PADX)
@@ -669,7 +803,8 @@ class TagsConfigDialog(BaseDialog):
                 pass
 
     def redraw_all_tags(self):
-        if not self.winfo_exists(): return
+        if not self.winfo_exists():
+            return
         if not self.single_mode:
             self._redraw_tags_in_frame(self.folders_scroll_frame, self.folders_list)
 
@@ -681,8 +816,10 @@ class TagsConfigDialog(BaseDialog):
             current_view = canvas.yview()[0] if canvas is not None else 0.0
         except Exception:
             current_view = 0.0
-        for widget in frame.winfo_children(): widget.destroy()
-        if not frame.winfo_exists(): return
+        for widget in frame.winfo_children():
+            widget.destroy()
+        if not frame.winfo_exists():
+            return
         frame.update_idletasks()
 
         container_width = self._get_container_width(frame)
@@ -702,7 +839,7 @@ class TagsConfigDialog(BaseDialog):
                 measured_width = max(
                     self._estimate_pill_width(tag_data["nombre"]),
                     int(pill_frame.winfo_reqwidth()),
-                    int(pill_frame.winfo_width())
+                    int(pill_frame.winfo_width()),
                 )
                 measured_items.append((index, tag_data, measured_width))
                 pill_frame.destroy()
@@ -758,26 +895,21 @@ class TagsConfigDialog(BaseDialog):
                 for gap_index in range(gap_count):
                     spacer_column = gap_index * 2 + 1
                     current_row.grid_columnconfigure(
-                        spacer_column,
-                        weight=1,
-                        minsize=space_between_pills
+                        spacer_column, weight=1, minsize=space_between_pills
                     )
 
                 for position, (index, tag_data, _) in enumerate(row_items):
                     pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
                     item_column = position * 2
-                    sticky = "w" if position == 0 else ("e" if position == len(row_items) - 1 else "")
-                    pill_frame.grid(
-                        row=0,
-                        column=item_column,
-                        sticky=sticky
+                    sticky = (
+                        "w" if position == 0 else ("e" if position == len(row_items) - 1 else "")
                     )
+                    pill_frame.grid(row=0, column=item_column, sticky=sticky)
             else:
                 for position, (index, tag_data, _) in enumerate(row_items):
                     pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
                     pill_frame.pack(
-                        side="left",
-                        padx=(0, space_between_pills if position < gap_count else 0)
+                        side="left", padx=(0, space_between_pills if position < gap_count else 0)
                     )
 
         self._configure_mousewheel_for_scrollable(frame)
@@ -798,9 +930,17 @@ class TagsConfigDialog(BaseDialog):
         tag_name, tag_state = tag_data["nombre"], tag_data["estado"]
         colors = self.tag_colors[tag_state]
 
-        pill_frame = ctk.CTkFrame(parent, fg_color=colors["fg"], border_color=colors.get("border", colors["fg"]), border_width=colors.get("border_width", 0), corner_radius=TAGS_DIALOG_PILL_RADIUS)
+        pill_frame = ctk.CTkFrame(
+            parent,
+            fg_color=colors["fg"],
+            border_color=colors.get("border", colors["fg"]),
+            border_width=colors.get("border_width", 0),
+            corner_radius=TAGS_DIALOG_PILL_RADIUS,
+        )
 
-        label = ctk.CTkLabel(pill_frame, text=tag_name, text_color=colors["text"], font=self.tag_font)
+        label = ctk.CTkLabel(
+            pill_frame, text=tag_name, text_color=colors["text"], font=self.tag_font
+        )
         label.pack(side="left", padx=TAGS_DIALOG_PILL_LABEL_PADX, pady=TAGS_DIALOG_PILL_LABEL_PADY)
 
         close_button = ctk.CTkButton(
@@ -813,12 +953,18 @@ class TagsConfigDialog(BaseDialog):
             text_color=colors["text"],
             fg_color="transparent",
             hover_color=colors["hover"],
-            command=lambda i=index, l=tag_list: self._delete_tag(i, l)
+            command=lambda i=index, tags=tag_list: self._delete_tag(i, tags),
         )
 
-        close_button.pack(side="right", padx=TAGS_DIALOG_PILL_CLOSE_PADX, pady=TAGS_DIALOG_PILL_CLOSE_PADY)
-        pill_frame.bind("<Button-1>", lambda e, i=index, l=tag_list: self._toggle_tag_state(e, i, l))
-        label.bind("<Button-1>", lambda e, i=index, l=tag_list: self._toggle_tag_state(e, i, l))
+        close_button.pack(
+            side="right", padx=TAGS_DIALOG_PILL_CLOSE_PADX, pady=TAGS_DIALOG_PILL_CLOSE_PADY
+        )
+        pill_frame.bind(
+            "<Button-1>", lambda e, i=index, tags=tag_list: self._toggle_tag_state(e, i, tags)
+        )
+        label.bind(
+            "<Button-1>", lambda e, i=index, tags=tag_list: self._toggle_tag_state(e, i, tags)
+        )
         return pill_frame
 
     def _add_tag(self, entry, tag_list, is_folder=False):
@@ -829,13 +975,17 @@ class TagsConfigDialog(BaseDialog):
         tag_to_check = raw_val if is_folder else normalize_file_rule(raw_val)
 
         if any(
-            file_rules_conflict(t["nombre"], tag_to_check) if not is_folder else t["nombre"] == tag_to_check
+            file_rules_conflict(t["nombre"], tag_to_check)
+            if not is_folder
+            else t["nombre"] == tag_to_check
             for t in tag_list
         ):
             entry.delete(0, "end")
             return
 
-        if not is_folder and any(file_rules_conflict(item, tag_to_check) for item in self.forbidden_items):
+        if not is_folder and any(
+            file_rules_conflict(item, tag_to_check) for item in self.forbidden_items
+        ):
             self._parent.show_message("error_title", "msg_tag_conflict", tag_to_check)
             entry.delete(0, "end")
             return
@@ -873,20 +1023,49 @@ class TagsConfigDialog(BaseDialog):
             self.result = (None, self.files_list)
         else:
             if self.extra_checkbox is not None and self.extra_checkbox_var is not None:
-                self.result = (self.folders_list, self.files_list, bool(self.extra_checkbox_var.get()))
+                self.result = (
+                    self.folders_list,
+                    self.files_list,
+                    bool(self.extra_checkbox_var.get()),
+                )
             else:
                 self.result = (self.folders_list, self.files_list)
         super()._on_ok(event)
 
     @classmethod
-    def get_input(cls, parent, title, folders_prompt, initial_folders, files_prompt, initial_files,
-                  allow_autodetect=False, excluded_folders=None, excluded_files=None, media_extensions=None,
-                  forbidden_items=None, extra_checkbox_text=None, extra_checkbox_value=False):
+    def get_input(
+        cls,
+        parent,
+        title,
+        folders_prompt,
+        initial_folders,
+        files_prompt,
+        initial_files,
+        allow_autodetect=False,
+        excluded_folders=None,
+        excluded_files=None,
+        media_extensions=None,
+        forbidden_items=None,
+        extra_checkbox_text=None,
+        extra_checkbox_value=False,
+    ):
         dialog = None
         try:
-            dialog = cls(parent, title, folders_prompt, initial_folders, files_prompt, initial_files,
-                         allow_autodetect, excluded_folders, excluded_files, media_extensions,
-                         forbidden_items, extra_checkbox_text, extra_checkbox_value)
+            dialog = cls(
+                parent,
+                title,
+                folders_prompt,
+                initial_folders,
+                files_prompt,
+                initial_files,
+                allow_autodetect,
+                excluded_folders,
+                excluded_files,
+                media_extensions,
+                forbidden_items,
+                extra_checkbox_text,
+                extra_checkbox_value,
+            )
             parent.wait_window(dialog)
             return dialog.result
         except Exception:

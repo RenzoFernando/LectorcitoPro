@@ -1,9 +1,84 @@
-import customtkinter as ctk
 import os
-from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
-from view.ui_constants import FONT_FAMILY_PRIMARY, COLORS, get_button_tokens, get_color_pair, DIALOG_ICON_DELAY_MS, DIALOG_PREPARE_DELAY_MS, DIALOG_CENTER_RETRY_DELAY_MS, DIALOG_CENTER_MAX_ATTEMPTS, DIALOG_INITIAL_ALPHA, DIALOG_REVEAL_DELAY_MS, DIALOG_REVEAL_OFFSET_Y, DIALOG_REVEAL_STEP_PX, DIALOG_HIDDEN_PARK_OFFSET_PX, DIALOG_FADE_IN_STEP, DIALOG_FADE_IN_INTERVAL_MS, DIALOG_FADE_OUT_STEP, DIALOG_FADE_OUT_INTERVAL_MS, MESSAGE_AUTO_CLOSE_SECONDS, DIALOG_SECONDARY_ICON_DELAY_MS, DIALOG_BUTTON_CORNER_RADIUS, DIALOG_BUTTON_HEIGHT, DIALOG_BUTTON_FONT_SIZE, DIALOG_BUTTON_BORDER_WIDTH, DIALOG_INPUT_HEIGHT, DIALOG_INPUT_CORNER_RADIUS, DIALOG_OPTION_MENU_HEIGHT, DIALOG_OPTION_MENU_CORNER_RADIUS, DIALOG_SCROLLABLE_BORDER_WIDTH, DIALOG_CARD_BORDER_WIDTH, DIALOG_CARD_CORNER_RADIUS, DIALOG_CARD_PADX, DIALOG_CARD_PADY, MESSAGE_DIALOG_TEXT_WRAP, MESSAGE_DIALOG_TEXT_FONT_SIZE, MESSAGE_DIALOG_TEXT_PADX, MESSAGE_DIALOG_TEXT_PADY, MESSAGE_DIALOG_OK_WIDTH, MESSAGE_DIALOG_BUTTON_PADY, CONFIRM_DIALOG_TEXT_WRAP, CONFIRM_DIALOG_TEXT_FONT_SIZE, CONFIRM_DIALOG_TEXT_PADX, CONFIRM_DIALOG_TEXT_PADY, CONFIRM_DIALOG_BUTTON_WIDTH, CONFIRM_DIALOG_BUTTON_PADX, CONFIRM_DIALOG_BUTTON_FRAME_PADY, EXTERNAL_LINK_DIALOG_WIDTH, EXTERNAL_LINK_DIALOG_HEIGHT, EXTERNAL_LINK_DIALOG_TEXT_WRAP, EXTERNAL_LINK_DIALOG_TEXT_FONT_SIZE, EXTERNAL_LINK_DIALOG_TEXT_PADX, EXTERNAL_LINK_DIALOG_TEXT_PADY, EXTERNAL_LINK_DIALOG_TARGET_BORDER_WIDTH, EXTERNAL_LINK_DIALOG_TARGET_RADIUS, EXTERNAL_LINK_DIALOG_TARGET_PADX, EXTERNAL_LINK_DIALOG_TARGET_PADY, EXTERNAL_LINK_DIALOG_TARGET_TEXT_WRAP, EXTERNAL_LINK_DIALOG_TARGET_FONT_SIZE, EXTERNAL_LINK_DIALOG_TARGET_TEXT_PADX, EXTERNAL_LINK_DIALOG_TARGET_TEXT_PADY, EXTERNAL_LINK_DIALOG_BUTTON_WIDTH, EXTERNAL_LINK_DIALOG_BUTTON_PADX, EXTERNAL_LINK_DIALOG_BUTTON_FRAME_PADY, CHOICE_DIALOG_WIDTH, CHOICE_DIALOG_HEIGHT, CHOICE_DIALOG_TEXT_WRAP, CHOICE_DIALOG_TEXT_FONT_SIZE, CHOICE_DIALOG_TEXT_PADX, CHOICE_DIALOG_TEXT_PADY, CHOICE_DIALOG_BUTTON_WIDTH, CHOICE_DIALOG_BUTTON1_PADY, CHOICE_DIALOG_BUTTON2_PADY
-from view.ui_assets import safe_set_window_icon
+
+import customtkinter as ctk
+
 from i18n.translations import translate_default
+from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
+from view.ui_assets import safe_set_window_icon
+from view.ui_constants import (
+    CHOICE_DIALOG_BUTTON1_PADY,
+    CHOICE_DIALOG_BUTTON2_PADY,
+    CHOICE_DIALOG_BUTTON_WIDTH,
+    CHOICE_DIALOG_HEIGHT,
+    CHOICE_DIALOG_TEXT_FONT_SIZE,
+    CHOICE_DIALOG_TEXT_PADX,
+    CHOICE_DIALOG_TEXT_PADY,
+    CHOICE_DIALOG_TEXT_WRAP,
+    CHOICE_DIALOG_WIDTH,
+    COLORS,
+    CONFIRM_DIALOG_BUTTON_FRAME_PADY,
+    CONFIRM_DIALOG_BUTTON_PADX,
+    CONFIRM_DIALOG_BUTTON_WIDTH,
+    CONFIRM_DIALOG_TEXT_FONT_SIZE,
+    CONFIRM_DIALOG_TEXT_PADX,
+    CONFIRM_DIALOG_TEXT_PADY,
+    CONFIRM_DIALOG_TEXT_WRAP,
+    DIALOG_BUTTON_BORDER_WIDTH,
+    DIALOG_BUTTON_CORNER_RADIUS,
+    DIALOG_BUTTON_FONT_SIZE,
+    DIALOG_BUTTON_HEIGHT,
+    DIALOG_CARD_BORDER_WIDTH,
+    DIALOG_CARD_CORNER_RADIUS,
+    DIALOG_CARD_PADX,
+    DIALOG_CARD_PADY,
+    DIALOG_CENTER_MAX_ATTEMPTS,
+    DIALOG_CENTER_RETRY_DELAY_MS,
+    DIALOG_FADE_IN_INTERVAL_MS,
+    DIALOG_FADE_IN_STEP,
+    DIALOG_FADE_OUT_INTERVAL_MS,
+    DIALOG_FADE_OUT_STEP,
+    DIALOG_HIDDEN_PARK_OFFSET_PX,
+    DIALOG_ICON_DELAY_MS,
+    DIALOG_INITIAL_ALPHA,
+    DIALOG_INPUT_CORNER_RADIUS,
+    DIALOG_INPUT_HEIGHT,
+    DIALOG_OPTION_MENU_CORNER_RADIUS,
+    DIALOG_OPTION_MENU_HEIGHT,
+    DIALOG_PREPARE_DELAY_MS,
+    DIALOG_REVEAL_DELAY_MS,
+    DIALOG_REVEAL_OFFSET_Y,
+    DIALOG_REVEAL_STEP_PX,
+    DIALOG_SCROLLABLE_BORDER_WIDTH,
+    DIALOG_SECONDARY_ICON_DELAY_MS,
+    EXTERNAL_LINK_DIALOG_BUTTON_FRAME_PADY,
+    EXTERNAL_LINK_DIALOG_BUTTON_PADX,
+    EXTERNAL_LINK_DIALOG_BUTTON_WIDTH,
+    EXTERNAL_LINK_DIALOG_HEIGHT,
+    EXTERNAL_LINK_DIALOG_TARGET_BORDER_WIDTH,
+    EXTERNAL_LINK_DIALOG_TARGET_FONT_SIZE,
+    EXTERNAL_LINK_DIALOG_TARGET_PADX,
+    EXTERNAL_LINK_DIALOG_TARGET_PADY,
+    EXTERNAL_LINK_DIALOG_TARGET_RADIUS,
+    EXTERNAL_LINK_DIALOG_TARGET_TEXT_PADX,
+    EXTERNAL_LINK_DIALOG_TARGET_TEXT_PADY,
+    EXTERNAL_LINK_DIALOG_TARGET_TEXT_WRAP,
+    EXTERNAL_LINK_DIALOG_TEXT_FONT_SIZE,
+    EXTERNAL_LINK_DIALOG_TEXT_PADX,
+    EXTERNAL_LINK_DIALOG_TEXT_PADY,
+    EXTERNAL_LINK_DIALOG_TEXT_WRAP,
+    EXTERNAL_LINK_DIALOG_WIDTH,
+    FONT_FAMILY_PRIMARY,
+    MESSAGE_AUTO_CLOSE_SECONDS,
+    MESSAGE_DIALOG_BUTTON_PADY,
+    MESSAGE_DIALOG_OK_WIDTH,
+    MESSAGE_DIALOG_TEXT_FONT_SIZE,
+    MESSAGE_DIALOG_TEXT_PADX,
+    MESSAGE_DIALOG_TEXT_PADY,
+    MESSAGE_DIALOG_TEXT_WRAP,
+    get_button_tokens,
+    get_color_pair,
+)
+
 
 def _tr_text(parent, key: str, *args):
     tr_callable = getattr(parent, "_tr", None)
@@ -15,7 +90,6 @@ def _tr_text(parent, key: str, *args):
     return translate_default(key, *args)
 
 
-
 def _restore_parent_modal_state(parent):
     try:
         if parent and hasattr(parent, "restore_ui_from_modal"):
@@ -23,9 +97,11 @@ def _restore_parent_modal_state(parent):
     except Exception:
         pass
 
+
 # =============================================================================
 # UTILIDADES DE ESTILO
 # =============================================================================
+
 
 def _get_color_tuple(key: str) -> tuple[str, str]:
     key_map = {
@@ -41,7 +117,7 @@ def _get_color_tuple(key: str) -> tuple[str, str]:
         "border_strong": "border_strong",
         "bg_panel": "bg_panel",
         "bg_card": "bg_card",
-        "bg_dialog": "bg_dialog"
+        "bg_dialog": "bg_dialog",
     }
     actual_key = key_map.get(key, key)
     return get_color_pair(actual_key)
@@ -58,7 +134,7 @@ def _style_button(btn: ctk.CTkButton, color_type="blue"):
         fg_color=palette["bg"],
         hover_color=palette["hover"],
         border_color=palette["border"],
-        border_width=DIALOG_BUTTON_BORDER_WIDTH
+        border_width=DIALOG_BUTTON_BORDER_WIDTH,
     )
 
 
@@ -70,7 +146,7 @@ def _style_entry(widget):
         fg_color=_get_color_tuple("bg_panel"),
         border_color=_get_color_tuple("border_subtle"),
         text_color=_get_color_tuple("text"),
-        placeholder_text_color=_get_color_tuple("text_muted")
+        placeholder_text_color=_get_color_tuple("text_muted"),
     )
 
 
@@ -86,7 +162,7 @@ def _style_option_menu(widget):
         text_color=_get_color_tuple("text"),
         dropdown_fg_color=_get_color_tuple("bg_card"),
         dropdown_hover_color=_get_color_tuple("bg_panel"),
-        dropdown_text_color=_get_color_tuple("text")
+        dropdown_text_color=_get_color_tuple("text"),
     )
 
 
@@ -98,7 +174,7 @@ def _style_checkbox(widget):
         fg_color=blue["bg"],
         hover_color=blue["hover"],
         border_color=_get_color_tuple("border_strong"),
-        checkmark_color=_get_color_tuple("bg_elevated")
+        checkmark_color=_get_color_tuple("bg_elevated"),
     )
 
 
@@ -108,7 +184,7 @@ def _style_scrollable(widget):
         border_width=DIALOG_SCROLLABLE_BORDER_WIDTH,
         border_color=get_color_pair("card_border"),
         scrollbar_button_color=get_color_pair("accent_blue"),
-        scrollbar_button_hover_color=get_color_pair("accent_blue_hover")
+        scrollbar_button_hover_color=get_color_pair("accent_blue_hover"),
     )
 
 
@@ -175,8 +251,8 @@ def _get_centered_position(target_rect, win_w: int, win_h: int):
 # CLASE BASE PARA DIALOGOS
 # =============================================================================
 
-class BaseDialog(ctk.CTkToplevel):
 
+class BaseDialog(ctk.CTkToplevel):
     def __init__(self, parent, title: str, persistent: bool = False, defer_show: bool = False):
         CustomTooltip.hide_global()
 
@@ -233,7 +309,8 @@ class BaseDialog(ctk.CTkToplevel):
 
     def _set_icon_safe(self):
         try:
-            if not self.winfo_exists(): return
+            if not self.winfo_exists():
+                return
             safe_set_window_icon(self)
             self.after(DIALOG_SECONDARY_ICON_DELAY_MS, lambda: safe_set_window_icon(self))
         except Exception:
@@ -245,7 +322,7 @@ class BaseDialog(ctk.CTkToplevel):
             fg_color=_get_color_tuple("card"),
             border_color=_get_color_tuple("card_border"),
             border_width=DIALOG_CARD_BORDER_WIDTH,
-            corner_radius=DIALOG_CARD_CORNER_RADIUS
+            corner_radius=DIALOG_CARD_CORNER_RADIUS,
         )
         card.pack(expand=True, fill="both", padx=DIALOG_CARD_PADX, pady=DIALOG_CARD_PADY)
         return card
@@ -256,7 +333,8 @@ class BaseDialog(ctk.CTkToplevel):
 
     def _install_escape_bindtags(self, event=None):
         try:
-            if not self.winfo_exists(): return
+            if not self.winfo_exists():
+                return
         except Exception:
             return
 
@@ -272,7 +350,8 @@ class BaseDialog(ctk.CTkToplevel):
             except Exception:
                 pass
             try:
-                for child in widget.winfo_children(): apply_tag(child)
+                for child in widget.winfo_children():
+                    apply_tag(child)
             except Exception:
                 pass
 
@@ -328,7 +407,8 @@ class BaseDialog(ctk.CTkToplevel):
             self.parent.restore_ui_from_modal()
 
     def _prepare_geometry(self):
-        if not self.winfo_exists(): return
+        if not self.winfo_exists():
+            return
 
         self._prepare_after_id = None
         try:
@@ -360,7 +440,8 @@ class BaseDialog(ctk.CTkToplevel):
         return x, y
 
     def _try_center_window(self, attempt=0):
-        if not self.winfo_exists(): return
+        if not self.winfo_exists():
+            return
 
         try:
             self.update_idletasks()
@@ -392,12 +473,16 @@ class BaseDialog(ctk.CTkToplevel):
 
             if (abs(dx) > 1 or abs(dy) > 1) and attempt < DIALOG_CENTER_MAX_ATTEMPTS:
                 self.geometry(f"+{int(self.winfo_x()) + dx}+{int(self.winfo_y()) + dy}")
-                self.after(DIALOG_CENTER_RETRY_DELAY_MS, lambda: self._try_center_window(attempt + 1))
+                self.after(
+                    DIALOG_CENTER_RETRY_DELAY_MS, lambda: self._try_center_window(attempt + 1)
+                )
                 return
 
             self._reveal_target_y = int(self.winfo_y())
             if DIALOG_REVEAL_OFFSET_Y > 0:
-                self.geometry(f"+{int(self.winfo_x())}+{self._reveal_target_y + DIALOG_REVEAL_OFFSET_Y}")
+                self.geometry(
+                    f"+{int(self.winfo_x())}+{self._reveal_target_y + DIALOG_REVEAL_OFFSET_Y}"
+                )
 
             self.lift()
             self.focus_force()
@@ -409,7 +494,8 @@ class BaseDialog(ctk.CTkToplevel):
             self.attributes("-alpha", 1.0)
 
     def _fade_in(self):
-        if not self.winfo_exists(): return
+        if not self.winfo_exists():
+            return
         try:
             alpha = float(self.attributes("-alpha"))
         except Exception:
@@ -444,7 +530,7 @@ class BaseDialog(ctk.CTkToplevel):
 
         try:
             alpha = self.attributes("-alpha")
-        except:
+        except Exception:
             alpha = 1.0
 
         if alpha > 0:
@@ -466,6 +552,7 @@ class BaseDialog(ctk.CTkToplevel):
 # DIALOGOS ESPECIFICOS
 # =============================================================================
 
+
 class MessageDialog(BaseDialog):
     def __init__(self, parent, title, message, on_close=None):
         super().__init__(parent, title)
@@ -483,16 +570,13 @@ class MessageDialog(BaseDialog):
             wraplength=MESSAGE_DIALOG_TEXT_WRAP,
             justify="center",
             font=(FONT_FAMILY_PRIMARY, MESSAGE_DIALOG_TEXT_FONT_SIZE),
-            text_color=_get_color_tuple("text")
+            text_color=_get_color_tuple("text"),
         ).pack(fill="x", padx=MESSAGE_DIALOG_TEXT_PADX, pady=MESSAGE_DIALOG_TEXT_PADY)
 
         btn_text = _tr_text(parent, "btn_ok")
 
         ok_button = ctk.CTkButton(
-            card,
-            text=btn_text,
-            width=MESSAGE_DIALOG_OK_WIDTH,
-            command=self._on_ok
+            card, text=btn_text, width=MESSAGE_DIALOG_OK_WIDTH, command=self._on_ok
         )
         _style_button(ok_button, "blue")
         ok_button.pack(pady=MESSAGE_DIALOG_BUTTON_PADY)
@@ -506,7 +590,8 @@ class MessageDialog(BaseDialog):
             seconds = float(MESSAGE_AUTO_CLOSE_SECONDS)
         except Exception:
             seconds = 0.0
-        if seconds <= 0: return
+        if seconds <= 0:
+            return
         ms = max(1, int(seconds * 1000))
         self._auto_close_after_id = self.after(ms, self._auto_close)
 
@@ -521,7 +606,8 @@ class MessageDialog(BaseDialog):
     def _auto_close(self):
         self._auto_close_after_id = None
         try:
-            if not self.winfo_exists(): return
+            if not self.winfo_exists():
+                return
         except Exception:
             return
         self.result = None
@@ -564,7 +650,7 @@ class ConfirmDialog(BaseDialog):
             wraplength=CONFIRM_DIALOG_TEXT_WRAP,
             justify="center",
             font=(FONT_FAMILY_PRIMARY, CONFIRM_DIALOG_TEXT_FONT_SIZE),
-            text_color=_get_color_tuple("text")
+            text_color=_get_color_tuple("text"),
         ).pack(fill="x", padx=CONFIRM_DIALOG_TEXT_PADX, pady=CONFIRM_DIALOG_TEXT_PADY)
 
         button_frame = ctk.CTkFrame(card, fg_color="transparent")
@@ -573,17 +659,25 @@ class ConfirmDialog(BaseDialog):
         txt_yes = _tr_text(parent, "btn_yes")
         txt_no = _tr_text(parent, "btn_no")
 
-        btn_yes = ctk.CTkButton(button_frame, text=txt_yes, width=CONFIRM_DIALOG_BUTTON_WIDTH, command=self._on_yes)
+        btn_yes = ctk.CTkButton(
+            button_frame, text=txt_yes, width=CONFIRM_DIALOG_BUTTON_WIDTH, command=self._on_yes
+        )
         _style_button(btn_yes, "green")
         btn_yes.pack(side="left", padx=CONFIRM_DIALOG_BUTTON_PADX)
 
-        btn_no = ctk.CTkButton(button_frame, text=txt_no, width=CONFIRM_DIALOG_BUTTON_WIDTH, command=self._on_no)
+        btn_no = ctk.CTkButton(
+            button_frame, text=txt_no, width=CONFIRM_DIALOG_BUTTON_WIDTH, command=self._on_no
+        )
         _style_button(btn_no, "red")
         btn_no.pack(side="left", padx=CONFIRM_DIALOG_BUTTON_PADX)
 
-    def _on_yes(self, event=None): self.result = True; self._close_with_fade_out()
+    def _on_yes(self, event=None):
+        self.result = True
+        self._close_with_fade_out()
 
-    def _on_no(self, event=None): self.result = False; self._close_with_fade_out()
+    def _on_no(self, event=None):
+        self.result = False
+        self._close_with_fade_out()
 
     @classmethod
     def ask(cls, parent, title, message):
@@ -605,7 +699,9 @@ class ConfirmDialog(BaseDialog):
 
 
 class ExternalLinkDialog(BaseDialog):
-    def __init__(self, parent, title, message, target_label=None, continue_text=None, cancel_text=None):
+    def __init__(
+        self, parent, title, message, target_label=None, continue_text=None, cancel_text=None
+    ):
         super().__init__(parent, title)
         self.result = False
         self.geometry(f"{EXTERNAL_LINK_DIALOG_WIDTH}x{EXTERNAL_LINK_DIALOG_HEIGHT}")
@@ -618,7 +714,7 @@ class ExternalLinkDialog(BaseDialog):
             wraplength=EXTERNAL_LINK_DIALOG_TEXT_WRAP,
             justify="center",
             font=(FONT_FAMILY_PRIMARY, EXTERNAL_LINK_DIALOG_TEXT_FONT_SIZE),
-            text_color=_get_color_tuple("text")
+            text_color=_get_color_tuple("text"),
         ).pack(fill="x", padx=EXTERNAL_LINK_DIALOG_TEXT_PADX, pady=EXTERNAL_LINK_DIALOG_TEXT_PADY)
 
         if target_label:
@@ -627,9 +723,13 @@ class ExternalLinkDialog(BaseDialog):
                 fg_color=_get_color_tuple("bg_panel"),
                 border_color=_get_color_tuple("border_subtle"),
                 border_width=EXTERNAL_LINK_DIALOG_TARGET_BORDER_WIDTH,
-                corner_radius=EXTERNAL_LINK_DIALOG_TARGET_RADIUS
+                corner_radius=EXTERNAL_LINK_DIALOG_TARGET_RADIUS,
             )
-            target_box.pack(fill="x", padx=EXTERNAL_LINK_DIALOG_TARGET_PADX, pady=EXTERNAL_LINK_DIALOG_TARGET_PADY)
+            target_box.pack(
+                fill="x",
+                padx=EXTERNAL_LINK_DIALOG_TARGET_PADX,
+                pady=EXTERNAL_LINK_DIALOG_TARGET_PADY,
+            )
 
             ctk.CTkLabel(
                 target_box,
@@ -637,8 +737,12 @@ class ExternalLinkDialog(BaseDialog):
                 wraplength=EXTERNAL_LINK_DIALOG_TARGET_TEXT_WRAP,
                 justify="center",
                 font=(FONT_FAMILY_PRIMARY, EXTERNAL_LINK_DIALOG_TARGET_FONT_SIZE),
-                text_color=_get_color_tuple("text_secondary")
-            ).pack(fill="x", padx=EXTERNAL_LINK_DIALOG_TARGET_TEXT_PADX, pady=EXTERNAL_LINK_DIALOG_TARGET_TEXT_PADY)
+                text_color=_get_color_tuple("text_secondary"),
+            ).pack(
+                fill="x",
+                padx=EXTERNAL_LINK_DIALOG_TARGET_TEXT_PADX,
+                pady=EXTERNAL_LINK_DIALOG_TARGET_TEXT_PADY,
+            )
 
         button_frame = ctk.CTkFrame(card, fg_color="transparent")
         button_frame.pack(pady=EXTERNAL_LINK_DIALOG_BUTTON_FRAME_PADY)
@@ -648,20 +752,34 @@ class ExternalLinkDialog(BaseDialog):
         if cancel_text is None:
             cancel_text = _tr_text(parent, "btn_cancel_simple")
 
-        btn_continue = ctk.CTkButton(button_frame, text=continue_text, width=EXTERNAL_LINK_DIALOG_BUTTON_WIDTH, command=self._on_continue)
+        btn_continue = ctk.CTkButton(
+            button_frame,
+            text=continue_text,
+            width=EXTERNAL_LINK_DIALOG_BUTTON_WIDTH,
+            command=self._on_continue,
+        )
         _style_button(btn_continue, "blue")
         btn_continue.pack(side="left", padx=EXTERNAL_LINK_DIALOG_BUTTON_PADX)
 
-        btn_cancel = ctk.CTkButton(button_frame, text=cancel_text, width=EXTERNAL_LINK_DIALOG_BUTTON_WIDTH, command=self._on_cancel)
+        btn_cancel = ctk.CTkButton(
+            button_frame,
+            text=cancel_text,
+            width=EXTERNAL_LINK_DIALOG_BUTTON_WIDTH,
+            command=self._on_cancel,
+        )
         _style_button(btn_cancel, "red")
         btn_cancel.pack(side="left", padx=EXTERNAL_LINK_DIALOG_BUTTON_PADX)
         btn_continue.focus_set()
 
         self.bind("<Return>", self._on_continue)
 
-    def _on_continue(self, event=None): self.result = True; self._close_with_fade_out()
+    def _on_continue(self, event=None):
+        self.result = True
+        self._close_with_fade_out()
 
-    def _on_cancel(self, event=None): self.result = False; self._close_with_fade_out()
+    def _on_cancel(self, event=None):
+        self.result = False
+        self._close_with_fade_out()
 
     @classmethod
     def ask(cls, parent, title, message, target_label=None, continue_text=None, cancel_text=None):
@@ -683,7 +801,9 @@ class ExternalLinkDialog(BaseDialog):
 
 
 class ChoiceDialog(BaseDialog):
-    def __init__(self, parent, title, message, option1_text, option2_text, option1_value, option2_value):
+    def __init__(
+        self, parent, title, message, option1_text, option2_text, option1_value, option2_value
+    ):
         super().__init__(parent, title)
         self.option1_value, self.option2_value = option1_value, option2_value
 
@@ -696,26 +816,36 @@ class ChoiceDialog(BaseDialog):
             text=message,
             wraplength=CHOICE_DIALOG_TEXT_WRAP,
             font=(FONT_FAMILY_PRIMARY, CHOICE_DIALOG_TEXT_FONT_SIZE),
-            text_color=_get_color_tuple("text")
+            text_color=_get_color_tuple("text"),
         ).pack(fill="x", padx=CHOICE_DIALOG_TEXT_PADX, pady=CHOICE_DIALOG_TEXT_PADY)
 
-        btn1 = ctk.CTkButton(card, text=option1_text, width=CHOICE_DIALOG_BUTTON_WIDTH, command=self._on_option1)
+        btn1 = ctk.CTkButton(
+            card, text=option1_text, width=CHOICE_DIALOG_BUTTON_WIDTH, command=self._on_option1
+        )
         _style_button(btn1, "blue")
         btn1.pack(pady=CHOICE_DIALOG_BUTTON1_PADY)
 
-        btn2 = ctk.CTkButton(card, text=option2_text, width=CHOICE_DIALOG_BUTTON_WIDTH, command=self._on_option2)
+        btn2 = ctk.CTkButton(
+            card, text=option2_text, width=CHOICE_DIALOG_BUTTON_WIDTH, command=self._on_option2
+        )
         _style_button(btn2, "blue")
         btn2.pack(pady=CHOICE_DIALOG_BUTTON2_PADY)
 
-    def _on_option1(self): self.result = self.option1_value; super()._on_ok()
+    def _on_option1(self):
+        self.result = self.option1_value
+        super()._on_ok()
 
-    def _on_option2(self): self.result = self.option2_value; super()._on_ok()
+    def _on_option2(self):
+        self.result = self.option2_value
+        super()._on_ok()
 
     @classmethod
     def ask(cls, parent, title, message, option1_text, option2_text, option1_value, option2_value):
         dialog = None
         try:
-            dialog = cls(parent, title, message, option1_text, option2_text, option1_value, option2_value)
+            dialog = cls(
+                parent, title, message, option1_text, option2_text, option1_value, option2_value
+            )
             parent.wait_window(dialog)
             return dialog.result
         except Exception:

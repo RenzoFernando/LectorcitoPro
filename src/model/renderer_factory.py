@@ -1,7 +1,6 @@
 from model.markdown_renderer import MarkdownReportRenderer
 from model.txt_renderer import TextReportRenderer
 
-
 _RENDERERS = {
     ".md": MarkdownReportRenderer,
     ".txt": TextReportRenderer,

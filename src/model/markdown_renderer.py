@@ -3,7 +3,6 @@ import os
 import re
 import unicodedata
 
-
 _LANGUAGE_BY_EXTENSION = {
     ".asm": "asm",
     ".bat": "batch",
@@ -232,9 +231,7 @@ class MarkdownReportRenderer:
         if content and not content.endswith("\n"):
             self.outfile.write("\n")
         self.outfile.write(f"{fence}\n\n")
-        self.outfile.write(
-            f"**{self.labels['content_end']}: {filename_inline}**\n\n"
-        )
+        self.outfile.write(f"**{self.labels['content_end']}: {filename_inline}**\n\n")
 
     def write_tree(self, title: str, project_name: str, source_path: str, tree_text: str):
         self.outfile.write(f"# {title}\n\n")

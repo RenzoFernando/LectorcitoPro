@@ -1,11 +1,12 @@
-import os
-import json
 import copy
+import json
+import os
 from datetime import datetime
+
+from app_logging import log_error, log_warning
 from app_meta import APP_NAME_INTERNAL, APP_VENDOR_NAME, APP_VERSION
 from file_rules import normalize_file_rule_list, normalize_file_tag_list
 from platform_services import get_platform_service
-from app_logging import log_error, log_warning
 
 PROFILE_CONFIG_KEYS = (
     "use_default_path",
@@ -22,7 +23,7 @@ PROFILE_CONFIG_KEYS = (
     "etiquetas_carpetas_excluidas",
     "etiquetas_archivos_excluidos",
     "media_extensions",
-    "etiquetas_multimedia_config"
+    "etiquetas_multimedia_config",
 )
 
 # =============================================================================
@@ -59,14 +60,30 @@ def to_tags(items: list[str]) -> list[dict]:
 def _normalize_profile_file_rules(profile: dict) -> dict:
     normalized_profile = copy.deepcopy(profile) if isinstance(profile, dict) else {}
     normalized_profile["use_default_path"] = bool(normalized_profile.get("use_default_path", True))
-    normalized_profile["custom_lecturas_path"] = str(normalized_profile.get("custom_lecturas_path", "") or "")
+    normalized_profile["custom_lecturas_path"] = str(
+        normalized_profile.get("custom_lecturas_path", "") or ""
+    )
     normalized_profile["custom_exe_path"] = str(normalized_profile.get("custom_exe_path", "") or "")
-    normalized_profile["lecturas_path"] = str(normalized_profile.get("lecturas_path", DEFAULT_LECTURAS_PATH) or DEFAULT_LECTURAS_PATH)
-    normalized_profile["last_read_folder"] = str(normalized_profile.get("last_read_folder", "") or "")
-    normalized_profile["theme"] = "Dark" if str(normalized_profile.get("theme", "Light")).lower() == "dark" else "Light"
-    normalized_profile["language"] = "en" if str(normalized_profile.get("language", "es")).lower() == "en" else "es"
-    normalized_profile["report_extension"] = ".txt" if str(normalized_profile.get("report_extension", ".md")).lower() == ".txt" else ".md"
-    normalized_profile["use_gitignore_exclusions"] = bool(normalized_profile.get("use_gitignore_exclusions", False))
+    normalized_profile["lecturas_path"] = str(
+        normalized_profile.get("lecturas_path", DEFAULT_LECTURAS_PATH) or DEFAULT_LECTURAS_PATH
+    )
+    normalized_profile["last_read_folder"] = str(
+        normalized_profile.get("last_read_folder", "") or ""
+    )
+    normalized_profile["theme"] = (
+        "Dark" if str(normalized_profile.get("theme", "Light")).lower() == "dark" else "Light"
+    )
+    normalized_profile["language"] = (
+        "en" if str(normalized_profile.get("language", "es")).lower() == "en" else "es"
+    )
+    normalized_profile["report_extension"] = (
+        ".txt"
+        if str(normalized_profile.get("report_extension", ".md")).lower() == ".txt"
+        else ".md"
+    )
+    normalized_profile["use_gitignore_exclusions"] = bool(
+        normalized_profile.get("use_gitignore_exclusions", False)
+    )
     normalized_profile["etiquetas_carpetas_importantes"] = normalize_file_tag_list(
         normalized_profile.get("etiquetas_carpetas_importantes", [])
     )
@@ -109,7 +126,9 @@ def build_profile_config(profile: dict | None, profile_id: str = "default") -> d
     return _normalize_profile_file_rules(normalized_profile)
 
 
-def extract_profile_from_runtime_config(runtime_config: dict | None, profile_id: str = "default") -> dict:
+def extract_profile_from_runtime_config(
+    runtime_config: dict | None, profile_id: str = "default"
+) -> dict:
     return build_profile_config(_copy_profile_payload(runtime_config), profile_id)
 
 
@@ -129,7 +148,9 @@ def clone_profiles_meta(profiles: dict | None) -> dict:
 def build_runtime_config(profiles: dict | None = None, active_id: str = "default") -> dict:
     normalized_profiles = clone_profiles_meta(profiles)
     resolved_active_id = active_id if active_id in normalized_profiles else "default"
-    runtime_config = build_profile_config(normalized_profiles.get(resolved_active_id, {}), resolved_active_id)
+    runtime_config = build_profile_config(
+        normalized_profiles.get(resolved_active_id, {}), resolved_active_id
+    )
     runtime_config["_profiles_meta"] = clone_profiles_meta(normalized_profiles)
     runtime_config["_active_profile_id"] = resolved_active_id
     return runtime_config
@@ -154,23 +175,58 @@ DEFAULT_CONFIG_VALUES = {
     "report_extension": ".md",
     "use_gitignore_exclusions": False,
     "etiquetas_carpetas_importantes": to_tags(["src"]),
-    "etiquetas_extensiones_incluidas": to_tags([".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json", ".sql"]),
-    "etiquetas_carpetas_excluidas": to_tags(["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]),
-    "etiquetas_archivos_excluidos": to_tags([
-        "Pipfile.lock", "package.json", "package-lock.json",
-        ".env", ".env.local", ".env.development", ".env.development.local",
-        ".env.production", ".env.production.local", ".env.test", ".env.test.local",
-        ".env.staging", ".env.staging.local", ".npmrc", ".pypirc", ".netrc"
-    ]),
+    "etiquetas_extensiones_incluidas": to_tags(
+        [".txt", ".py", ".html", ".java", ".md", ".css", ".js", ".json", ".sql"]
+    ),
+    "etiquetas_carpetas_excluidas": to_tags(
+        ["__pycache__", "env", "venv", ".venv", ".git", "build", "dist", ".idea"]
+    ),
+    "etiquetas_archivos_excluidos": to_tags(
+        [
+            "Pipfile.lock",
+            "package.json",
+            "package-lock.json",
+            ".env",
+            ".env.local",
+            ".env.development",
+            ".env.development.local",
+            ".env.production",
+            ".env.production.local",
+            ".env.test",
+            ".env.test.local",
+            ".env.staging",
+            ".env.staging.local",
+            ".npmrc",
+            ".pypirc",
+            ".netrc",
+        ]
+    ),
     "media_extensions": [
-        '.png', '.jpg', '.gif', '.ico',
-        '.mp4', '.mkv', '.avi',
-        '.mp3', '.wav',
-        '.zip', '.rar', '.7z',
-        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-        '.exe', '.bin', '.iso', ".pfx"
+        ".png",
+        ".jpg",
+        ".gif",
+        ".ico",
+        ".mp4",
+        ".mkv",
+        ".avi",
+        ".mp3",
+        ".wav",
+        ".zip",
+        ".rar",
+        ".7z",
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",
+        ".exe",
+        ".bin",
+        ".iso",
+        ".pfx",
     ],
-    "etiquetas_multimedia_config": []
+    "etiquetas_multimedia_config": [],
 }
 
 BLANK_PROFILE_CONFIG = {
@@ -188,7 +244,7 @@ BLANK_PROFILE_CONFIG = {
     "etiquetas_carpetas_excluidas": [],
     "etiquetas_archivos_excluidos": [],
     "media_extensions": [],
-    "etiquetas_multimedia_config": []
+    "etiquetas_multimedia_config": [],
 }
 
 DEFAULT_CONFIG_VALUES = _normalize_profile_file_rules(DEFAULT_CONFIG_VALUES)
@@ -198,6 +254,7 @@ BLANK_PROFILE_CONFIG = _normalize_profile_file_rules(BLANK_PROFILE_CONFIG)
 # =============================================================================
 # LOGICA DE CARGA Y GUARDADO
 # =============================================================================
+
 
 def _migrate_old_keys(data: dict) -> dict:
     migration_map = {
@@ -221,33 +278,29 @@ def get_blank_profile() -> dict:
 def load_config() -> dict:
     base_structure = {
         "active_profile_id": "default",
-        "profiles": {
-            "default": copy.deepcopy(DEFAULT_CONFIG_VALUES)
-        }
+        "profiles": {"default": copy.deepcopy(DEFAULT_CONFIG_VALUES)},
     }
 
     if os.path.exists(CONFIG_FILE_PATH):
         try:
-            with open(CONFIG_FILE_PATH, 'r', encoding="utf-8") as f:
+            with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
                 loaded_data = json.load(f)
 
                 if "profiles" in loaded_data:
                     base_structure = loaded_data
                 else:
                     migrated_data = _migrate_old_keys(loaded_data)
-                    base_structure["profiles"]["default"] = build_profile_config(migrated_data, "default")
+                    base_structure["profiles"]["default"] = build_profile_config(
+                        migrated_data, "default"
+                    )
                     base_structure["active_profile_id"] = "default"
 
         except (json.JSONDecodeError, TypeError, OSError) as error:
-            log_warning(
-                str(error),
-                operation="load_config",
-                file_path=CONFIG_FILE_PATH
-            )
+            log_warning(str(error), operation="load_config", file_path=CONFIG_FILE_PATH)
 
     return build_runtime_config(
         profiles=base_structure.get("profiles", {}),
-        active_id=base_structure.get("active_profile_id", "default")
+        active_id=base_structure.get("active_profile_id", "default"),
     )
 
 
@@ -255,15 +308,14 @@ def build_persisted_config_payload(runtime_config: dict | None) -> dict:
     active_id = "default"
     if isinstance(runtime_config, dict):
         active_id = runtime_config.get("_active_profile_id", "default")
-    profiles = clone_profiles_meta(runtime_config.get("_profiles_meta", {}) if isinstance(runtime_config, dict) else {})
+    profiles = clone_profiles_meta(
+        runtime_config.get("_profiles_meta", {}) if isinstance(runtime_config, dict) else {}
+    )
     if isinstance(runtime_config, dict):
         profiles[active_id] = extract_profile_from_runtime_config(runtime_config, active_id)
     if active_id not in profiles:
         active_id = "default"
-    return {
-        "active_profile_id": active_id,
-        "profiles": clone_profiles_meta(profiles)
-    }
+    return {"active_profile_id": active_id, "profiles": clone_profiles_meta(profiles)}
 
 
 def build_export_config_package(runtime_config: dict | None) -> dict:
@@ -273,7 +325,7 @@ def build_export_config_package(runtime_config: dict | None) -> dict:
         "app_name": APP_NAME_INTERNAL,
         "exported_from_version": APP_VERSION,
         "exported_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
-        "data": build_persisted_config_payload(runtime_config)
+        "data": build_persisted_config_payload(runtime_config),
     }
 
 
@@ -285,7 +337,7 @@ def export_config_to_file(file_path: str, runtime_config: dict | None):
     output_dir = os.path.dirname(clean_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
-    with open(clean_path, 'w', encoding="utf-8") as f:
+    with open(clean_path, "w", encoding="utf-8") as f:
         json.dump(package, f, indent=4, ensure_ascii=False)
     return clean_path
 
@@ -296,7 +348,11 @@ def _extract_import_payload(raw_data: dict | None) -> dict:
 
     if raw_data.get("format") == EXPORT_FORMAT_NAME:
         payload = raw_data.get("data")
-    elif "data" in raw_data and isinstance(raw_data.get("data"), dict) and "profiles" in raw_data.get("data", {}):
+    elif (
+        "data" in raw_data
+        and isinstance(raw_data.get("data"), dict)
+        and "profiles" in raw_data.get("data", {})
+    ):
         payload = raw_data.get("data")
     else:
         payload = raw_data
@@ -312,22 +368,18 @@ def _extract_import_payload(raw_data: dict | None) -> dict:
     if not isinstance(active_id, str) or not active_id.strip():
         active_id = "default"
 
-    return {
-        "active_profile_id": active_id.strip(),
-        "profiles": clone_profiles_meta(profiles)
-    }
+    return {"active_profile_id": active_id.strip(), "profiles": clone_profiles_meta(profiles)}
 
 
 def import_config_from_file(file_path: str) -> dict:
     clean_path = str(file_path or "").strip()
     if not clean_path:
         raise ValueError("Ruta de importación inválida.")
-    with open(clean_path, 'r', encoding="utf-8") as f:
+    with open(clean_path, "r", encoding="utf-8") as f:
         raw_data = json.load(f)
     payload = _extract_import_payload(raw_data)
     return build_runtime_config(
-        profiles=payload.get("profiles", {}),
-        active_id=payload.get("active_profile_id", "default")
+        profiles=payload.get("profiles", {}), active_id=payload.get("active_profile_id", "default")
     )
 
 
@@ -335,15 +387,12 @@ def save_config(config: dict):
     try:
         final_json = build_persisted_config_payload(config)
 
-        with open(CONFIG_FILE_PATH, 'w', encoding="utf-8") as f:
+        with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
             json.dump(final_json, f, indent=4, ensure_ascii=False)
 
     except Exception as e:
         log_error(
-            "Error al guardar config.",
-            e,
-            operation="save_config",
-            file_path=CONFIG_FILE_PATH
+            "Error al guardar config.", e, operation="save_config", file_path=CONFIG_FILE_PATH
         )
 
 
@@ -353,8 +402,5 @@ def delete_config_file():
             os.remove(CONFIG_FILE_PATH)
     except Exception as e:
         log_error(
-            "Error eliminando config.",
-            e,
-            operation="delete_config",
-            file_path=CONFIG_FILE_PATH
+            "Error eliminando config.", e, operation="delete_config", file_path=CONFIG_FILE_PATH
         )

@@ -3,8 +3,8 @@ from __future__ import annotations
 import os
 import subprocess
 
-from platform_services.base import PlatformActionResult, PlatformService
 from app_logging import log_warning
+from platform_services.base import PlatformActionResult, PlatformService
 
 
 class WindowsPlatformService(PlatformService):
@@ -29,7 +29,9 @@ class WindowsPlatformService(PlatformService):
 
     def is_valid_launcher(self, path) -> bool:
         clean_path = self.normalize_launcher_path(path)
-        return bool(clean_path and os.path.isfile(clean_path) and clean_path.lower().endswith(".exe"))
+        return bool(
+            clean_path and os.path.isfile(clean_path) and clean_path.lower().endswith(".exe")
+        )
 
     def supports_launcher_configuration(self) -> bool:
         return True
@@ -60,12 +62,16 @@ class WindowsPlatformService(PlatformService):
         start_instruction: str = "",
         display_name: str = "",
         desktop_id: str = "",
-        icon_path: str = ""
+        icon_path: str = "",
     ) -> PlatformActionResult:
         if not self.supports_shortcut_mode(mode):
-            return PlatformActionResult(False, status="unsupported", error=f"Unsupported Windows shortcut mode: {mode}")
+            return PlatformActionResult(
+                False, status="unsupported", error=f"Unsupported Windows shortcut mode: {mode}"
+            )
         if not self.is_valid_launcher(target_path):
-            return PlatformActionResult(False, status="invalid_target", error="Invalid Windows executable path.")
+            return PlatformActionResult(
+                False, status="invalid_target", error="Invalid Windows executable path."
+            )
 
         try:
             work_dir = os.path.dirname(target_path)
@@ -131,9 +137,11 @@ class WindowsPlatformService(PlatformService):
             if not item:
                 return False
 
-            keywords = ["anclar a la barra de tareas", "pin to taskbar", "taskbar"] if taskbar else [
-                "anclar a inicio", "pin to start", "start"
-            ]
+            keywords = (
+                ["anclar a la barra de tareas", "pin to taskbar", "taskbar"]
+                if taskbar
+                else ["anclar a inicio", "pin to start", "start"]
+            )
 
             for verb in item.Verbs():
                 verb_name = verb.Name.lower()
@@ -152,7 +160,9 @@ class WindowsPlatformService(PlatformService):
             return link_path
         try:
             folder = os.path.dirname(link_path)
-            safe_name = "".join(char for char in instruction_name if char.isalnum() or char in " _-")
+            safe_name = "".join(
+                char for char in instruction_name if char.isalnum() or char in " _-"
+            )
             if not safe_name:
                 return link_path
             new_path = os.path.join(folder, f"{safe_name}.lnk")
