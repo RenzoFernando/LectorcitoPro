@@ -21,6 +21,7 @@ from view.dialogs import (
     _style_entry,
     _style_scrollable,
 )
+from view.ui_assets import load_close_icon
 from view.ui_constants import (
     COLORS,
     DIALOG_BUTTON_FONT_SIZE,
@@ -46,6 +47,7 @@ from view.ui_constants import (
     TAGS_DIALOG_PILL_LABEL_PADY,
     TAGS_DIALOG_PILL_RADIUS,
     TAGS_DIALOG_PILL_SPACING,
+    TAGS_DIALOG_PILL_WIDTH_SAFETY_PX,
     TAGS_DIALOG_ROW_PADY,
     TAGS_DIALOG_SCROLL_BORDER_WIDTH,
     TAGS_DIALOG_SCROLL_PADX,
@@ -124,6 +126,7 @@ class TagsConfigDialog(BaseDialog):
         self._initial_state_signature = None
 
         self.tag_colors = self._build_tag_colors()
+        self.close_icon = load_close_icon((12, 12))
 
         self.tag_font = ctk.CTkFont(family=FONT_FAMILY_PRIMARY, size=TAGS_DIALOG_TAG_FONT_SIZE)
 
@@ -202,12 +205,12 @@ class TagsConfigDialog(BaseDialog):
         self.ok_button = ctk.CTkButton(button_frame, text=txt_ok, command=self._on_ok)
         _style_button(self.ok_button, "green")
         self.ok_button.configure(width=TAGS_DIALOG_ACTION_BUTTON_WIDTH)
-        self.ok_button.grid(row=0, column=0, padx=TAGS_DIALOG_ACTION_BUTTON_PADX, sticky="e")
+        self.ok_button.grid(row=0, column=1, padx=TAGS_DIALOG_ACTION_BUTTON_PADX, sticky="w")
 
         self.cancel_button = ctk.CTkButton(button_frame, text=txt_cancel, command=self._on_cancel)
         _style_button(self.cancel_button, "red")
         self.cancel_button.configure(width=TAGS_DIALOG_ACTION_BUTTON_WIDTH)
-        self.cancel_button.grid(row=0, column=1, padx=TAGS_DIALOG_ACTION_BUTTON_PADX, sticky="w")
+        self.cancel_button.grid(row=0, column=0, padx=TAGS_DIALOG_ACTION_BUTTON_PADX, sticky="e")
 
         self.bind("<Configure>", self._on_window_configure)
 
@@ -589,7 +592,7 @@ class TagsConfigDialog(BaseDialog):
         close_width = TAGS_DIALOG_PILL_CLOSE_SIZE + self._get_horizontal_padding_total(
             TAGS_DIALOG_PILL_CLOSE_PADX
         )
-        return label_width + close_width + 6
+        return label_width + close_width + TAGS_DIALOG_PILL_WIDTH_SAFETY_PX
 
     def _refresh_layout_when_ready(self):
         self._layout_retry_after_id = None
@@ -618,31 +621,30 @@ class TagsConfigDialog(BaseDialog):
             self._schedule_layout_refresh(delay=40)
 
     def _build_tag_colors(self):
-        blue_btn = COLORS["button"]["blue"]
         bg_panel = _get_color_tuple("bg_panel")
         border_subtle = _get_color_tuple("border_subtle")
         text_secondary = _get_color_tuple("text_secondary")
 
         inactive_fg = (
-            mix_color(bg_panel[0], text_secondary[0], 0.12),
-            mix_color(bg_panel[1], NEUTRAL_WHITE, 0.08),
+            mix_color(bg_panel[0], text_secondary[0], 0.06),
+            mix_color(bg_panel[1], NEUTRAL_WHITE, 0.05),
         )
         inactive_border = (
-            mix_color(border_subtle[0], text_secondary[0], 0.30),
-            mix_color(border_subtle[1], NEUTRAL_WHITE, 0.22),
+            mix_color(border_subtle[0], text_secondary[0], 0.18),
+            mix_color(border_subtle[1], NEUTRAL_WHITE, 0.12),
         )
         inactive_hover = (
-            mix_color(inactive_fg[0], text_secondary[0], 0.12),
-            mix_color(inactive_fg[1], NEUTRAL_WHITE, 0.10),
+            mix_color(inactive_fg[0], text_secondary[0], 0.08),
+            mix_color(inactive_fg[1], NEUTRAL_WHITE, 0.08),
         )
 
         return {
             "activo": {
-                "fg": blue_btn["bg"],
-                "hover": blue_btn["hover"],
-                "text": COLORS["light"]["text_on_accent"],
-                "border": blue_btn["bg"],
-                "border_width": 0,
+                "fg": ("#EFF6FF", "#172554"),
+                "hover": ("#DBEAFE", "#1E3A5F"),
+                "text": ("#2563EB", "#93C5FD"),
+                "border": ("#BFDBFE", "#1D4ED8"),
+                "border_width": 1,
             },
             "inactivo": {
                 "fg": inactive_fg,
@@ -781,7 +783,7 @@ class TagsConfigDialog(BaseDialog):
             if added_rules:
                 self.files_list.extend({"nombre": rule, "estado": "activo"} for rule in added_rules)
                 self._last_layout_widths = None
-                self.redraw_all_tags()
+                self._redraw_tag_list(self.files_list)
                 self._parent.show_message("info_title", "msg_autodetect_result", str(added_count))
             else:
                 self._parent.show_message("info_title", "msg_autodetect_none")
@@ -810,6 +812,14 @@ class TagsConfigDialog(BaseDialog):
 
         self._redraw_tags_in_frame(self.files_scroll_frame, self.files_list)
 
+    def _redraw_tag_list(self, tag_list):
+        if not self.winfo_exists():
+            return
+        if not self.single_mode and tag_list is self.folders_list:
+            self._redraw_tags_in_frame(self.folders_scroll_frame, self.folders_list)
+            return
+        self._redraw_tags_in_frame(self.files_scroll_frame, self.files_list)
+
     def _redraw_tags_in_frame(self, frame, tag_list):
         canvas = self._get_scroll_canvas(frame)
         try:
@@ -820,34 +830,18 @@ class TagsConfigDialog(BaseDialog):
             widget.destroy()
         if not frame.winfo_exists():
             return
-        frame.update_idletasks()
 
         container_width = self._get_container_width(frame)
         if container_width < 220:
             return
 
         space_between_pills = TAGS_DIALOG_PILL_SPACING
-        usable_width = max(1, container_width)
+        usable_width = max(1, container_width - TAGS_DIALOG_WRAP_SAFETY_PX)
 
-        measurement_row = ctk.CTkFrame(frame, fg_color="transparent")
-        measured_items = []
-        try:
-            for index, tag_data in enumerate(tag_list):
-                pill_frame = self._create_pill_frame(measurement_row, tag_data, index, tag_list)
-                pill_frame.pack(side="left")
-                self.update_idletasks()
-                measured_width = max(
-                    self._estimate_pill_width(tag_data["nombre"]),
-                    int(pill_frame.winfo_reqwidth()),
-                    int(pill_frame.winfo_width()),
-                )
-                measured_items.append((index, tag_data, measured_width))
-                pill_frame.destroy()
-        finally:
-            try:
-                measurement_row.destroy()
-            except Exception:
-                pass
+        measured_items = [
+            (index, tag_data, self._estimate_pill_width(tag_data["nombre"]))
+            for index, tag_data in enumerate(tag_list)
+        ]
 
         rows = []
         pending_items = list(measured_items)
@@ -884,47 +878,25 @@ class TagsConfigDialog(BaseDialog):
         row_container = ctk.CTkFrame(frame, fg_color="transparent")
         row_container.pack(fill="x", anchor="nw")
 
-        for row_index, row_items in enumerate(rows):
+        for row_items in rows:
             current_row = ctk.CTkFrame(row_container, fg_color="transparent")
             current_row.pack(fill="x", anchor="w", pady=TAGS_DIALOG_ROW_PADY)
 
             gap_count = max(0, len(row_items) - 1)
-            justify_row = row_index < len(rows) - 1 and gap_count > 0
-
-            if justify_row:
-                for gap_index in range(gap_count):
-                    spacer_column = gap_index * 2 + 1
-                    current_row.grid_columnconfigure(
-                        spacer_column, weight=1, minsize=space_between_pills
-                    )
-
-                for position, (index, tag_data, _) in enumerate(row_items):
-                    pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
-                    item_column = position * 2
-                    sticky = (
-                        "w" if position == 0 else ("e" if position == len(row_items) - 1 else "")
-                    )
-                    pill_frame.grid(row=0, column=item_column, sticky=sticky)
-            else:
-                for position, (index, tag_data, _) in enumerate(row_items):
-                    pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
-                    pill_frame.pack(
-                        side="left", padx=(0, space_between_pills if position < gap_count else 0)
-                    )
+            for position, (index, tag_data, _) in enumerate(row_items):
+                pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
+                pill_frame.pack(
+                    side="left", padx=(0, space_between_pills if position < gap_count else 0)
+                )
 
         self._configure_mousewheel_for_scrollable(frame)
-        try:
-            frame.update_idletasks()
-        except Exception:
-            pass
         if canvas is not None:
-            try:
-                bbox = canvas.bbox("all")
-                canvas.configure(scrollregion=bbox if bbox is not None else (0, 0, 0, 0))
-            except Exception:
-                pass
-            self._clamp_scroll_position(frame, current_view)
-            self.after_idle(lambda sf=frame: self._refresh_scroll_visuals(sf))
+
+            def refresh_scroll_state(sf=frame, view=current_view):
+                self._refresh_scroll_visuals(sf)
+                self._clamp_scroll_position(sf, view)
+
+            self.after_idle(refresh_scroll_state)
 
     def _create_pill_frame(self, parent, tag_data, index, tag_list):
         tag_name, tag_state = tag_data["nombre"], tag_data["estado"]
@@ -945,7 +917,8 @@ class TagsConfigDialog(BaseDialog):
 
         close_button = ctk.CTkButton(
             pill_frame,
-            text="✕",
+            text="" if self.close_icon is not None else "×",
+            image=self.close_icon,
             width=TAGS_DIALOG_PILL_CLOSE_SIZE,
             height=TAGS_DIALOG_PILL_CLOSE_SIZE,
             corner_radius=TAGS_DIALOG_PILL_CLOSE_RADIUS,
@@ -993,20 +966,20 @@ class TagsConfigDialog(BaseDialog):
         tag_list.append({"nombre": tag_to_check, "estado": "activo"})
         entry.delete(0, "end")
         self._last_layout_widths = None
-        self.redraw_all_tags()
+        self._redraw_tag_list(tag_list)
 
     def _delete_tag(self, index, tag_list):
         if index < len(tag_list):
             tag_list.pop(index)
             self._last_layout_widths = None
-            self.redraw_all_tags()
+            self._redraw_tag_list(tag_list)
 
     def _toggle_tag_state(self, event, index, tag_list):
         if index < len(tag_list):
             current_state = tag_list[index]["estado"]
             tag_list[index]["estado"] = "inactivo" if current_state == "activo" else "activo"
             self._last_layout_widths = None
-            self.redraw_all_tags()
+            self._redraw_tag_list(tag_list)
 
     def _on_cancel(self, event=None):
         if not self._confirm_discard_changes():

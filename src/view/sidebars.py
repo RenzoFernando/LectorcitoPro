@@ -1,155 +1,25 @@
-import tkinter as tk
-from tkinter import Canvas
+from __future__ import annotations
 
 import customtkinter as ctk
-from PIL import Image, ImageDraw, ImageTk
 
-from view.tooltip import CustomTooltip
 from view.ui_constants import (
     BTN_H_ICON,
     COLORS,
     FONT_FAMILY_PRIMARY,
-    LEFT_SIDEBAR_FONT_SIZE,
-    LEFT_SIDEBAR_HEIGHT,
-    NEUTRAL_BLACK,
-    NEUTRAL_WHITE,
     PILL_TEXT_BUTTON_FONT_SIZE,
-    PILL_TEXT_HORIZONTAL_INSET,
-    RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH,
     RIGHT_SIDEBAR_BUTTON_SPACING,
-    SIDEBAR_CLICK_LOCK_DELAY_MS,
-    SIDEBAR_REPAINT_DELAY_MS,
     SIDEBAR_WIDTH,
-    get_button_tokens,
     get_theme_tokens,
 )
-from view.ui_scaling import canvas_font, scale_tk_value
 
 # =============================================================================
-# UTILIDADES DE COLOR
+# COMPONENTES COMPARTIDOS DE NAVEGACION Y ACCIONES
 # =============================================================================
 
 
-def _hex_to_rgb(h: str):
-    h = (h or "").strip().lstrip("#")
-    if len(h) != 6:
-        return (0, 0, 0)
-    return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
+class BlendedRoundedFrame(ctk.CTkFrame):
+    """Card redondeada nativa, sin renderizado por Canvas ni degradados."""
 
-
-def _luma(h: str) -> float:
-    # Calculo de brillo perceptual para determinar contraste
-    r, g, b = _hex_to_rgb(h)
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-
-def _mix(a: str, b: str, t: float) -> str:
-    ar, ag, ab = _hex_to_rgb(a)
-    br, bg, bb = _hex_to_rgb(b)
-    r = int(ar + (br - ar) * t)
-    g = int(ag + (bg - ag) * t)
-    b2 = int(ab + (bb - ab) * t)
-    return f"#{r:02X}{g:02X}{b2:02X}"
-
-
-def _auto_border(fill: str) -> str:
-    # Genera un borde automatico basado en la luminosidad del relleno
-    if _luma(fill) < 140:
-        return _mix(fill, NEUTRAL_WHITE, 0.2)
-    return _mix(fill, NEUTRAL_BLACK, 0.15)
-
-
-def _gradient_color(stops: list[tuple[float, str]], t: float) -> str:
-    t = max(0.0, min(1.0, float(t)))
-    if not stops:
-        return NEUTRAL_BLACK
-    if len(stops) == 1:
-        return stops[0][1]
-    for i in range(len(stops) - 1):
-        p1, c1 = stops[i]
-        p2, c2 = stops[i + 1]
-        if p1 <= t <= p2:
-            local = (t - p1) / max(1e-9, (p2 - p1))
-            return _mix(c1, c2, local)
-    return stops[-1][1]
-
-
-def _build_stops(
-    start: str | None, end: str | None, mid: str | None = None
-) -> list[tuple[float, str]] | None:
-    if not start or not end:
-        return None
-    if mid:
-        return [(0.0, start), (0.54, mid), (1.0, end)]
-    return [(0.0, start), (1.0, end)]
-
-
-def _mix_stops(
-    stops: list[tuple[float, str]] | None, base_color: str, ratio: float
-) -> list[tuple[float, str]] | None:
-    if not stops:
-        return None
-    return [(point, _mix(color, base_color, ratio)) for point, color in stops]
-
-
-def _draw_gradient_capsule(
-    img,
-    x1: int,
-    y1: int,
-    x2: int,
-    y2: int,
-    radius: int,
-    stops: list[tuple[float, str]],
-    border_rgb=None,
-    border_width: int = 1,
-):
-    grad_w = max(1, int(x2 - x1))
-    grad_h = max(1, int(y2 - y1))
-    gradient = Image.new("RGBA", (grad_w, grad_h), (0, 0, 0, 0))
-    gradient_draw = ImageDraw.Draw(gradient)
-    for x in range(grad_w):
-        color = _gradient_color(stops, x / max(1, grad_w - 1))
-        gradient_draw.line((x, 0, x, grad_h), fill=_hex_to_rgb(color))
-    mask = Image.new("L", (grad_w, grad_h), 0)
-    mask_draw = ImageDraw.Draw(mask)
-    mask_draw.rounded_rectangle((0, 0, grad_w - 1, grad_h - 1), radius=radius, fill=255)
-    img.paste(gradient, (x1, y1), mask)
-    if border_rgb is not None and border_width > 0:
-        ImageDraw.Draw(img).rounded_rectangle(
-            (x1, y1, x2, y2), radius=radius, outline=border_rgb, width=border_width
-        )
-
-
-def _trim_render_cache(cache: dict, limit: int = 12):
-    while len(cache) > limit:
-        try:
-            cache.pop(next(iter(cache)))
-        except Exception:
-            break
-
-
-def _build_surface_image(
-    widget, backdrop_provider, width: int, height: int, outside_bg: str, scale: int = 4
-):
-    target_size = (max(1, int(width * scale)), max(1, int(height * scale)))
-    signature = None
-
-    if callable(backdrop_provider):
-        try:
-            patch, signature = backdrop_provider(widget, width, height)
-        except Exception:
-            patch, signature = None, None
-        if isinstance(patch, Image.Image):
-            patch = patch.convert("RGBA")
-            if patch.size != target_size:
-                resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
-                patch = patch.resize(target_size, resample)
-            return patch.copy(), signature
-
-    return Image.new("RGBA", target_size, (*_hex_to_rgb(outside_bg), 255)), signature
-
-
-class BlendedRoundedFrame(tk.Frame):
     def __init__(
         self,
         parent,
@@ -158,446 +28,65 @@ class BlendedRoundedFrame(tk.Frame):
         fill_color: str = COLORS["light"]["bg_card"],
         border_color: str | None = None,
         border_width: int = 1,
-        corner_radius: int = 18,
+        corner_radius: int = 12,
         content_inset: int | None = None,
         backdrop_provider=None,
     ):
-        super().__init__(parent, bg=outside_bg, bd=0, highlightthickness=0)
-
-        self._outside_bg = outside_bg
-        self._fill_color = fill_color
-        self._border_color = border_color
-        self._border_w = int(border_width)
-        self._corner_radius = int(corner_radius)
-        self._content_inset = int(
-            content_inset if content_inset is not None else max(6, self._corner_radius // 2)
-        )
+        self._content_inset = int(content_inset if content_inset is not None else 10)
         self._backdrop_provider = backdrop_provider
-
-        self._canvas = Canvas(
-            self, width=1, height=1, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg
-        )
-        self._canvas.pack(fill="both", expand=True)
-
-        self.content_frame = tk.Frame(self._canvas, bg=self._fill_color, bd=0, highlightthickness=0)
-        self._content_window_id = self._canvas.create_window(
-            0, 0, window=self.content_frame, anchor="nw"
+        super().__init__(
+            parent,
+            fg_color=fill_color,
+            bg_color=outside_bg,
+            border_color=border_color or fill_color,
+            border_width=max(0, int(border_width)),
+            corner_radius=max(0, int(corner_radius)),
         )
 
-        self._surface_photo = None
-        self._paint_job = None
-        self._paint_signature = None
-        self._last_size = None
-        self._render_cache = {}
-
-        self.bind("<Configure>", self._on_configure, add="+")
-        self._canvas.bind("<Configure>", self._on_configure, add="+")
-        self.content_frame.bind("<Configure>", self._on_content_configure, add="+")
-        self._sync_requested_size()
-        self._schedule_paint()
+        self.content_frame = ctk.CTkFrame(self, fg_color="transparent", bg_color="transparent")
+        self.content_frame.pack(
+            fill="both",
+            expand=True,
+            padx=self._content_inset,
+            pady=self._content_inset,
+        )
 
     def configure(self, cnf=None, **kwargs):
         if cnf and isinstance(cnf, dict):
             kwargs = {**cnf, **kwargs}
 
-        if "outside_bg" in kwargs:
-            self._outside_bg = kwargs.pop("outside_bg")
-            try:
-                super().configure(bg=self._outside_bg)
-                self._canvas.configure(bg=self._outside_bg)
-            except Exception:
-                pass
-
-        if "fill_color" in kwargs:
-            self._fill_color = kwargs.pop("fill_color")
-            try:
-                self.content_frame.configure(bg=self._fill_color)
-            except Exception:
-                pass
-
-        if "fg_color" in kwargs:
-            self._fill_color = kwargs.pop("fg_color")
-            try:
-                self.content_frame.configure(bg=self._fill_color)
-            except Exception:
-                pass
-
-        if "border_color" in kwargs:
-            self._border_color = kwargs.pop("border_color")
-
-        if "border_width" in kwargs:
-            self._border_w = int(kwargs.pop("border_width"))
-
-        if "corner_radius" in kwargs:
-            self._corner_radius = int(kwargs.pop("corner_radius"))
-
-        if "content_inset" in kwargs:
-            self._content_inset = int(kwargs.pop("content_inset"))
-
+        outside_bg = kwargs.pop("outside_bg", None)
+        fill_color = kwargs.pop("fill_color", None)
+        content_inset = kwargs.pop("content_inset", None)
         if "backdrop_provider" in kwargs:
             self._backdrop_provider = kwargs.pop("backdrop_provider")
 
-        self._paint_signature = None
-        self._schedule_paint()
+        if outside_bg is not None:
+            kwargs["bg_color"] = outside_bg
+        if fill_color is not None:
+            kwargs["fg_color"] = fill_color
+        if content_inset is not None:
+            self._content_inset = max(0, int(content_inset))
+            try:
+                self.content_frame.pack_configure(
+                    padx=self._content_inset,
+                    pady=self._content_inset,
+                )
+            except Exception:
+                pass
 
-        if kwargs:
-            super().configure(**kwargs)
+        return super().configure(**kwargs)
 
     config = configure
 
     def refresh_backdrop(self):
-        self._paint_signature = None
-        self._render_cache.clear()
-        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
-
-    def _sync_requested_size(self):
-        inset = max(0, int(scale_tk_value(self, self._content_inset)))
-        try:
-            req_w = max(1, int(self.content_frame.winfo_reqwidth()) + (inset * 2))
-        except Exception:
-            req_w = max(1, inset * 2)
-        try:
-            req_h = max(1, int(self.content_frame.winfo_reqheight()) + (inset * 2))
-        except Exception:
-            req_h = max(1, inset * 2)
-        try:
-            self._canvas.configure(width=req_w, height=req_h)
-        except Exception:
-            pass
-
-    def _on_content_configure(self, event=None):
-        self._sync_requested_size()
-        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
-
-    def _sync_content_window(self, width: int, height: int):
-        inset = max(0, int(scale_tk_value(self, self._content_inset)))
-        inner_w = max(1, int(width - (inset * 2)))
-        inner_h = max(1, int(height - (inset * 2)))
-        try:
-            self._canvas.coords(self._content_window_id, inset, inset)
-            self._canvas.itemconfigure(self._content_window_id, width=inner_w, height=inner_h)
-        except Exception:
-            pass
-
-    def _on_configure(self, event=None):
-        if event is not None and getattr(event, "widget", None) not in (self, self._canvas):
-            return
-        try:
-            size = (
-                max(1, int(getattr(event, "width", self._canvas.winfo_width()))),
-                max(1, int(getattr(event, "height", self._canvas.winfo_height()))),
-            )
-        except Exception:
-            size = (
-                max(1, int(self._canvas.winfo_width())),
-                max(1, int(self._canvas.winfo_height())),
-            )
-        self._sync_content_window(*size)
-        if size == self._last_size:
-            return
-        self._last_size = size
-        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
-
-    def _schedule_paint(self, delay=0):
-        if self._paint_job is not None:
-            try:
-                self.after_cancel(self._paint_job)
-            except Exception:
-                pass
-            self._paint_job = None
-        try:
-            self._paint_job = self.after(max(1, int(delay)), self._paint)
-        except Exception:
-            self._paint_job = None
-
-    def _paint(self, event=None):
-        self._paint_job = None
-        w = max(1, int(self._canvas.winfo_width()))
-        h = max(1, int(self._canvas.winfo_height()))
-        if w <= 2 or h <= 2:
-            return
-
-        self._last_size = (w, h)
-        self._sync_content_window(w, h)
-
-        scale = 4
-        W, H = w * scale, h * scale
-        img, backdrop_signature = _build_surface_image(
-            self._canvas, self._backdrop_provider, w, h, self._outside_bg, scale
-        )
-
-        paint_signature = (
-            w,
-            h,
-            self._outside_bg,
-            self._fill_color,
-            self._border_color,
-            self._border_w,
-            self._corner_radius,
-            self._content_inset,
-            backdrop_signature,
-        )
-        if paint_signature == self._paint_signature and self._canvas.find_all():
-            return
-
-        cached = self._render_cache.get(paint_signature)
-        if cached is not None:
-            self._surface_photo = cached
-            self._canvas.delete("all")
-            self._canvas.create_image(0, 0, image=self._surface_photo, anchor="nw")
-            self._content_window_id = self._canvas.create_window(
-                0, 0, window=self.content_frame, anchor="nw"
-            )
-            self._sync_content_window(w, h)
-            self._paint_signature = paint_signature
-            return
-
-        border_rgb = _hex_to_rgb(self._border_color) if self._border_color else None
-        fill_rgba = (*_hex_to_rgb(self._fill_color), 255)
-
-        pad = max(1, int(scale))
-        x1, y1 = pad, pad
-        x2, y2 = W - pad - 1, H - pad - 1
-        radius = max(
-            1,
-            min(
-                (x2 - x1) // 2,
-                (y2 - y1) // 2,
-                int(scale_tk_value(self, self._corner_radius) * scale),
-            ),
-        )
-        bw = max(1, int(scale_tk_value(self, self._border_w) * scale))
-
-        ImageDraw.Draw(img).rounded_rectangle(
-            [x1, y1, x2, y2], radius=radius, fill=fill_rgba, outline=border_rgb, width=bw
-        )
-
-        img_small = img.resize((w, h), Image.LANCZOS)
-        self._surface_photo = ImageTk.PhotoImage(img_small)
-        self._render_cache[paint_signature] = self._surface_photo
-        _trim_render_cache(self._render_cache)
-        self._canvas.delete("all")
-        self._canvas.create_image(0, 0, image=self._surface_photo, anchor="nw")
-        self._content_window_id = self._canvas.create_window(
-            0, 0, window=self.content_frame, anchor="nw"
-        )
-        self._sync_content_window(w, h)
-        self._paint_signature = paint_signature
+        # Compatibilidad con llamadas antiguas. Ya no existe un fondo renderizado.
+        return None
 
 
-# =============================================================================
-# BARRA LATERAL IZQUIERDA (VERTICAL)
-# =============================================================================
+class PillIconButton(ctk.CTkButton):
+    """Boton compacto para la barra superior usando el renderizado nativo de CTk."""
 
-
-class LeftSidebar(ctk.CTkFrame):
-    def __init__(self, parent, text: str, height: int = 415, backdrop_provider=None):
-        super().__init__(parent, width=SIDEBAR_WIDTH, height=height, fg_color="transparent")
-        self.pack_propagate(False)
-
-        self._text = text
-        light_theme = get_theme_tokens("Light")
-        self._outside_bg = light_theme["bg_base"]
-        self._pill_bg = light_theme["bg_sidebar"]
-        self._pill_bg_end = light_theme["sidebar_pill_end"]
-        self._pill_bg_mid = light_theme.get(
-            "sidebar_pill_mid", _mix(self._pill_bg, self._pill_bg_end, 0.42)
-        )
-        self._text_color = light_theme["sidebar_text"]
-        self._state = "normal"
-
-        self._border_w = RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH
-        self._border_color = None
-        self._backdrop_provider = backdrop_provider
-
-        self._canvas = Canvas(self, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
-        self._canvas.pack(fill="both", expand=True)
-
-        self._pill_photo = None
-        self._paint_job = None
-        self._last_size = None
-        self._paint_signature = None
-        self._render_cache = {}
-        self.pack(expand=True, anchor="center")
-        self.bind("<Configure>", self._on_configure, add="+")
-        self._canvas.bind("<Configure>", self._on_configure, add="+")
-
-    def configure(self, cnf=None, **kwargs):
-        if cnf:
-            kwargs.update(cnf)
-
-        if "backdrop_provider" in kwargs:
-            self._backdrop_provider = kwargs.pop("backdrop_provider")
-            self._render_cache.clear()
-
-        if "state" in kwargs:
-            self._state = kwargs.pop("state")
-        self._paint_signature = None
-        self._schedule_paint()
-
-        super().configure(**kwargs)
-
-    def set_text(self, text: str):
-        self._text = text
-        self._paint_signature = None
-        self._schedule_paint()
-
-    def refresh_backdrop(self):
-        self._paint_signature = None
-        self._render_cache.clear()
-        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
-
-    def apply_theme(self, theme_name: str):
-        theme = get_theme_tokens(theme_name)
-
-        self._outside_bg = theme["bg_base"]
-        self._pill_bg = theme["bg_sidebar"]
-        self._pill_bg_end = theme["sidebar_pill_end"]
-        self._pill_bg_mid = theme.get(
-            "sidebar_pill_mid", _mix(self._pill_bg, self._pill_bg_end, 0.42)
-        )
-        self._text_color = theme["sidebar_text"]
-
-        self._border_color = theme["card_border"]
-
-        self._canvas.configure(bg=self._outside_bg)
-        self._paint_signature = None
-        self._render_cache.clear()
-        self._schedule_paint()
-
-    def _on_configure(self, event=None):
-        if event is not None and getattr(event, "widget", None) not in (self, self._canvas):
-            return
-        try:
-            size = (
-                max(1, int(getattr(event, "width", self._canvas.winfo_width()))),
-                max(1, int(getattr(event, "height", self._canvas.winfo_height()))),
-            )
-        except Exception:
-            size = (
-                max(1, int(self._canvas.winfo_width())),
-                max(1, int(self._canvas.winfo_height())),
-            )
-        if size == self._last_size:
-            return
-        self._last_size = size
-        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
-
-    def _schedule_paint(self, delay=0):
-        if self._paint_job is not None:
-            try:
-                self.after_cancel(self._paint_job)
-            except Exception:
-                pass
-            self._paint_job = None
-        try:
-            self._paint_job = self.after(max(1, int(delay)), self._paint)
-        except Exception:
-            self._paint_job = None
-
-    def _paint(self, event=None):
-        self._paint_job = None
-        w = max(1, int(self._canvas.winfo_width()))
-        h = max(1, int(self._canvas.winfo_height()))
-        if w <= 2 or h <= 2:
-            return
-
-        self._last_size = (w, h)
-
-        scale = 4
-        W, H = w * scale, h * scale
-
-        outside_fill = self._outside_bg
-        pill_fill = self._pill_bg
-        pill_mid_fill = self._pill_bg_mid
-        pill_end_fill = self._pill_bg_end
-        text_fill = self._text_color
-        border_fill = self._border_color
-
-        if self._state == "disabled":
-            outside_fill = _mix(self._outside_bg, self._pill_bg, 0.16)
-            pill_fill = _mix(pill_fill, outside_fill, 0.35)
-            pill_mid_fill = _mix(pill_mid_fill, outside_fill, 0.35)
-            pill_end_fill = _mix(pill_end_fill, outside_fill, 0.35)
-            text_fill = _mix(text_fill, outside_fill, 0.55)
-            if border_fill:
-                border_fill = _mix(border_fill, outside_fill, 0.35)
-
-        img, backdrop_signature = _build_surface_image(
-            self._canvas, self._backdrop_provider, w, h, outside_fill, scale
-        )
-
-        paint_signature = (
-            w,
-            h,
-            outside_fill,
-            pill_fill,
-            pill_mid_fill,
-            pill_end_fill,
-            text_fill,
-            border_fill,
-            self._state,
-            self._text,
-            backdrop_signature,
-        )
-        if paint_signature == self._paint_signature and self._canvas.find_all():
-            return
-
-        cached_photo = self._render_cache.get(paint_signature)
-        if cached_photo is not None:
-            self._pill_photo = cached_photo
-            self._canvas.delete("all")
-            self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
-            self._canvas.create_text(
-                w / 2,
-                h / 2,
-                text=self._text,
-                angle=90,
-                font=canvas_font(self, FONT_FAMILY_PRIMARY, LEFT_SIDEBAR_FONT_SIZE, "bold"),
-                fill=text_fill,
-            )
-            self._paint_signature = paint_signature
-            return
-
-        border_rgb = _hex_to_rgb(border_fill) if border_fill else None
-
-        pad = 2 * scale
-        x1, y1 = pad, pad
-        x2, y2 = W - pad, H - pad
-
-        usable_w = max(10 * scale, (x2 - x1))
-        radius = usable_w // 2
-        bw = max(1, int(scale_tk_value(self, self._border_w) * scale))
-        stops = _build_stops(pill_fill, pill_end_fill, pill_mid_fill)
-
-        _draw_gradient_capsule(
-            img, x1, y1, x2, y2, radius, stops, border_rgb=border_rgb, border_width=bw
-        )
-
-        img_small = img.resize((w, h), Image.LANCZOS)
-        self._pill_photo = ImageTk.PhotoImage(img_small)
-        self._render_cache[paint_signature] = self._pill_photo
-        _trim_render_cache(self._render_cache)
-        self._canvas.delete("all")
-        self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
-
-        self._canvas.create_text(
-            w / 2,
-            h / 2,
-            text=self._text,
-            angle=90,
-            font=canvas_font(self, FONT_FAMILY_PRIMARY, LEFT_SIDEBAR_FONT_SIZE, "bold"),
-            fill=text_fill,
-        )
-        self._paint_signature = paint_signature
-
-
-# =============================================================================
-# COMPONENTES DE BOTONES (PILL SHAPE)
-# =============================================================================
-
-
-class PillIconButton(ctk.CTkFrame):
     def __init__(
         self,
         parent,
@@ -606,810 +95,412 @@ class PillIconButton(ctk.CTkFrame):
         width: int = SIDEBAR_WIDTH,
         height: int = BTN_H_ICON,
         outside_bg: str = COLORS["light"]["bg_base"],
-        fg_color: str = COLORS["light"]["sidebar_pill_start"],
-        hover_color: str = COLORS["light"]["sidebar_pill_hover_start"],
-        border_color: str = None,
-        border_width: int = 2,
-        gradient_start: str | None = None,
-        gradient_mid: str | None = None,
-        gradient_end: str | None = None,
-        hover_gradient_start: str | None = None,
-        hover_gradient_mid: str | None = None,
-        hover_gradient_end: str | None = None,
+        fg_color: str = "transparent",
+        hover_color: str = COLORS["light"]["sidebar_hover"],
+        border_color: str | None = None,
+        border_width: int = 0,
         command=None,
         backdrop_provider=None,
+        **legacy_kwargs,
     ):
-        super().__init__(parent, width=width, height=height, fg_color="transparent")
-        self.pack_propagate(False)
-
-        self._outside_bg = outside_bg
-        self._fg_color = fg_color
-        self._hover_color = hover_color
-        self._border_w = int(border_width)
-        self._gradient_start = gradient_start
-        self._gradient_mid = gradient_mid
-        self._gradient_end = gradient_end
-        self._hover_gradient_start = hover_gradient_start
-        self._hover_gradient_mid = hover_gradient_mid
-        self._hover_gradient_end = hover_gradient_end
-
-        self._hovered = False
-        self._state = "normal"
         self._backdrop_provider = backdrop_provider
-        self._explicit_border = border_color
-        self._border_color = border_color if border_color else _auto_border(self._fg_color)
-        self._hover_border_color = border_color if border_color else _auto_border(self._hover_color)
+        # CTkButton permite transparencia en el fondo, pero no en border_color.
+        # El color es irrelevante con border_width=0, por lo que usamos uno valido.
+        safe_border_color = border_color
+        if safe_border_color in (None, "transparent"):
+            safe_border_color = hover_color
 
-        self._canvas = Canvas(self, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
-        self._canvas.pack(fill="both", expand=True)
-
-        self._pill_photo = None
-        self._icon_photo = None
-        self._paint_job = None
-        self._paint_signature = None
-        self._last_size = None
-        self._render_cache = {}
-        self._command = command
-        self._image = image
-
+        super().__init__(
+            parent,
+            text="",
+            image=image,
+            width=width,
+            height=height,
+            corner_radius=8,
+            fg_color=fg_color,
+            hover_color=hover_color,
+            bg_color="transparent",
+            border_color=safe_border_color,
+            border_width=max(0, int(border_width)),
+            command=command,
+        )
         try:
-            self._canvas.configure(cursor="hand2")
+            self.configure(cursor="hand2")
         except Exception:
             pass
-
-        super().bind("<Enter>", self._on_enter, add="+")
-        super().bind("<Leave>", self._on_leave, add="+")
-        super().bind("<Button-1>", self._on_click, add="+")
-
-        self._canvas.bind("<Enter>", self._on_enter, add="+")
-        self._canvas.bind("<Leave>", self._on_leave, add="+")
-        self._canvas.bind("<Button-1>", self._on_click, add="+")
-
-        self.bind("<Configure>", self._on_configure, add="+")
-        self._canvas.bind("<Configure>", self._on_configure, add="+")
-        self._schedule_paint()
 
     def configure(self, cnf=None, **kwargs):
         if cnf and isinstance(cnf, dict):
             kwargs = {**cnf, **kwargs}
-
-        if "outside_bg" in kwargs:
-            self._outside_bg = kwargs.pop("outside_bg")
-            try:
-                self._canvas.configure(bg=self._outside_bg)
-            except Exception:
-                pass
-
-        if "backdrop_provider" in kwargs:
-            self._backdrop_provider = kwargs.pop("backdrop_provider")
-            self._render_cache.clear()
-
-        if "fg_color" in kwargs:
-            self._fg_color = kwargs.pop("fg_color")
-            if not self._explicit_border:
-                self._border_color = _auto_border(self._fg_color)
-
-        if "border_color" in kwargs:
-            self._explicit_border = kwargs.pop("border_color")
-            self._border_color = self._explicit_border
-            self._hover_border_color = (
-                self._explicit_border if self._explicit_border else _auto_border(self._hover_color)
-            )
-
-        if "hover_color" in kwargs:
-            self._hover_color = kwargs.pop("hover_color")
-            self._hover_border_color = (
-                self._explicit_border if self._explicit_border else _auto_border(self._hover_color)
-            )
-
-        if "gradient_start" in kwargs:
-            self._gradient_start = kwargs.pop("gradient_start")
-        if "gradient_mid" in kwargs:
-            self._gradient_mid = kwargs.pop("gradient_mid")
-        if "gradient_end" in kwargs:
-            self._gradient_end = kwargs.pop("gradient_end")
-        if "hover_gradient_start" in kwargs:
-            self._hover_gradient_start = kwargs.pop("hover_gradient_start")
-        if "hover_gradient_mid" in kwargs:
-            self._hover_gradient_mid = kwargs.pop("hover_gradient_mid")
-        if "hover_gradient_end" in kwargs:
-            self._hover_gradient_end = kwargs.pop("hover_gradient_end")
-
-        if "state" in kwargs:
-            self._state = kwargs.pop("state")
-
-        if "command" in kwargs:
-            self._command = kwargs.pop("command")
-
-        if "image" in kwargs:
-            self._image = kwargs.pop("image")
-
-        self._paint_signature = None
-        self._schedule_paint()
+        kwargs.pop("outside_bg", None)
+        kwargs.pop("backdrop_provider", None)
+        if kwargs.get("border_color") == "transparent":
+            kwargs.pop("border_color")
+        kwargs["bg_color"] = "transparent"
+        return super().configure(**kwargs)
 
     config = configure
 
-    def cget(self, key):
-        if key in ("outside_bg", "fg_color", "hover_color"):
-            return {
-                "outside_bg": self._outside_bg,
-                "fg_color": self._fg_color,
-                "hover_color": self._hover_color,
-            }[key]
-        if key == "state":
-            return self._state
-        if key == "command":
-            return self._command
-        if key == "image":
-            return self._image
-        return super().cget(key)
-
-    def bind(self, sequence=None, func=None, add=None):
-        if add is None:
-            add = "+"
-        r = super().bind(sequence, func, add)
-        try:
-            self._canvas.bind(sequence, func, add)
-        except Exception:
-            pass
-        return r
-
-    def invoke(self):
-        if self._state == "disabled":
-            return None
-        if callable(self._command):
-            return self._command()
-        return None
-
     def refresh_backdrop(self):
-        self._paint_signature = None
-        self._render_cache.clear()
-        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
-
-    def _on_enter(self, event=None):
-        if self._state == "disabled":
-            return
-        if not self._hovered:
-            self._hovered = True
-            self._schedule_paint()
-
-    def _on_leave(self, event=None):
-        if self._hovered:
-            self._hovered = False
-            self._schedule_paint()
-
-    def _on_click(self, event=None):
-        if self._state == "disabled":
-            return "break"
-        if getattr(self, "_click_lock", False):
-            return "break"
-        CustomTooltip.hide_global()
-        self._click_lock = True
-        try:
-            self.after(SIDEBAR_CLICK_LOCK_DELAY_MS, lambda: setattr(self, "_click_lock", False))
-        except Exception:
-            self._click_lock = False
-        if callable(self._command):
-            self._command()
-        return "break"
-
-    def _pick_icon_pil(self):
-        img = self._image
-        if img is None:
-            return None
-
-        pil = None
-        try:
-            if isinstance(img, Image.Image):
-                pil = img
-        except Exception:
-            pass
-
-        if pil is None:
-            try:
-                mode = ctk.get_appearance_mode()
-            except Exception:
-                mode = "Light"
-
-            if mode == "Dark":
-                for a in ("_dark_image", "dark_image"):
-                    if hasattr(img, a):
-                        pil = getattr(img, a)
-                        break
-            if pil is None:
-                for a in ("_light_image", "light_image"):
-                    if hasattr(img, a):
-                        pil = getattr(img, a)
-                        break
-            if pil is None:
-                for a in ("_pil_image", "_image", "image"):
-                    if hasattr(img, a):
-                        pil = getattr(img, a)
-                        break
-
-        if pil is None:
-            return None
-
-        try:
-            pil = pil.convert("RGBA")
-            bbox = pil.getchannel("A").getbbox()
-            if bbox:
-                pil = pil.crop(bbox)
-        except Exception:
-            pass
-
-        size = None
-        for a in ("_size", "size"):
-            if hasattr(img, a):
-                size = getattr(img, a)
-                break
-        if isinstance(size, (tuple, list)) and len(size) == 2:
-            try:
-                target_w = max(1, int(size[0]))
-                target_h = max(1, int(size[1]))
-                iw, ih = pil.size
-                ratio = min(target_w / max(1, iw), target_h / max(1, ih))
-                new_w = max(1, int(round(iw * ratio)))
-                new_h = max(1, int(round(ih * ratio)))
-                if pil.size != (new_w, new_h):
-                    resample = getattr(
-                        getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS
-                    )
-                    pil = pil.resize((new_w, new_h), resample)
-            except Exception:
-                pass
-        return pil
-
-    def _on_configure(self, event=None):
-        if event is not None and getattr(event, "widget", None) not in (self, self._canvas):
-            return
-        try:
-            size = (
-                max(1, int(getattr(event, "width", self._canvas.winfo_width()))),
-                max(1, int(getattr(event, "height", self._canvas.winfo_height()))),
-            )
-        except Exception:
-            size = (
-                max(1, int(self._canvas.winfo_width())),
-                max(1, int(self._canvas.winfo_height())),
-            )
-        if size == self._last_size:
-            return
-        self._last_size = size
-        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
-
-    def _schedule_paint(self, delay=0):
-        if self._paint_job is not None:
-            try:
-                self.after_cancel(self._paint_job)
-            except Exception:
-                pass
-            self._paint_job = None
-        try:
-            self._paint_job = self.after(max(1, int(delay)), self._paint)
-        except Exception:
-            self._paint_job = None
-
-    def _paint(self, event=None):
-        self._paint_job = None
-        w = max(1, int(self._canvas.winfo_width()))
-        h = max(1, int(self._canvas.winfo_height()))
-        if w <= 2 or h <= 2:
-            return
-
-        self._last_size = (w, h)
-
-        scale = 4
-        W, H = w * scale, h * scale
-
-        fill = (
-            self._hover_color if (self._hovered and self._state != "disabled") else self._fg_color
-        )
-        border = (
-            self._hover_border_color
-            if (self._hovered and self._state != "disabled")
-            else self._border_color
-        )
-        gradient_stops = _build_stops(self._gradient_start, self._gradient_end, self._gradient_mid)
-        hover_gradient_stops = _build_stops(
-            self._hover_gradient_start, self._hover_gradient_end, self._hover_gradient_mid
-        )
-        active_stops = (
-            hover_gradient_stops
-            if (self._hovered and self._state != "disabled" and hover_gradient_stops)
-            else gradient_stops
-        )
-
-        if self._state == "disabled":
-            fill = _mix(fill, self._outside_bg, 0.35)
-            border = _mix(border, self._outside_bg, 0.35)
-            active_stops = _mix_stops(active_stops, self._outside_bg, 0.35)
-
-        img, backdrop_signature = _build_surface_image(
-            self._canvas, self._backdrop_provider, w, h, self._outside_bg, scale
-        )
-
-        paint_signature = (
-            w,
-            h,
-            self._outside_bg,
-            fill,
-            border,
-            tuple(active_stops or []),
-            self._state,
-            self._hovered,
-            self._border_w,
-            bool(self._image),
-            backdrop_signature,
-        )
-        if paint_signature == self._paint_signature and self._canvas.find_all():
-            return
-
-        cached_photo = self._render_cache.get(paint_signature)
-        if cached_photo is not None:
-            self._pill_photo = cached_photo
-            self._canvas.delete("all")
-            self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
-            self._paint_signature = paint_signature
-            return
-
-        border_rgb = _hex_to_rgb(border) if border else None
-
-        pad = 2 * scale
-        x1, y1 = pad, pad
-        x2, y2 = W - pad, H - pad
-
-        usable_w = max(10 * scale, (x2 - x1))
-        usable_h = max(10 * scale, (y2 - y1))
-        radius = min(usable_w, usable_h) // 2
-        bw = max(1, int(scale_tk_value(self, self._border_w) * scale))
-
-        if active_stops:
-            _draw_gradient_capsule(
-                img, x1, y1, x2, y2, radius, active_stops, border_rgb=border_rgb, border_width=bw
-            )
-        else:
-            ImageDraw.Draw(img).rounded_rectangle(
-                [x1, y1, x2, y2],
-                radius=radius,
-                fill=_hex_to_rgb(fill),
-                outline=border_rgb,
-                width=bw,
-            )
-
-        icon = self._pick_icon_pil()
-        if icon is not None:
-            try:
-                icon = icon.convert("RGBA")
-                iw, ih = icon.size
-                max_w = max(1, int((x2 - x1) * 0.56))
-                max_h = max(1, int((y2 - y1) * 0.56))
-                ratio = min(max_w / max(1, iw), max_h / max(1, ih))
-                if ratio < 1.0 or ratio > 1.02:
-                    new_w = max(1, int(iw * ratio))
-                    new_h = max(1, int(ih * ratio))
-                    resample = getattr(
-                        getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS
-                    )
-                    icon = icon.resize((new_w, new_h), resample)
-                else:
-                    new_w, new_h = iw, ih
-
-                if self._state == "disabled":
-                    alpha = icon.split()[-1].point(lambda a: int(a * 0.45))
-                    icon.putalpha(alpha)
-
-                ix = (W - new_w) // 2
-                iy = (H - new_h) // 2
-                img.alpha_composite(icon, (ix, iy))
-            except Exception:
-                pass
-
-        img_small = img.resize((w, h), Image.LANCZOS)
-        self._pill_photo = ImageTk.PhotoImage(img_small)
-        self._render_cache[paint_signature] = self._pill_photo
-        _trim_render_cache(self._render_cache)
-        self._canvas.delete("all")
-        self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
-        self._paint_signature = paint_signature
+        return None
 
 
 class PillTextButton(ctk.CTkFrame):
+    """Accion de texto con slot de icono estable y chevron vectorial de texto."""
+
     def __init__(
         self,
         parent,
         *,
         text: str = "",
-        width: int = 300,
-        height: int = 32,
+        image=None,
+        width: int = 380,
+        height: int = 42,
         outside_bg: str = COLORS["light"]["bg_base"],
-        fg_color: str = COLORS["button"]["blue"]["bg"],
-        hover_color: str = COLORS["button"]["blue"]["hover"],
-        border_color: str = None,
-        border_width: int = 2,
-        gradient_start: str | None = None,
-        gradient_mid: str | None = None,
-        gradient_end: str | None = None,
-        hover_gradient_start: str | None = None,
-        hover_gradient_mid: str | None = None,
-        hover_gradient_end: str | None = None,
-        text_color: str = COLORS["light"]["text_on_accent"],
-        font=(FONT_FAMILY_PRIMARY, PILL_TEXT_BUTTON_FONT_SIZE, "bold"),
+        fg_color: str = COLORS["light"]["bg_panel"],
+        hover_color: str = COLORS["light"]["surface_alt"],
+        border_color: str | None = None,
+        border_width: int = 1,
+        text_color: str = COLORS["light"]["text_primary"],
+        font=None,
+        corner_radius: int = 10,
         command=None,
+        icon_placeholder: bool = False,
+        icon_color: str | None = None,
+        chevron: bool = False,
+        chevron_color: str | None = None,
+        content_pad: int = 14,
+        text_anchor: str = "w",
+        backdrop_provider=None,
+        **legacy_kwargs,
     ):
-        super().__init__(parent, width=width, height=height, fg_color="transparent")
-        self.pack_propagate(False)
-
-        self._outside_bg = outside_bg
-        self._fg_color = fg_color
-        self._hover_color = hover_color
-        self._border_w = int(border_width)
-        self._gradient_start = gradient_start
-        self._gradient_mid = gradient_mid
-        self._gradient_end = gradient_end
-        self._hover_gradient_start = hover_gradient_start
-        self._hover_gradient_mid = hover_gradient_mid
-        self._hover_gradient_end = hover_gradient_end
-
-        self._text = text or ""
-        self._text_color = text_color
-        self._font = font
-        self._hovered = False
-        self._state = "normal"
+        self._pill_ready = False
+        self._text = text
         self._command = command
+        self._state = "normal"
+        self._hovered = False
+        self._applied_bg_color = None
+        self._applied_cursor = None
+        self._normal_color = fg_color
+        self._hover_color = hover_color
+        self._text_color = text_color
+        self._icon_color = icon_color or text_color
+        self._chevron_color = chevron_color or text_color
+        self._font = font or (FONT_FAMILY_PRIMARY, PILL_TEXT_BUTTON_FONT_SIZE, "bold")
+        self._image = image
+        self._icon_placeholder = bool(icon_placeholder)
+        self._show_chevron = bool(chevron)
+        self._backdrop_provider = backdrop_provider
 
-        self._explicit_border = border_color
-        self._border_color = border_color if border_color else _auto_border(self._fg_color)
-        self._hover_border_color = _auto_border(self._hover_color)
+        super().__init__(
+            parent,
+            width=width,
+            height=height,
+            fg_color=fg_color,
+            bg_color=outside_bg,
+            border_color=border_color or fg_color,
+            border_width=max(0, int(border_width)),
+            corner_radius=max(0, int(corner_radius)),
+        )
+        self.grid_propagate(False)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
-        self._canvas = Canvas(self, highlightthickness=0, bd=0, relief="flat", bg=self._outside_bg)
-        self._canvas.pack(fill="both", expand=True)
+        self._icon_host = ctk.CTkFrame(
+            self,
+            width=20,
+            height=20,
+            fg_color="transparent",
+            bg_color="transparent",
+        )
+        self._icon_host.grid(row=0, column=0, padx=(content_pad, 10), sticky="w")
+        self._icon_host.grid_propagate(False)
 
-        self._pill_photo = None
-        self._paint_job = None
-        self._paint_signature = None
-        self._last_size = None
-        self._render_cache = {}
+        self._icon_label = ctk.CTkLabel(
+            self._icon_host,
+            text="",
+            width=20,
+            height=20,
+            image=image,
+            fg_color="transparent",
+            bg_color="transparent",
+        )
 
+        self._placeholder = ctk.CTkFrame(
+            self._icon_host,
+            width=18,
+            height=18,
+            fg_color="transparent",
+            bg_color="transparent",
+            border_width=1,
+            border_color=self._icon_color,
+            corner_radius=0,
+        )
+        self._placeholder.pack_propagate(False)
+
+        self._text_label = ctk.CTkLabel(
+            self,
+            text=text,
+            font=self._font,
+            text_color=self._text_color,
+            fg_color="transparent",
+            bg_color="transparent",
+            anchor=text_anchor,
+        )
+        self._text_label.grid(row=0, column=1, sticky="ew")
+
+        self._chevron_label = ctk.CTkLabel(
+            self,
+            text="›" if self._show_chevron else "",
+            width=18,
+            font=(FONT_FAMILY_PRIMARY, 18, "bold"),
+            text_color=self._chevron_color,
+            fg_color="transparent",
+            bg_color="transparent",
+        )
+        self._chevron_label.grid(row=0, column=2, padx=(10, content_pad), sticky="e")
+
+        self._pill_ready = True
+        self._sync_icon()
+        self._bind_interaction_tree()
+        self._apply_visual_state()
+
+    def _interactive_widgets(self):
+        return (
+            self,
+            self._icon_host,
+            self._icon_label,
+            self._placeholder,
+            self._text_label,
+            self._chevron_label,
+        )
+
+    def _bind_interaction_tree(self):
+        for widget in self._interactive_widgets():
+            try:
+                if widget is self:
+                    ctk.CTkFrame.bind(self, "<Enter>", self._on_enter, add="+")
+                    ctk.CTkFrame.bind(self, "<Leave>", self._on_leave, add="+")
+                    ctk.CTkFrame.bind(self, "<Button-1>", self._on_click, add="+")
+                    ctk.CTkFrame.configure(self, cursor="hand2")
+                else:
+                    widget.bind("<Enter>", self._on_enter, add="+")
+                    widget.bind("<Leave>", self._on_leave, add="+")
+                    widget.bind("<Button-1>", self._on_click, add="+")
+                    widget.configure(cursor="hand2")
+            except Exception:
+                pass
+        self._applied_cursor = "hand2"
+
+    def _pointer_inside(self) -> bool:
         try:
-            self._canvas.configure(cursor="hand2")
+            x, y = self.winfo_pointerxy()
+            left = self.winfo_rootx()
+            top = self.winfo_rooty()
+            return left <= x < left + self.winfo_width() and top <= y < top + self.winfo_height()
+        except Exception:
+            return False
+
+    def _on_enter(self, event=None):
+        if self._state == "disabled":
+            return
+        self._hovered = True
+        self._apply_visual_state()
+
+    def _on_leave(self, event=None):
+        if self._pointer_inside():
+            return
+        self._hovered = False
+        self._apply_visual_state()
+
+    def _on_click(self, event=None):
+        if self._state == "disabled":
+            return
+        self.invoke()
+
+    def _sync_icon(self):
+        try:
+            self._icon_label.pack_forget()
+            self._placeholder.pack_forget()
         except Exception:
             pass
 
-        self._click_lock = False
+        if self._image is not None:
+            self._icon_label.configure(image=self._image)
+            self._icon_label.pack(fill="both", expand=True)
+        elif self._icon_placeholder:
+            self._placeholder.configure(border_color=self._icon_color)
+            self._placeholder.pack(expand=True)
 
-        super().bind("<Enter>", self._on_enter, add="+")
-        super().bind("<Leave>", self._on_leave, add="+")
-        super().bind("<Button-1>", self._on_click, add="+")
+    def _apply_icon_surface(self, color):
+        # Los hijos transparentes de CTk pueden heredar el fondo exterior del
+        # contenedor. Igualamos su superficie al boton para evitar cuadrados
+        # visibles detras de SVG con transparencia.
+        for widget in (self._icon_host, self._icon_label, self._placeholder):
+            try:
+                widget.configure(fg_color=color, bg_color=color)
+            except Exception:
+                pass
 
-        self._canvas.bind("<Enter>", self._on_enter, add="+")
-        self._canvas.bind("<Leave>", self._on_leave, add="+")
-        self._canvas.bind("<Button-1>", self._on_click, add="+")
+    def _apply_visual_state(self):
+        disabled = self._state == "disabled"
+        base = self._normal_color if disabled or not self._hovered else self._hover_color
 
-        self.bind("<Configure>", self._on_configure, add="+")
-        self._canvas.bind("<Configure>", self._on_configure, add="+")
-        self._schedule_paint()
+        if base != self._applied_bg_color:
+            ctk.CTkFrame.configure(self, fg_color=base)
+            self._apply_icon_surface(base)
+            self._applied_bg_color = base
+
+        cursor = "arrow" if disabled else "hand2"
+        if cursor != self._applied_cursor:
+            try:
+                ctk.CTkFrame.configure(self, cursor=cursor)
+            except Exception:
+                pass
+            for widget in self._interactive_widgets()[1:]:
+                try:
+                    widget.configure(cursor=cursor)
+                except Exception:
+                    pass
+            self._applied_cursor = cursor
 
     def configure(self, cnf=None, **kwargs):
         if cnf and isinstance(cnf, dict):
             kwargs = {**cnf, **kwargs}
 
-        if "outside_bg" in kwargs:
-            self._outside_bg = kwargs.pop("outside_bg")
-            try:
-                self._canvas.configure(bg=self._outside_bg)
-            except Exception:
-                pass
+        # CTkFrame puede invocar configure() durante su propio __init__.
+        if not getattr(self, "_pill_ready", False):
+            return ctk.CTkFrame.configure(self, **kwargs)
 
-        if "fg_color" in kwargs:
-            self._fg_color = kwargs.pop("fg_color")
-            if not self._explicit_border:
-                self._border_color = _auto_border(self._fg_color)
-
-        if "border_color" in kwargs:
-            self._explicit_border = kwargs.pop("border_color")
-            self._border_color = self._explicit_border
-
-        if "hover_color" in kwargs:
-            self._hover_color = kwargs.pop("hover_color")
-            self._hover_border_color = _auto_border(self._hover_color)
-
-        if "gradient_start" in kwargs:
-            self._gradient_start = kwargs.pop("gradient_start")
-        if "gradient_mid" in kwargs:
-            self._gradient_mid = kwargs.pop("gradient_mid")
-        if "gradient_end" in kwargs:
-            self._gradient_end = kwargs.pop("gradient_end")
-        if "hover_gradient_start" in kwargs:
-            self._hover_gradient_start = kwargs.pop("hover_gradient_start")
-        if "hover_gradient_mid" in kwargs:
-            self._hover_gradient_mid = kwargs.pop("hover_gradient_mid")
-        if "hover_gradient_end" in kwargs:
-            self._hover_gradient_end = kwargs.pop("hover_gradient_end")
-
-        if "border_width" in kwargs:
-            self._border_w = int(kwargs.pop("border_width"))
+        visual_state_dirty = False
+        frame_kwargs = {}
 
         if "text" in kwargs:
-            self._text = str(kwargs.pop("text"))
-
-        if "text_color" in kwargs:
-            self._text_color = kwargs.pop("text_color")
-
-        if "font" in kwargs:
-            self._font = kwargs.pop("font")
-
-        if "state" in kwargs:
-            self._state = kwargs.pop("state")
-
+            self._text = kwargs.pop("text")
+            self._text_label.configure(text=self._text)
+        if "image" in kwargs:
+            self._image = kwargs.pop("image")
+            self._sync_icon()
         if "command" in kwargs:
             self._command = kwargs.pop("command")
+        if "state" in kwargs:
+            new_state = kwargs.pop("state")
+            if new_state != self._state:
+                self._state = new_state
+                visual_state_dirty = True
+        if "font" in kwargs:
+            new_font = kwargs.pop("font")
+            if new_font != self._font:
+                self._font = new_font
+                self._text_label.configure(font=self._font)
+        if "text_color" in kwargs:
+            new_color = kwargs.pop("text_color")
+            if new_color != self._text_color:
+                self._text_color = new_color
+                self._text_label.configure(text_color=self._text_color)
+        if "icon_color" in kwargs:
+            new_color = kwargs.pop("icon_color")
+            if new_color != self._icon_color:
+                self._icon_color = new_color
+                self._placeholder.configure(border_color=self._icon_color)
+        if "chevron_color" in kwargs:
+            new_color = kwargs.pop("chevron_color")
+            if new_color != self._chevron_color:
+                self._chevron_color = new_color
+                self._chevron_label.configure(text_color=self._chevron_color)
+        if "fg_color" in kwargs:
+            new_color = kwargs.pop("fg_color")
+            if new_color != self._normal_color:
+                self._normal_color = new_color
+                visual_state_dirty = True
+        if "hover_color" in kwargs:
+            new_color = kwargs.pop("hover_color")
+            if new_color != self._hover_color:
+                self._hover_color = new_color
+                visual_state_dirty = True
+        if "outside_bg" in kwargs:
+            frame_kwargs["bg_color"] = kwargs.pop("outside_bg")
+        if "icon_placeholder" in kwargs:
+            new_placeholder = bool(kwargs.pop("icon_placeholder"))
+            if new_placeholder != self._icon_placeholder:
+                self._icon_placeholder = new_placeholder
+                self._sync_icon()
+        if "chevron" in kwargs:
+            new_chevron = bool(kwargs.pop("chevron"))
+            if new_chevron != self._show_chevron:
+                self._show_chevron = new_chevron
+                self._chevron_label.configure(text="›" if self._show_chevron else "")
+        if "backdrop_provider" in kwargs:
+            self._backdrop_provider = kwargs.pop("backdrop_provider")
 
-        frame_kwargs = {}
-        if "width" in kwargs:
-            frame_kwargs["width"] = kwargs.pop("width")
-        if "height" in kwargs:
-            frame_kwargs["height"] = kwargs.pop("height")
+        kwargs.pop("content_pad", None)
+        kwargs.pop("text_anchor", None)
+
+        frame_kwargs.update(kwargs)
+        result = None
         if frame_kwargs:
-            super().configure(**frame_kwargs)
+            result = ctk.CTkFrame.configure(self, **frame_kwargs)
 
-        self._paint_signature = None
-        self._schedule_paint()
+        if visual_state_dirty:
+            self._apply_visual_state()
+        return result
 
     config = configure
 
     def cget(self, key):
-        if key in (
-            "outside_bg",
-            "fg_color",
-            "hover_color",
-            "text",
-            "text_color",
-            "font",
-            "state",
-            "command",
-        ):
-            return {
-                "outside_bg": self._outside_bg,
-                "fg_color": self._fg_color,
-                "hover_color": self._hover_color,
-                "text": self._text,
-                "text_color": self._text_color,
-                "font": self._font,
-                "state": self._state,
-                "command": self._command,
-            }[key]
+        custom = {
+            "state": self._state,
+            "text": self._text,
+            "image": self._image,
+            "command": self._command,
+            "fg_color": self._normal_color,
+            "hover_color": self._hover_color,
+            "text_color": self._text_color,
+        }
+        if key in custom:
+            return custom[key]
         return super().cget(key)
 
     def bind(self, sequence=None, func=None, add=None):
-        if add is None:
-            add = "+"
-        r = super().bind(sequence, func, add)
-        try:
-            self._canvas.bind(sequence, func, add)
-        except Exception:
-            pass
-        return r
+        result = super().bind(sequence, func, add)
+        if not getattr(self, "_pill_ready", False):
+            return result
+
+        for widget in self._interactive_widgets()[1:]:
+            try:
+                widget.bind(sequence, func, add)
+            except Exception:
+                pass
+        return result
 
     def invoke(self):
-        if self._state == "disabled":
-            return None
-        if callable(self._command):
+        if self._state != "disabled" and callable(self._command):
             return self._command()
         return None
 
-    def _on_enter(self, event=None):
-        if self._state == "disabled":
-            return
-        if not self._hovered:
-            self._hovered = True
-            self._schedule_paint()
-
-    def _on_leave(self, event=None):
-        if self._hovered:
-            self._hovered = False
-            self._schedule_paint()
-
-    def _on_click(self, event=None):
-        if self._state == "disabled":
-            return "break"
-        if getattr(self, "_click_lock", False):
-            return "break"
-        CustomTooltip.hide_global()
-        self._click_lock = True
-        try:
-            self.after(SIDEBAR_CLICK_LOCK_DELAY_MS, lambda: setattr(self, "_click_lock", False))
-        except Exception:
-            self._click_lock = False
-        if callable(self._command):
-            self._command()
-        return "break"
-
-    def _on_configure(self, event=None):
-        if event is not None and getattr(event, "widget", None) not in (self, self._canvas):
-            return
-        try:
-            size = (
-                max(1, int(getattr(event, "width", self._canvas.winfo_width()))),
-                max(1, int(getattr(event, "height", self._canvas.winfo_height()))),
-            )
-        except Exception:
-            size = (
-                max(1, int(self._canvas.winfo_width())),
-                max(1, int(self._canvas.winfo_height())),
-            )
-        if size == self._last_size:
-            return
-        self._last_size = size
-        self._schedule_paint(delay=SIDEBAR_REPAINT_DELAY_MS)
-
-    def _schedule_paint(self, delay=0):
-        if self._paint_job is not None:
-            try:
-                self.after_cancel(self._paint_job)
-            except Exception:
-                pass
-            self._paint_job = None
-        try:
-            self._paint_job = self.after(max(1, int(delay)), self._paint)
-        except Exception:
-            self._paint_job = None
-
-    def _paint(self, event=None):
-        self._paint_job = None
-        w = max(1, int(self._canvas.winfo_width()))
-        h = max(1, int(self._canvas.winfo_height()))
-        if w <= 2 or h <= 2:
-            return
-
-        self._last_size = (w, h)
-
-        scale = 4
-        W, H = w * scale, h * scale
-
-        fill = (
-            self._hover_color if (self._hovered and self._state != "disabled") else self._fg_color
-        )
-        border = (
-            self._hover_border_color
-            if (self._hovered and self._state != "disabled")
-            else self._border_color
-        )
-        text_color = self._text_color
-        gradient_stops = _build_stops(self._gradient_start, self._gradient_end, self._gradient_mid)
-        hover_gradient_stops = _build_stops(
-            self._hover_gradient_start, self._hover_gradient_end, self._hover_gradient_mid
-        )
-        active_stops = (
-            hover_gradient_stops
-            if (self._hovered and self._state != "disabled" and hover_gradient_stops)
-            else gradient_stops
-        )
-
-        if self._state == "disabled":
-            fill = _mix(fill, self._outside_bg, 0.35)
-            border = _mix(border, self._outside_bg, 0.35)
-            try:
-                text_color = _mix(text_color, self._outside_bg, 0.55)
-            except Exception:
-                pass
-            active_stops = _mix_stops(active_stops, self._outside_bg, 0.35)
-
-        render_font = self._font
-        try:
-            if (
-                isinstance(render_font, (tuple, list))
-                and len(render_font) >= 2
-                and int(render_font[1]) > 0
-            ):
-                render_font = canvas_font(
-                    self,
-                    str(render_font[0]),
-                    int(render_font[1]),
-                    str(render_font[2]) if len(render_font) > 2 else "normal",
-                )
-        except Exception:
-            render_font = self._font
-
-        paint_signature = (
-            w,
-            h,
-            self._outside_bg,
-            fill,
-            border,
-            text_color,
-            self._text,
-            str(render_font),
-            self._state,
-            self._hovered,
-            self._border_w,
-            tuple(active_stops or []),
-        )
-        if paint_signature == self._paint_signature and self._canvas.find_all():
-            return
-
-        cached_photo = self._render_cache.get(paint_signature)
-        if cached_photo is not None:
-            self._pill_photo = cached_photo
-            self._canvas.delete("all")
-            self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
-            wrap_w = max(10, w - scale_tk_value(self, PILL_TEXT_HORIZONTAL_INSET))
-            self._canvas.create_text(
-                w / 2,
-                h / 2,
-                text=self._text,
-                font=render_font,
-                fill=text_color,
-                width=wrap_w,
-                justify="center",
-            )
-            self._paint_signature = paint_signature
-            return
-
-        outside_rgb = _hex_to_rgb(self._outside_bg)
-        border_rgb = _hex_to_rgb(border) if border else None
-
-        img = Image.new("RGBA", (W, H), outside_rgb)
-
-        pad = 2 * scale
-        x1, y1 = pad, pad
-        x2, y2 = W - pad, H - pad
-
-        usable_w = max(10 * scale, (x2 - x1))
-        usable_h = max(10 * scale, (y2 - y1))
-        radius = min(usable_w, usable_h) // 2
-        bw = max(1, int(scale_tk_value(self, self._border_w) * scale))
-
-        if active_stops:
-            _draw_gradient_capsule(
-                img, x1, y1, x2, y2, radius, active_stops, border_rgb=border_rgb, border_width=bw
-            )
-        else:
-            ImageDraw.Draw(img).rounded_rectangle(
-                [x1, y1, x2, y2],
-                radius=radius,
-                fill=_hex_to_rgb(fill),
-                outline=border_rgb,
-                width=bw,
-            )
-
-        img_small = img.resize((w, h), Image.LANCZOS)
-        self._pill_photo = ImageTk.PhotoImage(img_small)
-        self._render_cache[paint_signature] = self._pill_photo
-        _trim_render_cache(self._render_cache)
-        self._canvas.delete("all")
-        self._canvas.create_image(0, 0, image=self._pill_photo, anchor="nw")
-
-        wrap_w = max(10, w - scale_tk_value(self, PILL_TEXT_HORIZONTAL_INSET))
-        self._canvas.create_text(
-            w / 2,
-            h / 2,
-            text=self._text,
-            font=render_font,
-            fill=text_color,
-            width=wrap_w,
-            justify="center",
-        )
-        self._paint_signature = paint_signature
+    def refresh_backdrop(self):
+        return None
 
 
-# =============================================================================
-# BARRA LATERAL DERECHA (ICONOS)
-# =============================================================================
-
-
-class RightSidebar(tk.Frame):
-    def __init__(self, parent, icons: dict, current_theme: str, backdrop_provider=None):
-        bg = get_theme_tokens(current_theme)["bg_base"]
-        super().__init__(parent, bg=bg, bd=0, highlightthickness=0)
-        self.pack(expand=True, anchor="center")
-
+class RightSidebar(ctk.CTkFrame):
+    def __init__(
+        self,
+        parent,
+        icons: dict,
+        current_theme: str,
+        backdrop_provider=None,
+        *,
+        orientation: str = "vertical",
+        auto_pack: bool = True,
+    ):
+        self._orientation = "horizontal" if orientation == "horizontal" else "vertical"
+        self._backdrop_provider = backdrop_provider
         self.icons = icons
         self.buttons: dict[str, PillIconButton] = {}
-        self._backdrop_provider = backdrop_provider
 
-        self._button_container = tk.Frame(self, bg=bg, bd=0, highlightthickness=0)
-        self._button_container.pack(expand=True, anchor="center")
+        super().__init__(parent, fg_color="transparent", bg_color="transparent")
+        if auto_pack:
+            self.pack(expand=True, anchor="center")
 
         keys = [
             "ver",
@@ -1417,99 +508,61 @@ class RightSidebar(tk.Frame):
             "etiqueta",
             "theme_icon",
             "traducir",
-            "perfil",
-            "ajustes",
             "restaurar",
+            "perfil",
             "github",
             "info",
+            "ajustes",
         ]
 
-        for key in keys:
-            btn = self._create_button(key, current_theme)
-            btn.pack(pady=scale_tk_value(self, RIGHT_SIDEBAR_BUTTON_SPACING))
-            self.buttons[key] = btn
+        for index, key in enumerate(keys):
+            button = self._create_button(key, current_theme)
+            if self._orientation == "horizontal":
+                self.grid_columnconfigure(index, minsize=SIDEBAR_WIDTH)
+                button.grid(
+                    row=0,
+                    column=index,
+                    padx=RIGHT_SIDEBAR_BUTTON_SPACING,
+                )
+            else:
+                button.pack(pady=RIGHT_SIDEBAR_BUTTON_SPACING)
+            self.buttons[key] = button
 
     def _create_button(self, key: str, theme_name: str) -> PillIconButton:
-        is_light = theme_name == "Light"
+        is_light = str(theme_name).lower() != "dark"
         if key == "theme_icon":
-            img = self.icons.get("moon") if is_light else self.icons.get("sun")
+            image = self.icons.get("moon") if is_light else self.icons.get("sun")
         else:
-            img = self.icons.get(key)
+            image = self.icons.get(key)
 
-        theme_keys = get_theme_tokens(theme_name)
-        outside_bg = theme_keys["bg_base"]
-
+        theme = get_theme_tokens(theme_name)
         return PillIconButton(
-            self._button_container,
-            image=img,
+            self,
+            image=image,
             width=SIDEBAR_WIDTH,
             height=BTN_H_ICON,
-            outside_bg=outside_bg,
-            fg_color=theme_keys["bg_sidebar"],
-            hover_color=theme_keys["sidebar_pill_hover_start"],
-            gradient_start=theme_keys["bg_sidebar"],
-            gradient_mid=theme_keys.get(
-                "sidebar_pill_mid",
-                _mix(theme_keys["bg_sidebar"], theme_keys["sidebar_pill_end"], 0.42),
-            ),
-            gradient_end=theme_keys["sidebar_pill_end"],
-            hover_gradient_start=theme_keys["sidebar_pill_hover_start"],
-            hover_gradient_mid=theme_keys.get(
-                "sidebar_pill_hover_mid",
-                _mix(
-                    theme_keys["sidebar_pill_hover_start"],
-                    theme_keys["sidebar_pill_hover_end"],
-                    0.48,
-                ),
-            ),
-            hover_gradient_end=theme_keys["sidebar_pill_hover_end"],
-            border_color=theme_keys["card_border"],
-            border_width=RIGHT_SIDEBAR_BUTTON_BORDER_WIDTH,
+            outside_bg="transparent",
+            fg_color="transparent",
+            hover_color=theme["sidebar_hover"],
+            border_width=0,
             backdrop_provider=self._backdrop_provider,
         )
 
     def refresh_backdrop(self):
-        for btn in self.buttons.values():
-            try:
-                btn.refresh_backdrop()
-            except Exception:
-                pass
+        return None
 
     def apply_theme(self, theme_name: str):
-        is_light = theme_name == "Light"
-        theme_keys = get_theme_tokens(theme_name)
+        is_light = str(theme_name).lower() != "dark"
+        theme = get_theme_tokens(theme_name)
+        self.configure(bg_color=theme["bg_base"])
 
-        bg = theme_keys["bg_base"]
-        try:
-            self.configure(bg=bg)
-            self._button_container.configure(bg=bg)
-        except Exception:
-            pass
-
-        for key, btn in self.buttons.items():
-            kwargs = {
-                "fg_color": theme_keys["bg_sidebar"],
-                "hover_color": theme_keys["sidebar_pill_hover_start"],
-                "outside_bg": bg,
-                "gradient_start": theme_keys["bg_sidebar"],
-                "gradient_mid": theme_keys.get(
-                    "sidebar_pill_mid",
-                    _mix(theme_keys["bg_sidebar"], theme_keys["sidebar_pill_end"], 0.42),
-                ),
-                "gradient_end": theme_keys["sidebar_pill_end"],
-                "hover_gradient_start": theme_keys["sidebar_pill_hover_start"],
-                "hover_gradient_mid": theme_keys.get(
-                    "sidebar_pill_hover_mid",
-                    _mix(
-                        theme_keys["sidebar_pill_hover_start"],
-                        theme_keys["sidebar_pill_hover_end"],
-                        0.48,
-                    ),
-                ),
-                "hover_gradient_end": theme_keys["sidebar_pill_hover_end"],
-                "border_color": theme_keys["card_border"],
-                "border_width": 1,
+        for key, button in self.buttons.items():
+            payload = {
+                "fg_color": "transparent",
+                "hover_color": theme["sidebar_hover"],
+                "outside_bg": "transparent",
+                "border_width": 0,
             }
             if key == "theme_icon":
-                kwargs["image"] = self.icons.get("moon") if is_light else self.icons.get("sun")
-            btn.configure(**kwargs)
+                payload["image"] = self.icons.get("moon") if is_light else self.icons.get("sun")
+            button.configure(**payload)

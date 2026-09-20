@@ -4,7 +4,7 @@ import customtkinter as ctk
 
 from i18n.translations import translate_default
 from view.tooltip import CustomTooltip, _get_monitor_workarea_for_point
-from view.ui_assets import safe_set_window_icon
+from view.ui_assets import load_info_icon, safe_set_window_icon
 from view.ui_constants import (
     CHOICE_DIALOG_BUTTON1_PADY,
     CHOICE_DIALOG_BUTTON2_PADY,
@@ -70,11 +70,15 @@ from view.ui_constants import (
     FONT_FAMILY_PRIMARY,
     MESSAGE_AUTO_CLOSE_SECONDS,
     MESSAGE_DIALOG_BUTTON_PADY,
+    MESSAGE_DIALOG_HEIGHT,
+    MESSAGE_DIALOG_ICON_BADGE_SIZE,
+    MESSAGE_DIALOG_ICON_SIZE,
     MESSAGE_DIALOG_OK_WIDTH,
     MESSAGE_DIALOG_TEXT_FONT_SIZE,
     MESSAGE_DIALOG_TEXT_PADX,
     MESSAGE_DIALOG_TEXT_PADY,
     MESSAGE_DIALOG_TEXT_WRAP,
+    MESSAGE_DIALOG_WIDTH,
     get_button_tokens,
     get_color_pair,
 )
@@ -278,6 +282,7 @@ class BaseDialog(ctk.CTkToplevel):
 
             self.title(title)
             self.resizable(False, False)
+            safe_set_window_icon(self)
 
             self.configure(fg_color=_get_color_tuple("bg"))
 
@@ -457,6 +462,8 @@ class BaseDialog(ctk.CTkToplevel):
             target_cy = int((target_rect[1] + target_rect[3]) / 2)
 
             if attempt == 0:
+                safe_set_window_icon(self)
+                self.after(DIALOG_SECONDARY_ICON_DELAY_MS, lambda: safe_set_window_icon(self))
                 hidden_x, hidden_y = self._get_hidden_position(target_rect, w, h)
                 self.geometry(f"+{hidden_x}+{hidden_y}")
                 self.deiconify()
@@ -562,7 +569,30 @@ class MessageDialog(BaseDialog):
         self._auto_close_after_id = None
         self._schedule_auto_close()
 
+        self.geometry(f"{MESSAGE_DIALOG_WIDTH}x{MESSAGE_DIALOG_HEIGHT}")
         card = self._create_card_frame()
+
+        info_icon = load_info_icon(MESSAGE_DIALOG_ICON_SIZE)
+        icon_badge = ctk.CTkFrame(
+            card,
+            width=MESSAGE_DIALOG_ICON_BADGE_SIZE,
+            height=MESSAGE_DIALOG_ICON_BADGE_SIZE,
+            corner_radius=MESSAGE_DIALOG_ICON_BADGE_SIZE // 2,
+            fg_color=("#EFF6FF", "#172554"),
+            border_width=1,
+            border_color=("#DBEAFE", "#1E3A8A"),
+        )
+        icon_badge.pack(pady=(18, 6))
+        icon_badge.pack_propagate(False)
+
+        ctk.CTkLabel(
+            icon_badge,
+            text="i" if info_icon is None else "",
+            image=info_icon,
+            font=(FONT_FAMILY_PRIMARY, 18, "bold"),
+            text_color=("#2563EB", "#60A5FA"),
+            fg_color="transparent",
+        ).pack(expand=True)
 
         ctk.CTkLabel(
             card,
@@ -574,9 +604,11 @@ class MessageDialog(BaseDialog):
         ).pack(fill="x", padx=MESSAGE_DIALOG_TEXT_PADX, pady=MESSAGE_DIALOG_TEXT_PADY)
 
         btn_text = _tr_text(parent, "btn_ok")
-
         ok_button = ctk.CTkButton(
-            card, text=btn_text, width=MESSAGE_DIALOG_OK_WIDTH, command=self._on_ok
+            card,
+            text=btn_text,
+            width=MESSAGE_DIALOG_OK_WIDTH,
+            command=self._on_ok,
         )
         _style_button(ok_button, "blue")
         ok_button.pack(pady=MESSAGE_DIALOG_BUTTON_PADY)

@@ -1,35 +1,27 @@
 from __future__ import annotations
 
-import ctypes
-import ctypes.util
 import datetime
-import math
 import os
 import random
-import sys
 import tkinter as tk
 
 import customtkinter as ctk
-from PIL import Image, ImageDraw, ImageFilter, ImageStat, ImageTk
 
-from app_logging import log_error, log_warning
+from app_logging import log_error, log_info, log_warning
 from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
 from i18n.translations import TRANSLATIONS, translate_default
 from platform_services import get_platform_service
-from utils import resource_path
 from view.dialogs import (
     MessageDialog,
-    _get_centered_position,
     _get_widget_window_rect,
-    _get_widget_workarea,
 )
 from view.profiles_dialog import ProfilesDialog
 from view.settings_dialog import SettingsDialog
-from view.sidebars import BlendedRoundedFrame, LeftSidebar, PillTextButton, RightSidebar
+from view.sidebars import BlendedRoundedFrame, PillTextButton, RightSidebar
 from view.status_panel import StatusPanel
 from view.tags_dialog import TagsConfigDialog
 from view.tooltip import CustomTooltip
-from view.ui_assets import load_logo, load_sidebar_icons, safe_set_window_icon
+from view.ui_assets import load_action_icons, load_logo, load_sidebar_icons, safe_set_window_icon
 from view.ui_constants import *
 from view.ui_constants import (
     AUTHOR,
@@ -37,46 +29,23 @@ from view.ui_constants import (
     BTN_W_MAIN,
     COLORS,
     FONT_FAMILY_PRIMARY,
-    MAIN_WINDOW_CENTER_MAX_ATTEMPTS,
-    MAIN_WINDOW_CENTER_RETRY_DELAY_MS,
-    MAIN_WINDOW_FADE_IN_INTERVAL_MS,
-    MAIN_WINDOW_FADE_IN_STEP,
     MAIN_WINDOW_FADE_OUT_INTERVAL_MS,
     MAIN_WINDOW_FADE_OUT_STEP,
-    MAIN_WINDOW_HIDDEN_PARK_OFFSET_PX,
-    MAIN_WINDOW_INITIAL_ALPHA,
-    MAIN_WINDOW_REVEAL_DELAY_MS,
-    MAIN_WINDOW_REVEAL_OFFSET_Y,
-    MAIN_WINDOW_REVEAL_STEP_PX,
-    MAIN_WINDOW_SHOW_DELAY_MS,
-    MAIN_WINDOW_SOFT_REFRESH_ALPHA,
-    MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS,
-    MAIN_WINDOW_SWITCH_FADE_IN_STEP,
-    MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS,
-    MAIN_WINDOW_SWITCH_FADE_OUT_STEP,
-    MAIN_WINDOW_SWITCH_HOLD_MS,
-    MAIN_WINDOW_SWITCH_REBUILD_DELAY_MS,
     REPO_URL,
     VERSION,
     YEAR,
-    get_button_tokens,
     get_theme_tokens,
-    hex_to_rgb,
-    with_alpha,
 )
 from view.ui_scaling import (
     configure_application_scaling,
     fit_canvas_font,
-    get_application_workarea,
-    get_widget_scaling,
-    measure_canvas_text,
-    refresh_application_scaling,
     scale_tk_value,
-    wrapped_line_count,
 )
 
 # =============================================================================
+
 # INTERFAZ PRINCIPAL (MAIN WINDOW)
+
 # =============================================================================
 
 
@@ -85,7 +54,10 @@ class LectorcitoApp(ctk.CTk):
         super().__init__()
 
         self.withdraw()
-        self.attributes("-alpha", 0.0)
+        try:
+            self.attributes("-alpha", 0.0)
+        except Exception:
+            pass
         configure_application_scaling(self, prefer_pointer=True)
 
         self.TRANSLATIONS = TRANSLATIONS
@@ -101,1108 +73,450 @@ class LectorcitoApp(ctk.CTk):
         self._is_modal_open = False
         self._modal_fail_safe_after_id = None
         self._dialog_cache = {}
-        self._reveal_target_y = None
         self._is_theme_switching = False
         self._is_profile_switching = False
-        self._profile_switch_apply_callback = None
-        self._profile_switch_complete_callback = None
-        self._background_after_id = None
-        self._background_photo = None
-        self._background_image = None
-        self._background_cache_key = None
-        self._background_revision = 0
-        self._surface_backdrops = {}
-        self._adaptive_layout_after_id = None
-        self._adaptive_layout_running = False
-        self._linux_shape_after_id = None
+        self._startup_visible = False
+        self._header_greeting_title = ""
+        self._header_greeting_subtitle = ""
 
         self.title(APP_DISPLAY_NAME)
         self._app_w = MAIN_WINDOW_WIDTH
         self._app_h = MAIN_WINDOW_HEIGHT
         self.geometry(f"{self._app_w}x{self._app_h}")
+        self.minsize(self._app_w, self._app_h)
+        self.maxsize(self._app_w, self._app_h)
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
 
         safe_set_window_icon(self)
 
         self.icons = load_sidebar_icons()
+        self.action_icons = load_action_icons()
         self.logo_image = load_logo()
-        self._header_logo_assets = self._load_header_logo_assets()
-        self._header_logo_photo = None
-        self._header_backdrop_photo = None
-        self._header_greeting_text = ""
-        self._header_refresh_after_id = None
-        self._header_logo_render_cache = {}
 
         self._build_ui()
         self.update_ui_texts()
         self.apply_theme()
         self.toggle_ui_for_processing(is_active=False)
-        self.bind("<Configure>", self._schedule_adaptive_layout_refresh, add="+")
-        if sys.platform.startswith("linux"):
-            self.bind("<Map>", lambda event: self._schedule_linux_window_shape(120), add="+")
-        self.after_idle(self._refresh_adaptive_layout)
 
-        self.after(MAIN_WINDOW_SHOW_DELAY_MS, self._precise_center_and_show)
-        self.after(
-            MAIN_WINDOW_SHOW_DELAY_MS + MAIN_WINDOW_PRELOAD_DIALOGS_EXTRA_DELAY_MS,
-            self._preload_persistent_dialogs,
-        )
-
-    def _load_header_logo_assets(self):
-        try:
-            return {
-                "light": Image.open(
-                    resource_path(os.path.join("branding", "logo_oscuro.png"))
-                ).convert("RGBA"),
-                "dark": Image.open(
-                    resource_path(os.path.join("branding", "logo_claro.png"))
-                ).convert("RGBA"),
-            }
-        except Exception:
-            return {"light": None, "dark": None}
-
-    def _get_header_scaling(self) -> float:
-        return get_widget_scaling(self)
-
-    def _get_header_logo_image(self):
-        base_logo = self._header_logo_assets.get(
-            "light" if self.current_theme == "Light" else "dark"
-        )
-        if base_logo is None:
-            return None
-
-        scale = max(0.55, self._get_header_scaling())
-        target_width = max(1, int(round(LOGO_TARGET_WIDTH * scale)))
-        cache_key = ("light" if self.current_theme == "Light" else "dark", target_width)
-        cached = self._header_logo_render_cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        ow, oh = base_logo.size
-        ratio = oh / ow if ow else 1.0
-        target_height = max(1, int(round(target_width * ratio)))
-        resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
-        rendered = base_logo.resize((target_width, target_height), resample)
-        self._header_logo_render_cache[cache_key] = rendered
-        return rendered
+        # El root permanece oculto hasta que el controlador inicia el mainloop.
+        # Esto evita mostrar una ventana a medio construir y elimina callbacks
+        # de layout durante el arranque.
+        self._apply_raw_tk_scaling()
+        log_info("Interfaz principal construida.", operation="startup_ui")
 
     def _schedule_header_refresh(self, event=None):
-        if event is not None and getattr(event, "widget", None) not in (
-            getattr(self, "header_frame", None),
-            getattr(self, "header_canvas", None),
-        ):
-            return
-        if self._header_refresh_after_id is not None:
-            try:
-                self.after_cancel(self._header_refresh_after_id)
-            except Exception:
-                pass
-        try:
-            self._header_refresh_after_id = self.after(
-                max(1, int(MAIN_WINDOW_BG_REFRESH_DELAY_MS)), self._refresh_header_canvas
-            )
-        except Exception:
-            self._header_refresh_after_id = None
+        self._refresh_header_canvas()
 
     def _refresh_header_canvas(self):
-        self._header_refresh_after_id = None
-        if not hasattr(self, "header_canvas") or not self.header_canvas.winfo_exists():
+        if not hasattr(self, "lbl_greeting_title"):
             return
-
-        try:
-            w = max(1, int(self.header_canvas.winfo_width()))
-            h = max(1, int(self.header_canvas.winfo_height()))
-        except Exception:
-            return
-
         theme = get_theme_tokens(self.current_theme)
-        patch, _ = self.get_backdrop_patch(self.header_canvas, width=w, height=h)
-        if patch is None:
-            patch = Image.new("RGBA", (w, h), with_alpha(theme["bg_base"], 255))
-
-        self._header_backdrop_photo = ImageTk.PhotoImage(patch)
-        self.header_canvas.delete("all")
-        self.header_canvas.create_image(0, 0, image=self._header_backdrop_photo, anchor="nw")
-
-        logo = self._get_header_logo_image()
-        current_y = 0
-        top_y = max(0, scale_tk_value(self, MAIN_WINDOW_HEADER_TOP_INSET))
-        if logo is not None:
-            self._header_logo_photo = ImageTk.PhotoImage(logo)
-            self.header_canvas.create_image(w / 2, top_y, image=self._header_logo_photo, anchor="n")
-            current_y = top_y + logo.height + scale_tk_value(self, MAIN_WINDOW_HEADER_LOGO_TEXT_GAP)
-        else:
-            self._header_logo_photo = None
-            current_y = top_y
-
-        side_pad = max(1, scale_tk_value(self, MAIN_WINDOW_HEADER_TEXT_SIDE_PAD))
-        available_text_width = max(40, w - (side_pad * 2))
-        font_spec = fit_canvas_font(
-            self.header_canvas,
-            self._header_greeting_text,
-            FONT_FAMILY_PRIMARY,
-            MAIN_WINDOW_GREETING_FONT_SIZE,
-            MAIN_WINDOW_GREETING_MIN_FONT_SIZE,
-            available_text_width,
-            weight="normal",
-        )
-        text_width, line_height = measure_canvas_text(
-            self.header_canvas, self._header_greeting_text, font_spec
-        )
-        line_count = (
-            1
-            if text_width <= available_text_width
-            else wrapped_line_count(
-                self.header_canvas, self._header_greeting_text, font_spec, available_text_width
-            )
-        )
-        text_height = max(line_height, line_height * line_count)
-        desired_height = max(
-            scale_tk_value(self, MAIN_WINDOW_HEADER_MIN_HEIGHT),
-            current_y + text_height + scale_tk_value(self, MAIN_WINDOW_HEADER_BOTTOM_INSET),
-        )
-
+        title_text = self._header_greeting_title or ""
+        subtitle_text = self._header_greeting_subtitle or ""
         try:
-            if abs(int(self.header_frame.cget("height")) - int(desired_height)) > 1:
-                self.header_frame.configure(height=int(desired_height))
-                self.header_canvas.configure(height=int(desired_height))
-                self.after_idle(self._schedule_header_refresh)
+            title_font = fit_canvas_font(
+                self,
+                title_text,
+                FONT_FAMILY_PRIMARY,
+                MAIN_WINDOW_GREETING_FONT_SIZE,
+                MAIN_WINDOW_GREETING_MIN_FONT_SIZE,
+                max(180, MAIN_WINDOW_HEADER_TEXT_WIDTH - 4),
+                weight="bold",
+            )
+            self.lbl_greeting_title.configure(
+                text=title_text,
+                text_color=theme["text_primary"],
+                font=title_font,
+            )
+            self.lbl_greeting_subtitle.configure(
+                text=subtitle_text,
+                text_color=theme["text_secondary"],
+                font=(FONT_FAMILY_PRIMARY, 13, "normal"),
+                wraplength=max(180, MAIN_WINDOW_HEADER_TEXT_WIDTH - 4),
+            )
         except Exception:
             pass
-
-        self.header_canvas.create_text(
-            w / 2,
-            current_y,
-            text=self._header_greeting_text,
-            anchor="n",
-            font=font_spec,
-            fill=theme["text_primary"],
-            justify="center",
-            width=available_text_width,
-        )
-
-    def _schedule_adaptive_layout_refresh(self, event=None):
-        if event is not None and getattr(event, "widget", None) is not self:
-            return
-        if self._adaptive_layout_after_id is not None:
-            try:
-                self.after_cancel(self._adaptive_layout_after_id)
-            except Exception:
-                pass
-        try:
-            self._adaptive_layout_after_id = self.after(
-                max(1, int(MAIN_WINDOW_ADAPTIVE_REFRESH_DELAY_MS)), self._refresh_adaptive_layout
-            )
-        except Exception:
-            self._adaptive_layout_after_id = None
 
     def _apply_raw_tk_scaling(self):
         footer_height = max(1, scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT))
-        footer_clearance = max(0, footer_height - scale_tk_value(self, 35))
+        footer_clearance = footer_height + scale_tk_value(self, 8)
+        center_pady = scale_tk_value(self, MAIN_WINDOW_CENTER_PADY)
 
         try:
-            left_pady = scale_tk_value(self, MAIN_WINDOW_LEFT_PADY)
-            right_pady = scale_tk_value(self, MAIN_WINDOW_RIGHT_PADY)
-            center_pady = scale_tk_value(self, MAIN_WINDOW_CENTER_PADY)
-            self.left_container.grid_configure(
-                padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
-                pady=(left_pady[0], left_pady[1] + footer_clearance),
-            )
-            self.right_container.grid_configure(
-                padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
-                pady=(right_pady[0], right_pady[1] + footer_clearance),
-            )
             self.center_container.grid_configure(
-                pady=(center_pady[0], center_pady[1] + footer_clearance)
+                padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
+                pady=(center_pady[0], center_pady[1] + footer_clearance),
             )
-        except Exception:
-            pass
-
-        try:
-            self.header_frame.grid_configure(pady=scale_tk_value(self, MAIN_WINDOW_HEADER_PADY))
-            self.main_menu_frame.grid_configure(
-                pady=(0, scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_BOTTOM_GAP))
-            )
-            self.main_buttons_frame.pack_configure(
-                pady=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD),
-                padx=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD),
-            )
-            for btn in self.main_buttons.values():
-                btn.pack_configure(pady=scale_tk_value(self, MAIN_WINDOW_BUTTON_SPACING))
-            self.progress_frame.grid_configure(
-                pady=scale_tk_value(self, MAIN_WINDOW_STATUS_AREA_PADY)
-            )
-        except Exception:
-            pass
-
-        try:
+            self.header_frame.configure(height=MAIN_WINDOW_HEADER_MIN_HEIGHT)
             self.footer_frame.configure(height=footer_height)
         except Exception:
             pass
 
-    def _fit_main_button_fonts(self):
-        if not getattr(self, "main_buttons", None):
-            return
-        try:
-            self.update_idletasks()
-            widget_scale = max(0.1, get_widget_scaling(self))
-            panel_width = max(1, int(self.main_menu_frame.content_frame.winfo_width()))
-            horizontal_padding = scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD) * 2
-            logical_available_width = max(1, int((panel_width - horizontal_padding) / widget_scale))
-            button_width = max(
-                MAIN_WINDOW_BUTTON_MIN_WIDTH, min(BTN_W_MAIN, logical_available_width)
-            )
-            for btn in self.main_buttons.values():
-                btn.configure(width=button_width)
-            self.update_idletasks()
-            widths = [max(1, int(btn.winfo_width())) for btn in self.main_buttons.values()]
-            heights = [max(1, int(btn.winfo_height())) for btn in self.main_buttons.values()]
-            available_width = max(
-                10, min(widths) - scale_tk_value(self, PILL_TEXT_HORIZONTAL_INSET)
-            )
-            available_height = max(8, int(min(heights) * 0.62))
-            texts = [str(btn.cget("text") or "") for btn in self.main_buttons.values()]
-            font_spec = fit_canvas_font(
-                self,
-                texts,
-                FONT_FAMILY_PRIMARY,
-                MAIN_WINDOW_BUTTON_FONT_SIZE,
-                MAIN_WINDOW_BUTTON_MIN_FONT_SIZE,
-                available_width,
-                available_height,
-                "bold",
-            )
-            for btn in self.main_buttons.values():
-                btn.configure(font=font_spec)
-        except Exception:
-            pass
-
-    def _refresh_adaptive_layout(self):
-        self._adaptive_layout_after_id = None
-        if self._adaptive_layout_running:
-            return
-        self._adaptive_layout_running = True
-        try:
-            scaling_changed = refresh_application_scaling(self) if self.winfo_viewable() else False
-            if scaling_changed:
-                self._header_logo_render_cache.clear()
-                self.geometry(f"{self._app_w}x{self._app_h}")
-            self._apply_raw_tk_scaling()
-            self._fit_main_button_fonts()
-            self._schedule_header_refresh()
-        finally:
-            self._adaptive_layout_running = False
-
-    def _schedule_linux_window_shape(self, delay=120):
-        if not sys.platform.startswith("linux"):
-            return
-        if self._linux_shape_after_id is not None:
-            try:
-                self.after_cancel(self._linux_shape_after_id)
-            except Exception:
-                pass
-        try:
-            self._linux_shape_after_id = self.after(
-                max(1, int(delay)), self._apply_linux_window_shape
-            )
-        except Exception:
-            self._linux_shape_after_id = None
-
-    def _apply_linux_window_shape(self):
-        self._linux_shape_after_id = None
-        if not sys.platform.startswith("linux"):
-            return
-        try:
-            if not self.winfo_exists() or not self.winfo_ismapped():
-                return
-            self.update_idletasks()
-
-            x11 = ctypes.CDLL(ctypes.util.find_library("X11") or "libX11.so.6")
-            xext = ctypes.CDLL(ctypes.util.find_library("Xext") or "libXext.so.6")
-
-            class XRectangle(ctypes.Structure):
-                _fields_ = [
-                    ("x", ctypes.c_short),
-                    ("y", ctypes.c_short),
-                    ("width", ctypes.c_ushort),
-                    ("height", ctypes.c_ushort),
-                ]
-
-            x11.XOpenDisplay.argtypes = [ctypes.c_char_p]
-            x11.XOpenDisplay.restype = ctypes.c_void_p
-            x11.XCloseDisplay.argtypes = [ctypes.c_void_p]
-            x11.XCloseDisplay.restype = ctypes.c_int
-            x11.XQueryTree.argtypes = [
-                ctypes.c_void_p,
-                ctypes.c_ulong,
-                ctypes.POINTER(ctypes.c_ulong),
-                ctypes.POINTER(ctypes.c_ulong),
-                ctypes.POINTER(ctypes.POINTER(ctypes.c_ulong)),
-                ctypes.POINTER(ctypes.c_uint),
-            ]
-            x11.XQueryTree.restype = ctypes.c_int
-            x11.XGetGeometry.argtypes = [
-                ctypes.c_void_p,
-                ctypes.c_ulong,
-                ctypes.POINTER(ctypes.c_ulong),
-                ctypes.POINTER(ctypes.c_int),
-                ctypes.POINTER(ctypes.c_int),
-                ctypes.POINTER(ctypes.c_uint),
-                ctypes.POINTER(ctypes.c_uint),
-                ctypes.POINTER(ctypes.c_uint),
-                ctypes.POINTER(ctypes.c_uint),
-            ]
-            x11.XGetGeometry.restype = ctypes.c_int
-            x11.XFree.argtypes = [ctypes.c_void_p]
-            x11.XFree.restype = ctypes.c_int
-            x11.XFlush.argtypes = [ctypes.c_void_p]
-            x11.XFlush.restype = ctypes.c_int
-
-            xext.XShapeQueryExtension.argtypes = [
-                ctypes.c_void_p,
-                ctypes.POINTER(ctypes.c_int),
-                ctypes.POINTER(ctypes.c_int),
-            ]
-            xext.XShapeQueryExtension.restype = ctypes.c_int
-            xext.XShapeCombineRectangles.argtypes = [
-                ctypes.c_void_p,
-                ctypes.c_ulong,
-                ctypes.c_int,
-                ctypes.c_int,
-                ctypes.c_int,
-                ctypes.POINTER(XRectangle),
-                ctypes.c_int,
-                ctypes.c_int,
-                ctypes.c_int,
-            ]
-            xext.XShapeCombineRectangles.restype = None
-
-            display = x11.XOpenDisplay(None)
-            if not display:
-                return
-
-            try:
-                event_base = ctypes.c_int()
-                error_base = ctypes.c_int()
-                if not xext.XShapeQueryExtension(
-                    display, ctypes.byref(event_base), ctypes.byref(error_base)
-                ):
-                    return
-
-                current_window = int(self.winfo_id())
-                outer_window = current_window
-                for _ in range(12):
-                    root_return = ctypes.c_ulong()
-                    parent_return = ctypes.c_ulong()
-                    children_return = ctypes.POINTER(ctypes.c_ulong)()
-                    child_count = ctypes.c_uint()
-                    status = x11.XQueryTree(
-                        display,
-                        ctypes.c_ulong(current_window),
-                        ctypes.byref(root_return),
-                        ctypes.byref(parent_return),
-                        ctypes.byref(children_return),
-                        ctypes.byref(child_count),
-                    )
-                    if children_return:
-                        x11.XFree(ctypes.cast(children_return, ctypes.c_void_p))
-                    if not status:
-                        break
-                    parent_window = int(parent_return.value)
-                    root_window = int(root_return.value)
-                    if not parent_window or parent_window == current_window:
-                        break
-                    if parent_window == root_window:
-                        outer_window = current_window
-                        break
-                    current_window = parent_window
-                    outer_window = current_window
-
-                root_return = ctypes.c_ulong()
-                x_return = ctypes.c_int()
-                y_return = ctypes.c_int()
-                width_return = ctypes.c_uint()
-                height_return = ctypes.c_uint()
-                border_return = ctypes.c_uint()
-                depth_return = ctypes.c_uint()
-                if not x11.XGetGeometry(
-                    display,
-                    ctypes.c_ulong(outer_window),
-                    ctypes.byref(root_return),
-                    ctypes.byref(x_return),
-                    ctypes.byref(y_return),
-                    ctypes.byref(width_return),
-                    ctypes.byref(height_return),
-                    ctypes.byref(border_return),
-                    ctypes.byref(depth_return),
-                ):
-                    return
-
-                width = int(width_return.value)
-                height = int(height_return.value)
-                if width <= 2 or height <= 2:
-                    return
-
-                radius = max(
-                    6, min(scale_tk_value(self, CORNER_RADIUS_XL), width // 2, height // 2)
-                )
-
-                def row_inset(row):
-                    if row < radius:
-                        local_row = row
-                    elif row >= height - radius:
-                        local_row = height - 1 - row
-                    else:
-                        return 0
-                    dy = radius - (local_row + 0.5)
-                    return max(
-                        0,
-                        int(math.ceil(radius - math.sqrt(max(0.0, (radius * radius) - (dy * dy))))),
-                    )
-
-                runs = []
-                run_start = 0
-                run_inset = row_inset(0)
-                for row in range(1, height):
-                    inset = row_inset(row)
-                    if inset != run_inset:
-                        runs.append((run_start, row - run_start, run_inset))
-                        run_start = row
-                        run_inset = inset
-                runs.append((run_start, height - run_start, run_inset))
-
-                rectangles = (XRectangle * len(runs))()
-                for index, (start_y, run_height, inset) in enumerate(runs):
-                    rectangles[index] = XRectangle(
-                        int(inset),
-                        int(start_y),
-                        max(1, int(width - (inset * 2))),
-                        max(1, int(run_height)),
-                    )
-
-                xext.XShapeCombineRectangles(
-                    display, ctypes.c_ulong(outer_window), 0, 0, 0, rectangles, len(runs), 0, 1
-                )
-                x11.XFlush(display)
-            finally:
-                x11.XCloseDisplay(display)
-        except Exception:
-            pass
-
     def get_real_window_rect(self):
+
         return _get_widget_window_rect(self)
 
-    def _get_hidden_window_position(self, target_rect):
-        left, top, right, bottom = target_rect
-        area_h = max(1, int(bottom - top))
-        x = int(right + MAIN_WINDOW_HIDDEN_PARK_OFFSET_PX)
-        y = int(top + max(0, (area_h - int(self._app_h)) / 2))
-        return x, y
+    def show_main_window(self):
+        """Muestra el root una sola vez, ya dimensionado y completamente dibujado."""
+        if getattr(self, "_startup_visible", False):
+            return
 
-    def _precise_center_and_show(self):
         try:
-            self.update_idletasks()
-            self._startup_target_rect = get_application_workarea(self)
-            hidden_x, hidden_y = self._get_hidden_window_position(self._startup_target_rect)
-            self.geometry(f"{self._app_w}x{self._app_h}+{hidden_x}+{hidden_y}")
-
             self.attributes("-alpha", 0.0)
-            self.deiconify()
-            self.after(
-                MAIN_WINDOW_CENTER_RETRY_DELAY_MS, lambda: self._stabilize_initial_position(1)
-            )
-
         except Exception:
+            pass
+
+        try:
+            self.geometry(f"{self._app_w}x{self._app_h}")
+            self.update_idletasks()
+
+            screen_w = max(1, int(self.winfo_screenwidth()))
+            screen_h = max(1, int(self.winfo_screenheight()))
+            actual_w = max(1, int(self.winfo_width()))
+            actual_h = max(1, int(self.winfo_height()))
+            x = max(0, int((screen_w - actual_w) / 2))
+            y = max(0, int((screen_h - actual_h) / 2))
+            final_geometry = f"{self._app_w}x{self._app_h}+{x}+{y}"
+            self.geometry(final_geometry)
+            self.update_idletasks()
+
+            # La ventana se mapea aun transparente y solo se revela cuando su
+            # geometria final ya esta aplicada. Evita el destello cuadrado inicial.
             self.deiconify()
+            self.update_idletasks()
+            self.geometry(final_geometry)
+        except Exception as error:
+            log_warning(str(error), operation="show_main_window")
+
+        try:
             self.attributes("-alpha", 1.0)
-            self._schedule_linux_window_shape(120)
+            self.lift()
+        except Exception as error:
+            log_warning(str(error), operation="show_main_window")
 
-    def _stabilize_initial_position(self, attempt=1):
-        try:
-            target_rect = getattr(self, "_startup_target_rect", _get_widget_workarea(self))
-            target_cx = int((target_rect[0] + target_rect[2]) / 2)
-            target_cy = int((target_rect[1] + target_rect[3]) / 2)
-            actual_rect = self.get_real_window_rect()
-            actual_cx = int((actual_rect[0] + actual_rect[2]) / 2)
-            actual_cy = int((actual_rect[1] + actual_rect[3]) / 2)
-            dx = target_cx - actual_cx
-            dy = target_cy - actual_cy
-
-            if (abs(dx) > 1 or abs(dy) > 1) and attempt < MAIN_WINDOW_CENTER_MAX_ATTEMPTS:
-                self.geometry(
-                    f"{self._app_w}x{self._app_h}+{int(self.winfo_x()) + dx}+{int(self.winfo_y()) + dy}"
-                )
-                self.after(
-                    MAIN_WINDOW_CENTER_RETRY_DELAY_MS,
-                    lambda: self._stabilize_initial_position(attempt + 1),
-                )
-                return
-
-            self._reveal_target_y = int(self.winfo_y())
-            if MAIN_WINDOW_REVEAL_OFFSET_Y > 0:
-                self.geometry(
-                    f"{self._app_w}x{self._app_h}+{int(self.winfo_x())}+{self._reveal_target_y + MAIN_WINDOW_REVEAL_OFFSET_Y}"
-                )
-        except Exception:
-            self._reveal_target_y = None
-        self._schedule_linux_window_shape(MAIN_WINDOW_CENTER_RETRY_DELAY_MS)
-        self.attributes("-alpha", MAIN_WINDOW_INITIAL_ALPHA)
-        self.after(MAIN_WINDOW_REVEAL_DELAY_MS, self._fade_in)
-
-    def _fade_in(self):
-        try:
-            alpha = float(self.attributes("-alpha"))
-        except Exception:
-            alpha = 1.0
-
-        target_y = self._reveal_target_y
-        if target_y is not None:
-            try:
-                current_y = int(self.winfo_y())
-                if current_y > target_y:
-                    step = min(MAIN_WINDOW_REVEAL_STEP_PX, current_y - target_y)
-                    self.geometry(
-                        f"{self._app_w}x{self._app_h}+{int(self.winfo_x())}+{current_y - step}"
-                    )
-                else:
-                    self._reveal_target_y = current_y
-            except Exception:
-                self._reveal_target_y = None
-
-        if alpha < 1.0:
-            self.attributes("-alpha", min(alpha + MAIN_WINDOW_FADE_IN_STEP, 1.0))
-            self.after(MAIN_WINDOW_FADE_IN_INTERVAL_MS, self._fade_in)
+        self._startup_visible = True
+        log_info("Ventana principal visible.", operation="startup_ui")
 
     def _close_with_fade_out(self):
+
         try:
             for tp in self.tooltips.values():
                 tp.cleanup()
+
         except Exception:
             pass
+
         try:
             self.status_panel.cleanup()
+
         except Exception:
             pass
+
         try:
             for dialog in self._dialog_cache.values():
                 try:
                     if dialog.winfo_exists():
                         dialog.destroy()
+
                 except Exception:
                     pass
+
         except Exception:
             pass
 
         alpha = self.attributes("-alpha")
+
         if alpha > 0:
             self.attributes("-alpha", max(alpha - MAIN_WINDOW_FADE_OUT_STEP, 0.0))
+
             self.after(MAIN_WINDOW_FADE_OUT_INTERVAL_MS, self._close_with_fade_out)
+
         else:
             self.destroy()
 
     def _tr(self, key: str, *args):
+
         entry = self.TRANSLATIONS.get(self.lang, self.TRANSLATIONS["es"]).get(key, f"<{key}>")
+
         if isinstance(entry, list):
             return random.choice(entry).format(*args)
+
         return entry.format(*args)
-
-    def _build_atmosphere_image(self, size: tuple[int, int], theme: dict):
-        width, height = size
-        width = max(1, int(width))
-        height = max(1, int(height))
-        scale = 2
-        W, H = width * scale, height * scale
-        resample = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
-        canvas = Image.new("RGBA", (W, H), with_alpha(theme["bg_base"], 255))
-        is_light = self.current_theme == "Light"
-
-        def add_ellipse(bounds, color, alpha, blur):
-            layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-            ImageDraw.Draw(layer).ellipse(bounds, fill=with_alpha(color, alpha))
-            layer = layer.filter(ImageFilter.GaussianBlur(max(1, int(blur))))
-            canvas.alpha_composite(layer)
-
-        def add_band(bounds, color, alpha, blur):
-            layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-            radius = max(1, int((bounds[3] - bounds[1]) * 0.52))
-            ImageDraw.Draw(layer).rounded_rectangle(
-                bounds, radius=radius, fill=with_alpha(color, alpha)
-            )
-            layer = layer.filter(ImageFilter.GaussianBlur(max(1, int(blur))))
-            canvas.alpha_composite(layer)
-
-        top_color = theme["bg_elevated"] if is_light else theme["accent_blue"]
-        bottom_color = theme["shadow_soft"] if is_light else theme["shadow_strong"]
-        top_rgb = hex_to_rgb(top_color)
-        bottom_rgb = hex_to_rgb(bottom_color)
-        depth = Image.new("RGBA", (1, H), (0, 0, 0, 0))
-        depth_pixels = depth.load()
-        top_limit = 0.52 if is_light else 0.48
-        bottom_start = 0.42 if is_light else 0.40
-        top_alpha_strength = 6 if is_light else 5
-        bottom_alpha_strength = 4 if is_light else 6
-
-        for y in range(H):
-            t = y / max(1, H - 1)
-            top_alpha = (
-                int(max(0.0, 1.0 - (t / top_limit)) * top_alpha_strength) if t <= top_limit else 0
-            )
-            bottom_alpha = (
-                int(
-                    max(0.0, (t - bottom_start) / max(0.001, 1.0 - bottom_start))
-                    * bottom_alpha_strength
-                )
-                if t >= bottom_start
-                else 0
-            )
-            if bottom_alpha > top_alpha:
-                depth_pixels[0, y] = (*bottom_rgb, bottom_alpha)
-            else:
-                depth_pixels[0, y] = (*top_rgb, top_alpha)
-
-        canvas.alpha_composite(depth.resize((W, H), resample))
-
-        blue_color = theme["accent_blue"]
-        purple_color = theme["accent_purple"]
-        blue_rgb = hex_to_rgb(blue_color)
-        purple_rgb = hex_to_rgb(purple_color)
-        combo_color = "#{:02X}{:02X}{:02X}".format(
-            (blue_rgb[0] + purple_rgb[0]) // 2,
-            (blue_rgb[1] + purple_rgb[1]) // 2,
-            (blue_rgb[2] + purple_rgb[2]) // 2,
-        )
-        aura_alpha = 20 if is_light else 20
-        aura_blur = int(H * 0.18)
-
-        add_ellipse(
-            (int(W * 0.54), -int(H * 0.24), int(W * 1.16), int(H * 0.26)),
-            blue_color,
-            aura_alpha,
-            aura_blur,
-        )
-        add_ellipse(
-            (-int(W * 0.08), int(H * 0.60), int(W * 0.34), int(H * 1.00)),
-            purple_color,
-            aura_alpha,
-            aura_blur,
-        )
-        add_ellipse(
-            (int(W * 0.82), int(H * 0.72), int(W * 1.10), int(H * 1.02)),
-            combo_color,
-            aura_alpha,
-            aura_blur,
-        )
-
-        return canvas.resize((width, height), resample)
-
-    def _register_surface_backdrop(self, widget):
-        try:
-            label = tk.Label(widget, bd=0, highlightthickness=0)
-            label.place(x=0, y=0, relwidth=1.0, relheight=1.0)
-            label.lower()
-            widget.bind("<Configure>", lambda event: self._schedule_background_refresh(), add="+")
-            self._surface_backdrops[widget] = {"label": label, "photo": None}
-        except Exception:
-            pass
-
-    def _refresh_surface_backdrops(self):
-        theme = get_theme_tokens(self.current_theme)
-        stale_widgets = []
-        for widget, payload in self._surface_backdrops.items():
-            try:
-                label = payload.get("label")
-                if not widget.winfo_exists() or label is None or not label.winfo_exists():
-                    stale_widgets.append(widget)
-                    continue
-                patch, _ = self.get_backdrop_patch(widget)
-                if patch is None:
-                    payload["photo"] = None
-                    label.configure(image="", bg=theme["bg_base"])
-                else:
-                    photo = ImageTk.PhotoImage(patch)
-                    payload["photo"] = photo
-                    label.configure(image=photo, bg=theme["bg_base"])
-                label.place(x=0, y=0, relwidth=1.0, relheight=1.0)
-                label.lower()
-            except Exception:
-                pass
-        for widget in stale_widgets:
-            self._surface_backdrops.pop(widget, None)
-
-    def _refresh_background_dependents(self):
-        try:
-            if hasattr(self, "left_sidebar") and self.left_sidebar.winfo_exists():
-                self.left_sidebar.refresh_backdrop()
-        except Exception:
-            pass
-        try:
-            if hasattr(self, "right_sidebar") and self.right_sidebar.winfo_exists():
-                self.right_sidebar.refresh_backdrop()
-        except Exception:
-            pass
-        try:
-            if hasattr(self, "main_menu_frame") and self.main_menu_frame.winfo_exists():
-                self.main_menu_frame.refresh_backdrop()
-        except Exception:
-            pass
-        try:
-            if hasattr(self, "status_panel") and self.status_panel.winfo_exists():
-                self.status_panel.refresh_backdrop()
-        except Exception:
-            pass
-        try:
-            self._schedule_header_refresh()
-        except Exception:
-            pass
-
-    def _mean_hex_from_patch(self, patch):
-        try:
-            theme = get_theme_tokens(self.current_theme)
-            base = Image.new("RGBA", patch.size, with_alpha(theme["bg_base"], 255))
-            merged = Image.alpha_composite(base, patch).convert("RGB")
-            stat = ImageStat.Stat(merged)
-            r, g, b = [max(0, min(255, int(round(x)))) for x in stat.mean[:3]]
-            return f"#{r:02X}{g:02X}{b:02X}"
-        except Exception:
-            return get_theme_tokens(self.current_theme)["bg_base"]
-
-    def _sample_backdrop_color(self, widget, *, width=None, height=None):
-        patch, _ = self.get_backdrop_patch(widget, width=width, height=height)
-        if patch is None:
-            return get_theme_tokens(self.current_theme)["bg_base"]
-        return self._mean_hex_from_patch(patch)
 
     def _refresh_local_surface_colors(self):
         theme = get_theme_tokens(self.current_theme)
-
         try:
-            if hasattr(self, "main_menu_frame") and self.main_menu_frame.winfo_exists():
-                self.main_menu_frame.configure(
-                    outside_bg=theme["bg_base"],
-                    fill_color=theme["bg_panel"],
-                    border_color=theme["card_border"],
-                    backdrop_provider=self.get_backdrop_patch,
-                )
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "status_panel") and self.status_panel.winfo_exists():
-                self.status_panel.set_backdrop_color(theme["bg_base"])
-                self.status_panel.refresh_backdrop()
-        except Exception:
-            pass
-
-        try:
-            if hasattr(self, "header_frame") and self.header_frame.winfo_exists():
-                self.header_frame.configure(bg=theme["bg_base"])
-                self.header_canvas.configure(bg=theme["bg_base"])
-                self._schedule_header_refresh()
+            self.configure(fg_color=theme["bg_base"])
+            self.center_container.configure(fg_color=theme["bg_base"])
         except Exception:
             pass
 
     def get_backdrop_patch(self, widget, width=None, height=None):
-        if self._background_image is None:
-            return None, None
-        try:
-            patch_width = max(1, int(width if width is not None else widget.winfo_width()))
-            patch_height = max(1, int(height if height is not None else widget.winfo_height()))
-            origin_x = int(widget.winfo_rootx() - self._background_canvas.winfo_rootx())
-            origin_y = int(widget.winfo_rooty() - self._background_canvas.winfo_rooty())
-        except Exception:
-            return None, None
-
-        patch = Image.new(
-            "RGBA",
-            (patch_width, patch_height),
-            with_alpha(get_theme_tokens(self.current_theme)["bg_base"], 255),
-        )
-        source = self._background_image
-        left = max(0, origin_x)
-        top = max(0, origin_y)
-        right = min(source.width, origin_x + patch_width)
-        bottom = min(source.height, origin_y + patch_height)
-
-        if right > left and bottom > top:
-            crop = source.crop((left, top, right, bottom))
-            paste_x = max(0, -origin_x)
-            paste_y = max(0, -origin_y)
-            patch.paste(crop, (paste_x, paste_y), crop)
-
-        return patch, (self._background_revision, origin_x, origin_y, patch_width, patch_height)
+        # API conservada para componentes persistentes antiguos. El fondo actual es solido.
+        return None, None
 
     # =========================================================================
+
     # CONSTRUCCION DE UI
+
     # =========================================================================
-
-    def _create_atmosphere_background(self):
-        self._background_canvas = tk.Canvas(self, highlightthickness=0, bd=0, relief="flat")
-        self._background_canvas.place(x=0, y=0, relwidth=1.0, relheight=1.0)
-        self.tk.call("lower", self._background_canvas._w)
-        self.bind("<Configure>", self._schedule_background_refresh, add="+")
-
-    def _schedule_background_refresh(self, event=None):
-        if event is not None and event.widget is not self:
-            return
-        if self._background_after_id is not None:
-            try:
-                self.after_cancel(self._background_after_id)
-            except Exception:
-                pass
-        try:
-            self._background_after_id = self.after(
-                MAIN_WINDOW_BG_REFRESH_DELAY_MS, self._refresh_background_canvas
-            )
-        except Exception:
-            self._background_after_id = None
-
-    def _refresh_background_canvas(self):
-        self._background_after_id = None
-        try:
-            width = max(1, int(self.winfo_width()))
-            height = max(1, int(self.winfo_height()))
-        except Exception:
-            return
-
-        theme = get_theme_tokens(self.current_theme)
-        cache_key = (width, height, self.current_theme)
-        background_changed = False
-
-        try:
-            if (
-                cache_key != self._background_cache_key
-                or self._background_image is None
-                or self._background_photo is None
-            ):
-                self._background_image = self._build_atmosphere_image((width, height), theme)
-                self._background_photo = ImageTk.PhotoImage(self._background_image)
-                self._background_cache_key = cache_key
-                self._background_revision += 1
-                background_changed = True
-        except Exception:
-            self._background_image = None
-            self._background_photo = None
-            self._background_cache_key = None
-            background_changed = True
-
-        self._background_canvas.configure(bg=theme["bg_base"])
-        self._background_canvas.delete("all")
-        if self._background_photo is not None:
-            self._background_canvas.create_image(0, 0, image=self._background_photo, anchor="nw")
-        else:
-            self._background_canvas.create_rectangle(
-                0, 0, width + 1, height + 1, outline="", fill=theme["bg_base"]
-            )
-        self.tk.call("lower", self._background_canvas._w)
-        self._refresh_surface_backdrops()
-        self._refresh_local_surface_colors()
-        if background_changed:
-            self._refresh_background_dependents()
-        try:
-            if hasattr(self, "footer_frame") and self.footer_frame.winfo_exists():
-                self.footer_frame.lift()
-        except Exception:
-            pass
 
     def _build_ui(self):
-        self._create_atmosphere_background()
-        theme_keys = get_theme_tokens(self.current_theme)
-        self.grid_columnconfigure(1, weight=1)
+        theme = get_theme_tokens(self.current_theme)
+
+        self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
         footer_height = max(1, scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT))
-        footer_clearance = max(0, footer_height - scale_tk_value(self, 35))
-        left_pady = scale_tk_value(self, MAIN_WINDOW_LEFT_PADY)
-        right_pady = scale_tk_value(self, MAIN_WINDOW_RIGHT_PADY)
         center_pady = scale_tk_value(self, MAIN_WINDOW_CENTER_PADY)
-
-        self.left_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.left_container.grid(
+        self.center_container = ctk.CTkFrame(
+            self,
+            fg_color=theme["bg_base"],
+            corner_radius=0,
+        )
+        self.center_container.grid(
             row=0,
             column=0,
-            sticky="ns",
+            sticky="nsew",
             padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
-            pady=(left_pady[0], left_pady[1] + footer_clearance),
-        )
-        self._register_surface_backdrop(self.left_container)
-
-        self.right_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.right_container.grid(
-            row=0,
-            column=2,
-            sticky="ns",
-            padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
-            pady=(right_pady[0], right_pady[1] + footer_clearance),
-        )
-        self._register_surface_backdrop(self.right_container)
-
-        self.center_container = tk.Frame(self, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.center_container.grid(
-            row=0, column=1, sticky="nsew", pady=(center_pady[0], center_pady[1] + footer_clearance)
+            pady=(center_pady[0], center_pady[1] + footer_height + scale_tk_value(self, 8)),
         )
         self.center_container.grid_columnconfigure(0, weight=1)
-        self.center_container.grid_rowconfigure(3, weight=1)
-        self._register_surface_backdrop(self.center_container)
+        self.center_container.grid_rowconfigure(2, weight=1)
 
         self._create_header(self.center_container)
+
+        self.header_separator = ctk.CTkFrame(
+            self.center_container,
+            height=1,
+            fg_color=theme["separator_line"],
+            corner_radius=0,
+        )
+        self.header_separator.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+
         self._create_main_buttons(self.center_container)
         self._create_status_area(self.center_container)
-
-        self.left_sidebar = LeftSidebar(
-            self.left_container,
-            text=f"{APP_DISPLAY_NAME} v{VERSION}",
-            height=LEFT_SIDEBAR_HEIGHT,
-            backdrop_provider=self.get_backdrop_patch,
-        )
-        self.right_sidebar = RightSidebar(
-            self.right_container,
-            icons=self.icons,
-            current_theme=self.current_theme,
-            backdrop_provider=self.get_backdrop_patch,
-        )
-        self._register_surface_backdrop(self.right_sidebar)
-        self._register_surface_backdrop(self.right_sidebar._button_container)
-        self._register_surface_backdrop(self.status_panel)
-        self.sidebar_buttons = self.right_sidebar.buttons
-
         self._create_footer()
 
     def _create_header(self, parent):
-        theme_keys = get_theme_tokens(self.current_theme)
-        logo = self._get_header_logo_image()
-        logo_height = 0 if logo is None else int(logo.height)
-        header_height = max(
-            scale_tk_value(self, MAIN_WINDOW_HEADER_MIN_HEIGHT),
-            logo_height + scale_tk_value(self, MAIN_WINDOW_GREETING_FONT_SIZE + 24),
-        )
+        theme = get_theme_tokens(self.current_theme)
 
-        self.header_frame = tk.Frame(
-            parent, bg=theme_keys["bg_base"], bd=0, highlightthickness=0, height=header_height
+        self.header_frame = ctk.CTkFrame(
+            parent,
+            height=MAIN_WINDOW_HEADER_MIN_HEIGHT,
+            fg_color=theme["bg_base"],
+            corner_radius=0,
         )
-        self.header_frame.grid(
-            row=0, column=0, sticky="ew", pady=scale_tk_value(self, MAIN_WINDOW_HEADER_PADY)
-        )
+        self.header_frame.grid(row=0, column=0, sticky="ew")
+        self.header_frame.grid_columnconfigure(0, weight=1, minsize=0)
+        self.header_frame.grid_columnconfigure(1, weight=0)
+        self.header_frame.grid_rowconfigure(0, weight=1)
         self.header_frame.grid_propagate(False)
 
-        self.header_canvas = tk.Canvas(
+        self.header_text_frame = ctk.CTkFrame(
             self.header_frame,
-            height=header_height,
-            highlightthickness=0,
-            bd=0,
-            relief="flat",
-            bg=theme_keys["bg_base"],
+            width=MAIN_WINDOW_HEADER_TEXT_WIDTH,
+            height=MAIN_WINDOW_HEADER_MIN_HEIGHT,
+            fg_color="transparent",
         )
-        self.header_canvas.pack(fill="both", expand=True)
-        self.header_frame.bind("<Configure>", self._schedule_header_refresh, add="+")
-        self.header_canvas.bind("<Configure>", self._schedule_header_refresh, add="+")
+        self.header_text_frame.grid(row=0, column=0, sticky="w", padx=(12, 4))
+        self.header_text_frame.grid_columnconfigure(0, weight=1)
+        self.header_text_frame.grid_rowconfigure(0, weight=1)
+        self.header_text_frame.grid_rowconfigure(3, weight=1)
+        self.header_text_frame.grid_propagate(False)
+
+        self.lbl_greeting_title = ctk.CTkLabel(
+            self.header_text_frame,
+            text="",
+            font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_GREETING_FONT_SIZE, "bold"),
+            anchor="w",
+            fg_color="transparent",
+            text_color=theme["text_primary"],
+        )
+        self.lbl_greeting_title.grid(row=1, column=0, sticky="ew")
+
+        self.lbl_greeting_subtitle = ctk.CTkLabel(
+            self.header_text_frame,
+            text="",
+            font=(FONT_FAMILY_PRIMARY, 13, "normal"),
+            anchor="w",
+            justify="left",
+            wraplength=MAIN_WINDOW_HEADER_TEXT_WIDTH - 4,
+            fg_color="transparent",
+            text_color=theme["text_secondary"],
+        )
+        self.lbl_greeting_subtitle.grid(row=2, column=0, sticky="ew", pady=(2, 0))
+
+        self.right_sidebar = RightSidebar(
+            self.header_frame,
+            icons=self.icons,
+            current_theme=self.current_theme,
+            orientation="horizontal",
+            auto_pack=False,
+        )
+        self.right_sidebar.grid(row=0, column=1, padx=(4, 0))
+        self.sidebar_buttons = self.right_sidebar.buttons
 
     def _create_main_buttons(self, parent):
-        theme_keys = get_theme_tokens(self.current_theme)
+        theme = get_theme_tokens(self.current_theme)
+        self.main_content_frame = ctk.CTkFrame(parent, fg_color=theme["bg_base"], corner_radius=0)
+        self.main_content_frame.grid(row=2, column=0, sticky="nsew")
+        self.main_content_frame.grid_columnconfigure(0, weight=3, uniform="main")
+        self.main_content_frame.grid_columnconfigure(1, weight=2, uniform="main")
+        self.main_content_frame.grid_rowconfigure(0, weight=1)
 
-        self.main_menu_frame = BlendedRoundedFrame(
-            parent,
-            outside_bg=theme_keys["bg_base"],
-            fill_color=theme_keys["bg_panel"],
-            corner_radius=MAIN_WINDOW_MAIN_MENU_RADIUS,
-            border_width=MAIN_WINDOW_MAIN_MENU_BORDER_WIDTH,
-            border_color=theme_keys["card_border"],
-            content_inset=max(8, MAIN_WINDOW_MAIN_MENU_RADIUS // 2),
-            backdrop_provider=self.get_backdrop_patch,
+        self.left_actions_frame = ctk.CTkFrame(
+            self.main_content_frame,
+            fg_color=theme["bg_base"],
+            corner_radius=0,
         )
-        self.main_menu_frame.grid(
+        self.left_actions_frame.grid(
+            row=0, column=0, sticky="nsew", padx=(0, scale_tk_value(self, 8))
+        )
+        self.left_actions_frame.grid_columnconfigure(0, weight=1)
+        self.left_actions_frame.grid_rowconfigure(0, weight=2)
+        self.left_actions_frame.grid_rowconfigure(1, weight=3)
+
+        self.primary_actions_card = BlendedRoundedFrame(
+            self.left_actions_frame,
+            outside_bg=theme["bg_base"],
+            fill_color=theme["bg_panel"],
+            border_color=theme["card_border"],
+            border_width=MAIN_WINDOW_CARD_BORDER_WIDTH,
+            corner_radius=12,
+            content_inset=10,
+        )
+        self.primary_actions_card.grid(row=0, column=0, sticky="nsew")
+
+        self.secondary_actions_card = BlendedRoundedFrame(
+            self.left_actions_frame,
+            outside_bg=theme["bg_base"],
+            fill_color=theme["bg_panel"],
+            border_color=theme["card_border"],
+            border_width=MAIN_WINDOW_CARD_BORDER_WIDTH,
+            corner_radius=12,
+            content_inset=10,
+        )
+        self.secondary_actions_card.grid(
+            row=1, column=0, sticky="nsew", pady=(scale_tk_value(self, 12), 0)
+        )
+
+        self.primary_actions_stack = ctk.CTkFrame(
+            self.primary_actions_card.content_frame, fg_color="transparent"
+        )
+        self.primary_actions_stack.pack(fill="x", expand=True)
+        self.secondary_actions_stack = ctk.CTkFrame(
+            self.secondary_actions_card.content_frame, fg_color="transparent"
+        )
+        self.secondary_actions_stack.pack(fill="x", expand=True)
+
+        self.main_menu_frame = self.primary_actions_card
+        self.main_buttons_frame = self.primary_actions_stack
+        self._main_button_variants = {
+            "choose": "primary",
+            "openlect": "primary",
+            "create_tree": "secondary",
+            "openlast": "secondary",
+            "selpath": "secondary",
+            "delete": "destructive",
+        }
+
+        def create_action(parent_frame, key: str):
+            variant = self._main_button_variants[key]
+            palette = get_action_button_tokens(self.current_theme, variant)
+            action_image = self.action_icons.get(key)
+
+            button = PillTextButton(
+                parent_frame,
+                image=action_image,
+                width=BTN_W_MAIN,
+                height=BTN_H_MAIN,
+                outside_bg=theme["bg_panel"],
+                fg_color=palette["bg"],
+                hover_color=palette["hover"],
+                border_color=palette["border"],
+                border_width=MAIN_WINDOW_ACTION_BORDER_WIDTH,
+                text_color=palette["text"],
+                font=FONT_ACTION,
+                corner_radius=10,
+                icon_placeholder=action_image is None,
+                icon_color=palette["icon"],
+                chevron=True,
+                chevron_color=palette["chevron"],
+                content_pad=14,
+                text_anchor="w",
+            )
+            button.pack(fill="x", pady=scale_tk_value(self, 3))
+            return button
+
+        self.main_buttons = {
+            "choose": create_action(self.primary_actions_stack, "choose"),
+            "openlect": create_action(self.primary_actions_stack, "openlect"),
+            "create_tree": create_action(self.secondary_actions_stack, "create_tree"),
+            "openlast": create_action(self.secondary_actions_stack, "openlast"),
+            "selpath": create_action(self.secondary_actions_stack, "selpath"),
+        }
+
+    def _create_status_area(self, parent):
+        theme = get_theme_tokens(self.current_theme)
+        self.progress_frame = ctk.CTkFrame(
+            self.main_content_frame,
+            fg_color=theme["bg_base"],
+            corner_radius=0,
+        )
+        self.progress_frame.grid(row=0, column=1, sticky="nsew", padx=(scale_tk_value(self, 8), 0))
+        self.progress_frame.grid_columnconfigure(0, weight=1)
+        self.progress_frame.grid_rowconfigure(0, weight=1)
+        self.progress_frame.grid_rowconfigure(1, weight=0)
+
+        self.status_panel = StatusPanel(
+            self.progress_frame,
+            min_visible_seconds=MAIN_WINDOW_STATUS_MIN_VISIBLE_SECONDS,
+        )
+        self.status_panel.grid(row=0, column=0, sticky="nsew")
+        self.btn_cancel = self.status_panel.btn_cancel
+
+        palette = get_action_button_tokens(self.current_theme, "destructive")
+        action_image = self.action_icons.get("delete")
+        delete_button = PillTextButton(
+            self.progress_frame,
+            image=action_image,
+            width=MAIN_WINDOW_RIGHT_ACTION_WIDTH,
+            height=BTN_H_MAIN,
+            outside_bg=theme["bg_base"],
+            fg_color=palette["bg"],
+            hover_color=palette["hover"],
+            border_color=palette["border"],
+            border_width=MAIN_WINDOW_ACTION_BORDER_WIDTH,
+            text_color=palette["text"],
+            font=FONT_ACTION,
+            corner_radius=10,
+            icon_placeholder=action_image is None,
+            icon_color=palette["icon"],
+            chevron=True,
+            chevron_color=palette["chevron"],
+            content_pad=14,
+            text_anchor="w",
+        )
+        delete_button.grid(
             row=1,
             column=0,
             sticky="ew",
-            pady=(0, scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_BOTTOM_GAP)),
+            pady=(scale_tk_value(self, 10), 0),
         )
-
-        self.main_buttons_frame = ctk.CTkFrame(
-            self.main_menu_frame.content_frame, fg_color="transparent", bg_color="transparent"
-        )
-        self.main_buttons_frame.pack(
-            pady=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD),
-            padx=scale_tk_value(self, MAIN_WINDOW_MAIN_MENU_PAD),
-        )
-
-        outside_bg = theme_keys["bg_panel"]
-        btn_blue = get_button_tokens("blue")
-        btn_green = get_button_tokens("green")
-        btn_red = get_button_tokens("red")
-
-        common = {
-            "width": BTN_W_MAIN,
-            "height": BTN_H_MAIN,
-            "outside_bg": outside_bg,
-            "border_width": MAIN_WINDOW_BUTTON_BORDER_WIDTH,
-            "font": (
-                FONT_FAMILY_PRIMARY,
-                -scale_tk_value(self, MAIN_WINDOW_BUTTON_FONT_SIZE),
-                "bold",
-            ),
-            "text_color": btn_blue["text"],
-        }
-
-        def build_palette(palette):
-            return {
-                "fg_color": palette["bg"],
-                "hover_color": palette["hover"],
-                "border_color": palette["border"],
-                "gradient_start": palette.get("gradient_start"),
-                "gradient_mid": palette.get("gradient_mid"),
-                "gradient_end": palette.get("gradient_end"),
-                "hover_gradient_start": palette.get("hover_gradient_start"),
-                "hover_gradient_mid": palette.get("hover_gradient_mid"),
-                "hover_gradient_end": palette.get("hover_gradient_end"),
-            }
-
-        self.main_buttons = {
-            "selpath": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
-            "choose": PillTextButton(self.main_buttons_frame, **build_palette(btn_blue), **common),
-            "create_tree": PillTextButton(
-                self.main_buttons_frame, **build_palette(btn_blue), **common
-            ),
-            "openlect": PillTextButton(
-                self.main_buttons_frame, **build_palette(btn_blue), **common
-            ),
-            "openlast": PillTextButton(
-                self.main_buttons_frame, **build_palette(btn_green), **common
-            ),
-            "delete": PillTextButton(self.main_buttons_frame, **build_palette(btn_red), **common),
-        }
-
-        BTN_SPACING = scale_tk_value(self, MAIN_WINDOW_BUTTON_SPACING)
-        for btn in self.main_buttons.values():
-            btn.pack(pady=BTN_SPACING, anchor="center")
-
-    def _create_status_area(self, parent):
-        theme_keys = get_theme_tokens(self.current_theme)
-        self.progress_frame = tk.Frame(parent, bg=theme_keys["bg_base"], bd=0, highlightthickness=0)
-        self.progress_frame.grid(
-            row=2, column=0, sticky="nsew", pady=scale_tk_value(self, MAIN_WINDOW_STATUS_AREA_PADY)
-        )
-        self.progress_frame.grid_columnconfigure(0, weight=1)
-        self._register_surface_backdrop(self.progress_frame)
-
-        self.status_panel = StatusPanel(
-            self.progress_frame, min_visible_seconds=MAIN_WINDOW_STATUS_MIN_VISIBLE_SECONDS
-        )
-        self.status_panel.grid(row=0, column=0, sticky="ew")
-        self.status_panel.set_backdrop_provider(self.get_backdrop_patch)
-
-        self.btn_cancel = self.status_panel.btn_cancel
+        self.main_buttons["delete"] = delete_button
 
     def _create_footer(self):
-        theme_keys = get_theme_tokens(self.current_theme)
+        theme = get_theme_tokens(self.current_theme)
         self.footer_frame = tk.Frame(
             self,
             height=scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT),
-            bg=theme_keys["bg_footer"],
+            bg=theme["bg_footer"],
             bd=0,
             highlightthickness=0,
         )
         self.footer_frame.pack_propagate(False)
-
         self.footer_frame.place(relx=0.0, rely=1.0, anchor="sw", relwidth=1.0)
         self.footer_frame.lift()
 
@@ -1210,35 +524,63 @@ class LectorcitoApp(ctk.CTk):
             self.footer_frame,
             height=MAIN_WINDOW_FOOTER_LINE_HEIGHT,
             corner_radius=0,
-            bg_color=theme_keys["bg_footer"],
+            fg_color=theme["separator_line"],
+            bg_color=theme["bg_footer"],
         )
         self.footer_line.pack(side="top", fill="x")
 
         self.lbl_copyright = ctk.CTkLabel(
             self.footer_frame,
             text="",
-            font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_FOOTER_FONT_SIZE),
+            font=FONT_AUXILIARY,
             fg_color="transparent",
-            bg_color=theme_keys["bg_footer"],
+            bg_color=theme["bg_footer"],
+            anchor="w",
         )
-        self.lbl_copyright.place(relx=0.5, rely=0.5, anchor="center")
+        self.lbl_copyright.place(
+            x=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX), rely=0.55, anchor="w"
+        )
 
-    # =========================================================================
-    # LOGICA DE ACTUALIZACION VISUAL
-    # =========================================================================
+        self.footer_brand = ctk.CTkFrame(
+            self.footer_frame, fg_color="transparent", bg_color=theme["bg_footer"]
+        )
+        self.footer_brand.place(
+            relx=1.0,
+            x=-scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
+            rely=0.55,
+            anchor="e",
+        )
+
+        self.lbl_footer_logo = ctk.CTkLabel(
+            self.footer_brand,
+            text="" if self.logo_image is not None else APP_DISPLAY_NAME,
+            image=self.logo_image,
+            compound="left",
+            font=FONT_AUXILIARY,
+            fg_color="transparent",
+            bg_color=theme["bg_footer"],
+        )
+        self.lbl_footer_logo.pack(side="left")
+
+        self.lbl_footer_version = ctk.CTkLabel(
+            self.footer_brand,
+            text=f"v{VERSION}",
+            font=FONT_AUXILIARY,
+            fg_color="transparent",
+            bg_color=theme["bg_footer"],
+        )
+        self.lbl_footer_version.pack(side="left", padx=(scale_tk_value(self, 6), 0))
 
     def update_ui_texts(self):
-        hour = datetime.datetime.now().hour
-        greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
         try:
             user = os.getlogin().lower().capitalize()
         except OSError:
-            user = (
-                self._tr("fallback_user")
-                if hasattr(self, "_tr")
-                else translate_default("fallback_user")
-            )
-        self._header_greeting_text = f"{self._tr(greet_key)} {user}{self._tr('welcome')}"
+            user = self._tr("fallback_user")
+
+        hour = datetime.datetime.now().hour
+        greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
+        self._header_greeting_title = self._tr("greeting_user", user)
+        self._header_greeting_subtitle = f"{self._tr(greet_key)} {self._tr('main_action_prompt')}"
         self._schedule_header_refresh()
 
         key_map = {
@@ -1249,14 +591,13 @@ class LectorcitoApp(ctk.CTk):
             "openlast": "btn_open_last",
             "delete": "btn_del",
         }
-
         for key, btn in self.main_buttons.items():
             if key in key_map:
                 btn.configure(text=self._tr(key_map[key]))
-        self.after_idle(self._fit_main_button_fonts)
 
-        self.status_panel.set_translator(lambda k: self._tr(k))
+        self.status_panel.set_translator(lambda key: self._tr(key))
         self.lbl_copyright.configure(text=self._tr("footer_copyright", YEAR, AUTHOR))
+        self.lbl_footer_version.configure(text=f"v{VERSION}")
 
         tooltip_map = {
             "ver": "tooltip_ver",
@@ -1270,250 +611,125 @@ class LectorcitoApp(ctk.CTk):
             "info": "tooltip_info",
             "ajustes": "tooltip_ajustes",
         }
-
         for key, btn in self.sidebar_buttons.items():
-            if key in tooltip_map:
-                txt = self._tr(tooltip_map[key])
-                if key in self.tooltips:
-                    self.tooltips[key].text = txt
-                else:
-                    self.tooltips[key] = CustomTooltip(btn, text=txt)
+            if key not in tooltip_map:
+                continue
+            text = self._tr(tooltip_map[key])
+            if key in self.tooltips:
+                self.tooltips[key].text = text
+            else:
+                self.tooltips[key] = CustomTooltip(btn, text=text)
 
-        try:
-            for dialog in self._dialog_cache.values():
-                try:
-                    if dialog.winfo_exists() and hasattr(dialog, "refresh_texts"):
-                        dialog.refresh_texts()
-                except Exception:
-                    pass
-        except Exception:
-            pass
+        for dialog in self._dialog_cache.values():
+            try:
+                if dialog.winfo_exists() and hasattr(dialog, "refresh_texts"):
+                    dialog.refresh_texts()
+            except Exception:
+                pass
 
-        try:
-            self._refresh_local_surface_colors()
-        except Exception:
-            pass
+        self._refresh_local_surface_colors()
 
     def apply_theme(self):
         ctk.set_appearance_mode(self.current_theme)
+        theme = get_theme_tokens(self.current_theme)
+        self.configure(fg_color=theme["bg_base"])
 
-        theme_keys = get_theme_tokens(self.current_theme)
-
-        self.configure(fg_color=theme_keys["bg_base"])
-
-        self.left_sidebar.apply_theme(self.current_theme)
         self.right_sidebar.apply_theme(self.current_theme)
         self.status_panel.apply_theme(self.current_theme)
 
-        try:
-            self.left_container.configure(bg=theme_keys["bg_base"])
-            self.right_container.configure(bg=theme_keys["bg_base"])
-            self.center_container.configure(bg=theme_keys["bg_base"])
-            self.header_frame.configure(bg=theme_keys["bg_base"])
-            self.header_canvas.configure(bg=theme_keys["bg_base"])
-            self.progress_frame.configure(bg=theme_keys["bg_base"])
-            self.main_menu_frame.configure(
-                outside_bg=theme_keys["bg_base"],
-                fill_color=theme_keys["bg_panel"],
-                border_color=theme_keys["card_border"],
-                backdrop_provider=self.get_backdrop_patch,
-            )
-            self.main_buttons_frame.configure(bg_color="transparent")
-        except Exception:
-            pass
-
-        for btn in self.main_buttons.values():
+        for frame in (
+            self.center_container,
+            self.header_frame,
+            self.main_content_frame,
+            self.left_actions_frame,
+            self.progress_frame,
+        ):
             try:
-                btn.configure(outside_bg=theme_keys["bg_panel"])
+                frame.configure(fg_color=theme["bg_base"])
             except Exception:
                 pass
 
-        try:
-            self.footer_frame.configure(bg=theme_keys["bg_footer"])
-            self.footer_line.configure(
-                bg_color=theme_keys["bg_footer"], fg_color=theme_keys["separator_line"]
-            )
-            self.lbl_copyright.configure(
-                bg_color=theme_keys["bg_footer"],
-                fg_color="transparent",
-                text_color=theme_keys["text_secondary"],
-            )
-        except Exception:
-            pass
+        self.lbl_greeting_title.configure(text_color=theme["text_primary"])
+        self.lbl_greeting_subtitle.configure(text_color=theme["text_secondary"])
+        self.header_separator.configure(fg_color=theme["separator_line"])
 
-        self._refresh_background_canvas()
+        for card in (self.primary_actions_card, self.secondary_actions_card):
+            card.configure(
+                outside_bg=theme["bg_base"],
+                fill_color=theme["bg_panel"],
+                border_color=theme["card_border"],
+                border_width=MAIN_WINDOW_CARD_BORDER_WIDTH,
+            )
+
+        for key, btn in self.main_buttons.items():
+            variant = self._main_button_variants.get(key, "secondary")
+            palette = get_action_button_tokens(self.current_theme, variant)
+            outside = theme["bg_base"] if key == "delete" else theme["bg_panel"]
+            action_image = self.action_icons.get(key)
+            btn.configure(
+                image=action_image,
+                icon_placeholder=action_image is None,
+                outside_bg=outside,
+                fg_color=palette["bg"],
+                hover_color=palette["hover"],
+                border_color=palette["border"],
+                text_color=palette["text"],
+                icon_color=palette["icon"],
+                chevron_color=palette["chevron"],
+            )
+
+        self.footer_frame.configure(bg=theme["bg_footer"])
+        self.footer_line.configure(bg_color=theme["bg_footer"], fg_color=theme["separator_line"])
+        self.footer_brand.configure(bg_color=theme["bg_footer"])
+        self.lbl_copyright.configure(
+            bg_color=theme["bg_footer"],
+            fg_color="transparent",
+            text_color=theme["text_primary"],
+        )
+        self.lbl_footer_logo.configure(
+            bg_color=theme["bg_footer"], text_color=theme["text_primary"]
+        )
+        self.lbl_footer_version.configure(
+            bg_color=theme["bg_footer"], text_color=theme["text_secondary"]
+        )
+
         self._schedule_header_refresh()
 
     def switch_theme_animated(self, new_theme: str):
+        """Aplica el tema sin ocultar ni reconstruir la ventana principal."""
         if new_theme == self.current_theme or self._is_theme_switching:
             return
         self._is_theme_switching = True
-        self._pending_new_theme = new_theme
-        self._reveal_target_y = None
         CustomTooltip.hide_global()
-        self._fade_out_for_switch()
-
-    def _fade_out_for_switch(self):
         try:
-            alpha = float(self.attributes("-alpha"))
-            if alpha > 0.0:
-                self.attributes("-alpha", max(alpha - MAIN_WINDOW_SWITCH_FADE_OUT_STEP, 0.0))
-                self.after(MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS, self._fade_out_for_switch)
-            else:
-                try:
-                    self.withdraw()
-                except Exception:
-                    pass
-                self.after(MAIN_WINDOW_SWITCH_HOLD_MS, self._apply_theme_after_switch)
-        except Exception:
-            self._is_theme_switching = False
-            self.current_theme = self._pending_new_theme
+            self.current_theme = new_theme
             self.apply_theme()
-            self.attributes("-alpha", 1.0)
-
-    def _apply_theme_after_switch(self):
-        try:
-            self.current_theme = self._pending_new_theme
-            self.apply_theme()
-            self.update_idletasks()
-            self.attributes("-alpha", 0.0)
-            self.after(MAIN_WINDOW_SWITCH_REBUILD_DELAY_MS, self._reveal_after_theme_switch)
-        except Exception:
-            self._is_theme_switching = False
-            try:
-                self.deiconify()
-            except Exception:
-                pass
-            self.attributes("-alpha", 1.0)
-
-    def _reveal_after_theme_switch(self):
-        try:
-            self._restore_window_stack_after_theme_switch()
-            self.attributes("-alpha", 0.0)
-            self._fade_in_after_switch()
-        except Exception:
-            self._is_theme_switching = False
-            self.attributes("-alpha", 1.0)
-
-    def _restore_window_stack_after_theme_switch(self):
-        try:
-            self.deiconify()
-        except Exception:
-            pass
-        try:
-            self.lift()
-        except Exception:
-            pass
-        try:
-            self.focus_force()
-        except Exception:
-            pass
-        try:
-            self.attributes("-topmost", True)
-            self.after(
-                MAIN_WINDOW_TOPMOST_RESET_DELAY_MS, lambda: self.attributes("-topmost", False)
-            )
-        except Exception:
-            pass
-        self._schedule_linux_window_shape(120)
-
-    def _fade_in_after_switch(self):
-        try:
-            alpha = float(self.attributes("-alpha"))
-        except Exception:
-            alpha = 1.0
-
-        if alpha < 1.0:
-            self.attributes("-alpha", min(alpha + MAIN_WINDOW_SWITCH_FADE_IN_STEP, 1.0))
-            self.after(MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS, self._fade_in_after_switch)
-        else:
+        finally:
             self._is_theme_switching = False
 
     def switch_profile_animated(self, apply_callback, complete_callback=None):
+        """Cambia de perfil en sitio para evitar parpadeos de la ventana principal."""
         if self._is_theme_switching or self._is_profile_switching:
             return
         self._is_profile_switching = True
-        self._profile_switch_apply_callback = apply_callback
-        self._profile_switch_complete_callback = complete_callback
-        self._reveal_target_y = None
         CustomTooltip.hide_global()
-        self._fade_out_for_profile_switch()
-
-    def _fade_out_for_profile_switch(self):
-        try:
-            alpha = float(self.attributes("-alpha"))
-            if alpha > 0.0:
-                self.attributes("-alpha", max(alpha - MAIN_WINDOW_SWITCH_FADE_OUT_STEP, 0.0))
-                self.after(
-                    MAIN_WINDOW_SWITCH_FADE_OUT_INTERVAL_MS, self._fade_out_for_profile_switch
-                )
-            else:
-                self.after(MAIN_WINDOW_SWITCH_HOLD_MS, self._apply_profile_after_switch)
-        except Exception:
-            self._finish_profile_switch_immediately()
-
-    def _apply_profile_after_switch(self):
-        try:
-            if callable(self._profile_switch_apply_callback):
-                self._profile_switch_apply_callback()
-            self.update_idletasks()
-            self._restore_window_stack_after_theme_switch()
-            self.attributes("-alpha", 0.0)
-            self._fade_in_after_profile_switch()
-        except Exception:
-            self._finish_profile_switch_immediately()
-
-    def _fade_in_after_profile_switch(self):
-        try:
-            alpha = float(self.attributes("-alpha"))
-        except Exception:
-            alpha = 1.0
-
-        if alpha < 1.0:
-            self.attributes("-alpha", min(alpha + MAIN_WINDOW_SWITCH_FADE_IN_STEP, 1.0))
-            self.after(MAIN_WINDOW_SWITCH_FADE_IN_INTERVAL_MS, self._fade_in_after_profile_switch)
-        else:
-            self._is_profile_switching = False
-            callback = self._profile_switch_complete_callback
-            self._profile_switch_apply_callback = None
-            self._profile_switch_complete_callback = None
-            if callable(callback):
-                self.after(100, callback)
-
-    def _finish_profile_switch_immediately(self):
-        self._is_profile_switching = False
-        apply_callback = self._profile_switch_apply_callback
-        complete_callback = self._profile_switch_complete_callback
-        self._profile_switch_apply_callback = None
-        self._profile_switch_complete_callback = None
         try:
             if callable(apply_callback):
                 apply_callback()
-        except Exception:
-            pass
-        try:
-            self.attributes("-alpha", 1.0)
-        except Exception:
-            pass
+        finally:
+            self._is_profile_switching = False
         if callable(complete_callback):
-            self.after(100, complete_callback)
+            self.after_idle(complete_callback)
 
     def prepare_soft_refresh(self):
+        """Prepara una actualizacion de datos sin modificar alpha ni geometria."""
         CustomTooltip.hide_global()
-        try:
-            current_alpha = float(self.attributes("-alpha"))
-        except Exception:
-            current_alpha = 1.0
-        try:
-            self.attributes("-alpha", min(current_alpha, MAIN_WINDOW_SOFT_REFRESH_ALPHA))
-        except Exception:
-            pass
-        self._reveal_target_y = None
 
     def complete_soft_refresh(self):
-        self._fade_in()
+        return None
 
     def _create_view_dialog(self):
+
         return TagsConfigDialog(
             parent=self,
             title=self._tr("dlg_ver_title"),
@@ -1530,6 +746,7 @@ class LectorcitoApp(ctk.CTk):
         )
 
     def _create_no_view_dialog(self):
+
         return TagsConfigDialog(
             parent=self,
             title=self._tr("dlg_nover_title"),
@@ -1544,18 +761,25 @@ class LectorcitoApp(ctk.CTk):
         )
 
     def _create_media_dialog(self):
+
         tags_stored = self.controller.config.get("etiquetas_multimedia_config", [])
+
         if not tags_stored:
             raw_exts = self.controller.config.get("media_extensions", [])
+
             current_files = [{"nombre": x, "estado": "activo"} for x in raw_exts]
+
         else:
             current_files = tags_stored
+
         view_exts = {
             t["nombre"] for t in self.controller.config.get("etiquetas_extensiones_incluidas", [])
         }
+
         no_view_items = {
             t["nombre"] for t in self.controller.config.get("etiquetas_archivos_excluidos", [])
         }
+
         return TagsConfigDialog(
             parent=self,
             title=self._tr("dlg_etiqueta_title"),
@@ -1569,10 +793,14 @@ class LectorcitoApp(ctk.CTk):
         )
 
     def _create_profiles_dialog(self):
+
         profiles = self.controller.config.get("_profiles_meta", {})
+
         active_id = self.controller.config.get("_active_profile_id", "default")
+
         if not profiles:
             profiles = {"default": self.controller.config.copy()}
+
         return ProfilesDialog(
             parent=self,
             profiles_meta=profiles,
@@ -1582,6 +810,7 @@ class LectorcitoApp(ctk.CTk):
         )
 
     def _create_settings_dialog(self):
+
         return SettingsDialog(
             parent=self,
             current_extension=self.controller.config.get("report_extension", ".md"),
@@ -1591,97 +820,124 @@ class LectorcitoApp(ctk.CTk):
         )
 
     def _get_or_create_dialog(self, key, factory):
+
         dialog = self._dialog_cache.get(key)
+
         if dialog is None:
             dialog = factory()
+
             self._dialog_cache[key] = dialog
+
         else:
             try:
                 if not dialog.winfo_exists():
                     dialog = factory()
+
                     self._dialog_cache[key] = dialog
+
             except Exception:
                 dialog = factory()
+
                 self._dialog_cache[key] = dialog
+
         return dialog
 
-    def _preload_persistent_dialogs(self):
-        try:
-            self.get_view_dialog()
-            self.get_no_view_dialog()
-            self.get_media_dialog()
-            self.get_profiles_dialog()
-            self.get_settings_dialog()
-        except Exception as error:
-            log_warning(str(error), operation="preload_persistent_dialogs")
-
     def get_view_dialog(self):
+
         return self._get_or_create_dialog("view", self._create_view_dialog)
 
     def get_no_view_dialog(self):
+
         return self._get_or_create_dialog("no_view", self._create_no_view_dialog)
 
     def get_media_dialog(self):
+
         return self._get_or_create_dialog("media", self._create_media_dialog)
 
     def get_profiles_dialog(self):
+
         return self._get_or_create_dialog("profiles", self._create_profiles_dialog)
 
     def get_settings_dialog(self):
+
         return self._get_or_create_dialog("settings", self._create_settings_dialog)
 
     # =========================================================================
+
     # ESTADO Y CONTROL
+
     # =========================================================================
 
     def _cancel_modal_fail_safe(self):
+
         if self._modal_fail_safe_after_id:
             try:
                 self.after_cancel(self._modal_fail_safe_after_id)
+
             except Exception:
                 pass
+
         self._modal_fail_safe_after_id = None
 
     def _schedule_modal_fail_safe(self):
+
         self._cancel_modal_fail_safe()
+
         try:
             self._modal_fail_safe_after_id = self.after(
                 MAIN_WINDOW_MODAL_FAIL_SAFE_DELAY_MS, self._modal_fail_safe_check
             )
+
         except Exception:
             self._modal_fail_safe_after_id = None
 
     def _has_live_modal_dialog(self) -> bool:
+
         try:
             for child in self.winfo_children():
                 try:
                     if not getattr(child, "_is_base_dialog", False):
                         continue
+
                     if not child.winfo_exists():
                         continue
+
                     if str(child.state()) == "withdrawn":
                         continue
+
                     return True
+
                 except Exception:
                     pass
+
         except Exception:
             pass
+
         return False
 
     def _modal_fail_safe_check(self):
+
         self._modal_fail_safe_after_id = None
+
         if not self._is_modal_open:
             return
+
         if self._has_live_modal_dialog():
             self._schedule_modal_fail_safe()
+
             return
+
         self.restore_ui_from_modal()
 
     def get_min_visible_completion_delay_ms(self) -> int:
+
         return self.status_panel.get_min_visible_completion_delay_ms()
 
-    def set_progress(self, percentage, file_context=None):
-        self.status_panel.set_progress(percentage, file_context)
+    def set_progress(self, percentage, file_context=None, report_context=None):
+        self.status_panel.set_progress(percentage, file_context, report_context)
+
+    def set_processing_cancelling(self):
+        self.status_panel.set_cancelling()
 
     def toggle_ui_for_processing(
         self, is_active: bool, mode: str = "determinate", text: str = None, final_status: str = None
@@ -1696,53 +952,47 @@ class LectorcitoApp(ctk.CTk):
         for btn in self.sidebar_buttons.values():
             btn.configure(state=state)
 
-        self.left_sidebar.configure(state=state)
         self.status_panel.set_active(is_active, mode=mode, text=text, final_status=final_status)
 
     def dim_ui_for_modal(self):
         CustomTooltip.hide_global()
         self._is_modal_open = True
-        for btn in self.main_buttons.values():
-            btn.configure(state="disabled")
-        for btn in self.sidebar_buttons.values():
-            btn.configure(state="disabled")
-        self.left_sidebar.configure(state="disabled")
         self._schedule_modal_fail_safe()
 
     def restore_ui_from_modal(self):
         CustomTooltip.hide_global()
         self._cancel_modal_fail_safe()
         self._is_modal_open = False
-        if not self.controller.is_processing:
-            for btn in self.main_buttons.values():
-                btn.configure(state="normal")
-            for btn in self.sidebar_buttons.values():
-                btn.configure(state="normal")
-            self.left_sidebar.configure(state="normal")
-        else:
-            pass
 
     def show_message(self, title_key: str, message_key: str, *args):
+
         CustomTooltip.hide_global()
+
         try:
 
             def _on_message_closed():
+
                 try:
                     if getattr(self.status_panel, "_mode", "") == "done":
                         self.status_panel.back_to_idle()
+
                 except Exception:
                     pass
 
             MessageDialog(
                 self, self._tr(title_key), self._tr(message_key, *args), on_close=_on_message_closed
             )
+
         except Exception as error:
             log_error("Error mostrando dialogo de mensaje.", error, operation="show_message")
+
             self.restore_ui_from_modal()
 
     def show_app_info(self):
+
         if self.controller and hasattr(self.controller, "open_manual_link"):
             self.controller.open_manual_link()
+
         else:
             if not get_platform_service().open_url(APP_WEBSITE_URL):
                 log_warning(

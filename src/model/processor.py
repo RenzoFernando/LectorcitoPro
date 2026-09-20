@@ -133,6 +133,9 @@ def generate_report(
     )
 
     processed_files = 0
+    report_name = os.path.basename(final_report_path)
+    if progress_callback:
+        progress_callback(0.0, "", report_name)
 
     try:
         with open(final_report_path, "w", encoding="utf-8") as outfile:
@@ -152,6 +155,10 @@ def generate_report(
                     if cancel_event.is_set():
                         break
 
+                    if progress_callback:
+                        progress = (processed_files / project.file_count) * 100
+                        progress_callback(progress, report_file.absolute_path, report_name)
+
                     scanner.read_file(report_file)
                     renderer.write_file(report_file)
                     report_file.content = None
@@ -160,7 +167,7 @@ def generate_report(
                     processed_files += 1
                     if progress_callback:
                         progress = (processed_files / project.file_count) * 100
-                        progress_callback(progress, report_file.relative_path)
+                        progress_callback(progress, report_file.absolute_path, report_name)
 
                 if cancel_event.is_set():
                     break

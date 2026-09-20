@@ -2,11 +2,18 @@ import os
 import sys
 
 import customtkinter as ctk
-from PIL import Image, ImageOps, ImageTk
+from PIL import Image, ImageTk
 
 from app_logging import log_warning
 from utils import resource_path
-from view.ui_constants import LOGO_TARGET_WIDTH, SIDEBAR_ICON_SIZE, THEME_TOGGLE_ICON_SIZE
+from view.svg_icons import load_ctk_svg_image
+from view.ui_constants import (
+    ACTION_ICON_SIZE,
+    LOGO_TARGET_WIDTH,
+    SIDEBAR_ICON_SIZE,
+    THEME_TOGGLE_ICON_SIZE,
+    get_theme_tokens,
+)
 
 # =============================================================================
 # GESTION DE RECURSOS VISUALES
@@ -21,52 +28,119 @@ def get_app_icon_png_path() -> str:
     return resource_path(os.path.join("branding", "lector.png"))
 
 
-def load_sidebar_icons(size=SIDEBAR_ICON_SIZE) -> dict:
-    icons = {}
-    icon_keys = [
-        "ver",
-        "nover",
-        "etiqueta",
-        "traducir",
-        "restaurar",
-        "perfil",
-        "github",
-        "info",
-        "ajustes",
-    ]
+def _svg_icon_path(name: str) -> str:
+    return resource_path(os.path.join("icons", "svg", f"{name}.svg"))
 
-    for key in icon_keys:
-        try:
-            img_dark = Image.open(resource_path(os.path.join("icons", f"{key}_oscuro.png")))
-            img_light = Image.open(resource_path(os.path.join("icons", f"{key}_claro.png")))
-            icons[key] = ctk.CTkImage(light_image=img_dark, dark_image=img_light, size=size)
-        except Exception as e:
-            log_warning(str(e), operation="load_sidebar_icon", file_path=key)
-            icons[key] = None
 
+def _load_svg_icon(
+    name: str,
+    *,
+    size: tuple[int, int],
+    light_color: str,
+    dark_color: str,
+) -> ctk.CTkImage | None:
+    path = _svg_icon_path(name)
+    if not os.path.exists(path):
+        log_warning("SVG no encontrado.", operation="load_svg_icon", file_path=path)
+        return None
     try:
-        sun_image = Image.open(resource_path(os.path.join("icons", "sol.png"))).convert("RGBA")
-        moon_image = Image.open(resource_path(os.path.join("icons", "luna.png"))).convert("RGBA")
-
-        sun_rgb = Image.merge("RGB", sun_image.split()[:3])
-        moon_rgb = Image.merge("RGB", moon_image.split()[:3])
-        sun_inverse = ImageOps.invert(sun_rgb).convert("RGBA")
-        moon_inverse = ImageOps.invert(moon_rgb).convert("RGBA")
-        sun_inverse.putalpha(sun_image.getchannel("A"))
-        moon_inverse.putalpha(moon_image.getchannel("A"))
-
-        icons["sun"] = ctk.CTkImage(
-            light_image=sun_image, dark_image=sun_inverse, size=THEME_TOGGLE_ICON_SIZE
+        return load_ctk_svg_image(
+            path,
+            size=size,
+            light_color=light_color,
+            dark_color=dark_color,
         )
-        icons["moon"] = ctk.CTkImage(
-            light_image=moon_inverse, dark_image=moon_image, size=THEME_TOGGLE_ICON_SIZE
-        )
-    except Exception as e:
-        log_warning(str(e), operation="load_theme_icons")
-        icons["sun"] = None
-        icons["moon"] = None
+    except Exception as error:
+        log_warning(str(error), operation="load_svg_icon", file_path=path)
+        return None
 
+
+def load_sidebar_icons(size=SIDEBAR_ICON_SIZE) -> dict:
+    """Carga la barra superior desde los SVG vectoriales del proyecto."""
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    toolbar_light = light["accent_blue"]
+    toolbar_dark = dark["accent_blue_icon"]
+
+    icon_names = {
+        "ver": "view",
+        "nover": "hide",
+        "etiqueta": "media",
+        "traducir": "language",
+        "restaurar": "restore",
+        "perfil": "profiles",
+        "github": "github",
+        "info": "info",
+        "ajustes": "settings",
+        "sun": "sun",
+        "moon": "moon",
+    }
+
+    icons = {}
+    for key, svg_name in icon_names.items():
+        icon_size = THEME_TOGGLE_ICON_SIZE if key in {"sun", "moon"} else size
+        icons[key] = _load_svg_icon(
+            svg_name,
+            size=icon_size,
+            light_color=toolbar_light,
+            dark_color=toolbar_dark,
+        )
     return icons
+
+
+def load_action_icons(size=ACTION_ICON_SIZE) -> dict:
+    """Carga las acciones principales desde una unica fuente SVG por icono."""
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    icon_names = {
+        "choose": "read_complete",
+        "openlect": "readings_folder",
+        "create_tree": "tree",
+        "openlast": "last_report",
+        "selpath": "destination",
+        "delete": "delete",
+    }
+    colors = {
+        "choose": ("#FFFFFF", "#FFFFFF"),
+        "openlect": ("#FFFFFF", "#FFFFFF"),
+        "create_tree": (light["accent_blue"], dark["accent_blue_icon"]),
+        "openlast": (light["accent_blue"], dark["accent_blue_icon"]),
+        "selpath": (light["accent_blue"], dark["accent_blue_icon"]),
+        "delete": (light["danger_red_deep"], dark["danger_red_deep"]),
+    }
+
+    icons = {}
+    for key, svg_name in icon_names.items():
+        light_color, dark_color = colors[key]
+        icons[key] = _load_svg_icon(
+            svg_name,
+            size=size,
+            light_color=light_color,
+            dark_color=dark_color,
+        )
+    return icons
+
+
+def load_close_icon(size=(14, 14)) -> ctk.CTkImage | None:
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    return _load_svg_icon(
+        "close",
+        size=size,
+        light_color=light["accent_blue"],
+        dark_color=dark["accent_blue_icon"],
+    )
+
+
+def load_info_icon(size=(24, 24)) -> ctk.CTkImage | None:
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    return _load_svg_icon(
+        "info",
+        size=size,
+        light_color=light["accent_blue"],
+        dark_color=dark["accent_blue_icon"],
+    )
 
 
 def load_logo(target_width=LOGO_TARGET_WIDTH) -> ctk.CTkImage | None:
@@ -79,10 +153,12 @@ def load_logo(target_width=LOGO_TARGET_WIDTH) -> ctk.CTkImage | None:
         target_height = int(target_width * ratio)
 
         return ctk.CTkImage(
-            light_image=logo_light, dark_image=logo_dark, size=(target_width, target_height)
+            light_image=logo_light,
+            dark_image=logo_dark,
+            size=(target_width, target_height),
         )
-    except Exception as e:
-        log_warning(str(e), operation="load_logo")
+    except Exception as error:
+        log_warning(str(error), operation="load_logo")
         return None
 
 
@@ -93,8 +169,8 @@ def safe_set_window_icon(window) -> None:
             try:
                 window.iconbitmap(icon_path)
                 window._icon_path = icon_path
-            except Exception as e:
-                log_warning(str(e), operation="set_window_icon", file_path=icon_path)
+            except Exception as error:
+                log_warning(str(error), operation="set_window_icon", file_path=icon_path)
         return
 
     icon_path = get_app_icon_png_path()
@@ -104,5 +180,5 @@ def safe_set_window_icon(window) -> None:
             window.iconphoto(True, icon_image)
             window._icon_photo = icon_image
             window._icon_path = icon_path
-        except Exception as e:
-            log_warning(str(e), operation="set_window_icon", file_path=icon_path)
+        except Exception as error:
+            log_warning(str(error), operation="set_window_icon", file_path=icon_path)

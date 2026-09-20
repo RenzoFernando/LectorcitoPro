@@ -14,6 +14,7 @@ from view.ui_constants import (
     SETTINGS_DIALOG_WIDTH,
     TAGS_DIALOG_HEIGHT,
     TAGS_DIALOG_WIDTH,
+    UI_DENSITY_SCALE,
 )
 
 _STATE = {
@@ -300,7 +301,8 @@ def configure_application_scaling(root, prefer_pointer: bool = True) -> bool:
         logical_width = work_width
         logical_height = work_height
 
-    desired_user_scale = _compute_user_scale(logical_width, logical_height)
+    base_user_scale = _compute_user_scale(logical_width, logical_height)
+    desired_user_scale = _clamp(base_user_scale * UI_DENSITY_SCALE, 0.55, 0.95)
     changed = abs(desired_user_scale - current_user_scale) >= 0.01
 
     if changed:

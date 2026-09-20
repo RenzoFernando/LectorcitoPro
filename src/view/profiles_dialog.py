@@ -73,8 +73,9 @@ class ProfilesDialog(BaseDialog):
         self.colors = {
             "card": _get_color_tuple("card"),
             "text": _get_color_tuple("text"),
-            "selected": COLORS["button"]["blue"]["bg"],
-            "selected_border": COLORS["button"]["blue"]["border"],
+            "selected": ("#EFF6FF", "#172554"),
+            "selected_text": ("#2563EB", "#93C5FD"),
+            "selected_border": ("#2563EB", "#3B82F6"),
             "panel": _get_color_tuple("bg_panel"),
             "border": _get_color_tuple("border_subtle"),
         }
@@ -192,7 +193,7 @@ class ProfilesDialog(BaseDialog):
             item_frame,
             text=f"  {display_name}{suffix}",
             font=(FONT_FAMILY_PRIMARY, PROFILE_ITEM_FONT_SIZE, "bold" if is_active else "normal"),
-            text_color=COLORS["light"]["text_on_accent"] if is_active else self.colors["text"],
+            text_color=self.colors["selected_text"] if is_active else self.colors["text"],
         )
         lbl.pack(side="left", padx=PROFILE_ITEM_LABEL_PADX, pady=PROFILE_ITEM_LABEL_PADY)
 
@@ -208,7 +209,7 @@ class ProfilesDialog(BaseDialog):
                 font=(FONT_FAMILY_PRIMARY, DIALOG_BUTTON_FONT_SIZE, "bold"),
                 fg_color="transparent",
                 hover_color=COLORS["button"]["red"]["hover"],
-                text_color=COLORS["light"]["text_on_accent"] if is_active else self.colors["text"],
+                text_color=self.colors["selected_text"] if is_active else self.colors["text"],
                 command=lambda p=pid: self._delete_profile(p),
             )
             btn_del.pack(side="right", padx=PROFILE_ITEM_DELETE_PADX)

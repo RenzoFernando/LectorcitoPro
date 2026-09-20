@@ -1,12 +1,17 @@
 # =============================================================================
+
 # DICCIONARIO DE TRADUCCIONES
+
 # =============================================================================
+
 
 TRANSLATIONS = {
     "es": {
         # --- GENERAL ---
         "title": "LECTORCITO PRO",
         "welcome": ", por favor seleccione una opción.",
+        "greeting_user": "¡Hola, {}!",
+        "main_action_prompt": "Selecciona una acción:",
         "footer_copyright": "Copyright © {} - {}",
         "manual_title": "Manual de Usuario",
         "info_title": "Información",
@@ -76,6 +81,11 @@ TRANSLATIONS = {
         "status_reading": "Haciendo lectura",
         "status_done_panel": "¡Completado!",
         "processing_label": "Procesando:",
+        "status_title": "Estado de Lectura",
+        "progress_global": "Progreso global",
+        "status_file_label": "Archivo actual",
+        "status_report_label": "Reporte en generación",
+        "status_cancelling": "Cancelando lectura",
         # --- MENSAJES ACCIONES ---
         "msg_done": "¡Reporte completo guardado en '{}'!",
         "msg_tree_done": "¡Estructura de árbol guardada en '{}'!",
@@ -201,6 +211,8 @@ TRANSLATIONS = {
         # --- GENERAL ---
         "title": "LECTORCITO PRO",
         "welcome": ", please select an option.",
+        "greeting_user": "Hello, {}!",
+        "main_action_prompt": "Select an action:",
         "footer_copyright": "Copyright © {} - {}",
         "manual_title": "User Manual",
         "info_title": "Information",
@@ -270,6 +282,11 @@ TRANSLATIONS = {
         "status_reading": "Reading in progress",
         "status_done_panel": "Completed!",
         "processing_label": "Processing:",
+        "status_title": "Reading Status",
+        "progress_global": "Overall progress",
+        "status_file_label": "Current file",
+        "status_report_label": "Report being generated",
+        "status_cancelling": "Cancelling reading",
         # --- MESSAGES ---
         "msg_done": "Full report saved in '{}'!",
         "msg_tree_done": "Directory tree saved in '{}'!",
@@ -395,14 +412,19 @@ TRANSLATIONS = {
 
 
 def translate(language: str, key: str, *args):
+
     entry = TRANSLATIONS.get(language, TRANSLATIONS["es"]).get(key, f"<{key}>")
+
     if isinstance(entry, list):
         entry = entry[0] if entry else f"<{key}>"
+
     try:
         return entry.format(*args)
+
     except Exception:
         return entry
 
 
 def translate_default(key: str, *args):
+
     return translate("es", key, *args)

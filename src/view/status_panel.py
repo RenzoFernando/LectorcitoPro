@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-import tkinter as tk
 
 import customtkinter as ctk
 
@@ -9,8 +8,9 @@ from i18n.translations import translate_default
 from view.gradient_progress import GradientProgressBar
 from view.sidebars import BlendedRoundedFrame
 from view.ui_constants import (
-    COLORS,
+    FONT_BODY,
     FONT_FAMILY_PRIMARY,
+    FONT_LABEL,
     STATUS_PANEL_BORDER_WIDTH,
     STATUS_PANEL_CANCEL_FONT_SIZE,
     STATUS_PANEL_CANCEL_RADIUS,
@@ -18,28 +18,13 @@ from view.ui_constants import (
     STATUS_PANEL_CONTEXT_MAX_LEN,
     STATUS_PANEL_CORNER_RADIUS,
     STATUS_PANEL_DEFAULT_MIN_VISIBLE_SECONDS,
+    STATUS_PANEL_DETAILS_HEIGHT,
     STATUS_PANEL_DOTS_INTERVAL_MS,
-    STATUS_PANEL_ELLIPSIS_MAX_LEN,
     STATUS_PANEL_FILE_PREFIX_FONT_SIZE,
-    STATUS_PANEL_FILE_ROW_PADY,
     STATUS_PANEL_FILE_TEXT_FONT_SIZE,
-    STATUS_PANEL_FILE_WRAP_DEFAULT,
-    STATUS_PANEL_MIN_USABLE_WIDTH,
-    STATUS_PANEL_MIN_WRAP,
-    STATUS_PANEL_PADX,
-    STATUS_PANEL_PADY,
-    STATUS_PANEL_PERCENT_FONT_SIZE,
-    STATUS_PANEL_PERCENT_PADX,
-    STATUS_PANEL_PREFIX_GAP,
     STATUS_PANEL_PROGRESS_HEIGHT,
-    STATUS_PANEL_PROGRESS_PADY,
     STATUS_PANEL_PROGRESS_RADIUS,
     STATUS_PANEL_PROGRESS_TICK_MS,
-    STATUS_PANEL_ROW_PADX,
-    STATUS_PANEL_STATUS_FONT_SIZE,
-    STATUS_PANEL_SUCCESS_RESET_DELAY_MS,
-    STATUS_PANEL_TOP_ROW_PADY,
-    get_button_tokens,
     get_theme_tokens,
 )
 
@@ -48,7 +33,7 @@ from view.ui_constants import (
 # =============================================================================
 
 
-def _translate_status(tr_callable, key: str):
+def _translate_status(tr_callable, key: str) -> str:
     if callable(tr_callable):
         try:
             return tr_callable(key)
@@ -57,33 +42,33 @@ def _translate_status(tr_callable, key: str):
     return translate_default(key)
 
 
-class StatusPanel(tk.Frame):
+class StatusPanel(ctk.CTkFrame):
     def __init__(
         self, parent, *, min_visible_seconds: float = STATUS_PANEL_DEFAULT_MIN_VISIBLE_SECONDS
     ):
-        super().__init__(
-            parent, bg=get_theme_tokens("Light")["bg_base"], bd=0, highlightthickness=0
-        )
+        theme = get_theme_tokens("Light")
+        super().__init__(parent, fg_color="transparent", bg_color=theme["bg_base"])
         self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
         self._min_visible_s = float(min_visible_seconds)
         self._processing_started_at: float | None = None
         self._min_end_time: float | None = None
         self._forced_end_time: float | None = None
-
+        self._current_theme = "Light"
         self._mode = "idle"
         self._status_base = ""
         self._dots_after_id = None
         self._dots_phase = 1
+        self._tr = None
 
         self.current_progress = 0.0
         self.target_progress = 0.0
         self._progress_after_id = None
         self._last_tick = None
-        self._current_theme = "Light"
+        self._current_file = ""
+        self._current_report = ""
 
-        # --- Construccion UI ---
-        theme = get_theme_tokens("Light")
         self.status_panel = BlendedRoundedFrame(
             self,
             outside_bg=theme["bg_base"],
@@ -91,294 +76,304 @@ class StatusPanel(tk.Frame):
             corner_radius=STATUS_PANEL_CORNER_RADIUS,
             border_width=STATUS_PANEL_BORDER_WIDTH,
             border_color=theme["card_border"],
-            content_inset=max(4, (STATUS_PANEL_CORNER_RADIUS // 2) - 2),
+            content_inset=12,
         )
-        self.status_panel.grid(
-            row=0, column=0, padx=STATUS_PANEL_PADX, pady=STATUS_PANEL_PADY, sticky="ew"
-        )
-        self.status_panel.content_frame.grid_columnconfigure(0, weight=1)
-        self.status_panel.content_frame.grid_rowconfigure(2, weight=0, minsize=0)
-        self._file_row_pady = (0, max(1, STATUS_PANEL_FILE_ROW_PADY[1] - 11))
-        self._progress_row_pady = (
-            STATUS_PANEL_PROGRESS_PADY[0],
-            max(3, STATUS_PANEL_PROGRESS_PADY[1] - 2),
-        )
+        self.status_panel.grid(row=0, column=0, sticky="nsew")
 
-        top_row = ctk.CTkFrame(
-            self.status_panel.content_frame, fg_color="transparent", bg_color="transparent"
-        )
-        top_row.grid(
-            row=0, column=0, padx=STATUS_PANEL_ROW_PADX, pady=STATUS_PANEL_TOP_ROW_PADY, sticky="ew"
-        )
-        top_row.grid_columnconfigure(0, weight=1)
-        top_row.grid_columnconfigure(1, weight=0)
-        top_row.grid_columnconfigure(2, weight=0)
+        content = self.status_panel.content_frame
+        content.grid_columnconfigure(0, weight=1)
+        content.grid_rowconfigure(4, weight=1)
 
-        self.lbl_status = ctk.CTkLabel(
-            top_row,
+        self.lbl_title = ctk.CTkLabel(
+            content,
             text="",
-            font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_STATUS_FONT_SIZE, "normal"),
+            font=FONT_LABEL,
             anchor="w",
             fg_color="transparent",
-            bg_color="transparent",
         )
-        self.lbl_status.grid(row=0, column=0, sticky="w")
+        self.lbl_title.grid(row=0, column=0, sticky="ew", pady=(0, 7))
 
-        self.lbl_percent = ctk.CTkLabel(
-            top_row,
-            text="0%",
-            font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_PERCENT_FONT_SIZE, "bold"),
-            anchor="e",
+        self.state_row = ctk.CTkFrame(
+            content,
+            fg_color=theme["surface_alt"],
+            border_width=1,
+            border_color=theme["border_subtle"],
+            corner_radius=8,
+        )
+        self.state_row.grid(row=1, column=0, sticky="ew")
+        self.state_row.grid_columnconfigure(1, weight=1)
+
+        self.state_dot = ctk.CTkFrame(
+            self.state_row,
+            width=8,
+            height=8,
+            corner_radius=4,
+            fg_color=theme["text_muted"],
+        )
+        self.state_dot.grid(row=0, column=0, sticky="w", padx=(10, 8), pady=6)
+        self.state_dot.grid_propagate(False)
+
+        self.lbl_status = ctk.CTkLabel(
+            self.state_row,
+            text="",
+            font=(FONT_BODY[0], 11, "normal"),
+            anchor="w",
             fg_color="transparent",
-            bg_color="transparent",
         )
-        self.lbl_percent.grid(row=0, column=1, sticky="e", padx=STATUS_PANEL_PERCENT_PADX)
+        self.lbl_status.grid(row=0, column=1, sticky="ew", pady=5)
 
-        red_btn = get_button_tokens("red")
         self.btn_cancel = ctk.CTkButton(
-            top_row,
-            text="✕",
+            self.state_row,
+            text="×",
             width=STATUS_PANEL_CANCEL_SIZE,
             height=STATUS_PANEL_CANCEL_SIZE,
             corner_radius=STATUS_PANEL_CANCEL_RADIUS,
-            fg_color=red_btn["bg"],
-            hover_color=red_btn["hover"],
-            border_width=STATUS_PANEL_BORDER_WIDTH,
-            border_color=red_btn["border"],
-            text_color=red_btn["text"],
-            font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_CANCEL_FONT_SIZE, "bold"),
+            border_width=1,
+            font=(FONT_BODY[0], STATUS_PANEL_CANCEL_FONT_SIZE + 2, "bold"),
         )
-        self.btn_cancel.grid(row=0, column=2, sticky="e")
+        self.btn_cancel.grid(row=0, column=2, sticky="e", padx=(8, 6), pady=4)
         self.btn_cancel.grid_remove()
 
+        self.progress_meta = ctk.CTkFrame(content, fg_color="transparent")
+        self.progress_meta.grid(row=2, column=0, sticky="ew", pady=(15, 5))
+        self.progress_meta.grid_columnconfigure(0, weight=1)
+
+        self.lbl_progress = ctk.CTkLabel(
+            self.progress_meta,
+            text="",
+            font=(FONT_FAMILY_PRIMARY, 12, "bold"),
+            anchor="w",
+            fg_color="transparent",
+        )
+        self.lbl_progress.grid(row=0, column=0, sticky="w")
+
+        self.lbl_percent = ctk.CTkLabel(
+            self.progress_meta,
+            text="0%",
+            font=(FONT_FAMILY_PRIMARY, 12, "bold"),
+            anchor="e",
+            fg_color="transparent",
+        )
+        self.lbl_percent.grid(row=0, column=1, sticky="e")
+
         self.progress_bar = GradientProgressBar(
-            self.status_panel.content_frame,
+            content,
             height=STATUS_PANEL_PROGRESS_HEIGHT,
             corner_radius=STATUS_PANEL_PROGRESS_RADIUS,
         )
-        self.progress_bar.grid(
-            row=1, column=0, padx=STATUS_PANEL_ROW_PADX, pady=self._progress_row_pady, sticky="ew"
-        )
+        self.progress_bar.grid(row=3, column=0, sticky="ew")
         self.progress_bar.set(0.0)
 
-        self.file_row = ctk.CTkFrame(
-            self.status_panel.content_frame, fg_color="transparent", bg_color="transparent"
+        # El espacio de detalles es fijo para que el boton destructivo no cambie de posicion.
+        self.details_slot = ctk.CTkFrame(
+            content,
+            height=STATUS_PANEL_DETAILS_HEIGHT,
+            fg_color="transparent",
         )
-        self.file_row.grid(
-            row=2, column=0, padx=STATUS_PANEL_ROW_PADX, pady=self._file_row_pady, sticky="ew"
-        )
-        self.file_row.grid_columnconfigure(1, weight=1)
+        self.details_slot.grid(row=4, column=0, sticky="nsew", pady=(12, 0))
+        self.details_slot.grid_propagate(False)
+        self.details_slot.grid_columnconfigure(0, weight=1)
 
-        self.lbl_processing_prefix = ctk.CTkLabel(
-            self.file_row,
+        self.details_separator = ctk.CTkFrame(
+            self.details_slot,
+            height=1,
+            corner_radius=0,
+            fg_color=theme["separator_line"],
+        )
+        self.details_separator.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        self.details_separator.grid_remove()
+
+        self.details_frame = ctk.CTkFrame(self.details_slot, fg_color="transparent")
+        self.details_frame.grid(row=1, column=0, sticky="new")
+        self.details_frame.grid_columnconfigure(0, weight=1)
+
+        self.file_block, self.lbl_file_caption, self.lbl_current_file = self._create_detail_block(
+            self.details_frame, row=0
+        )
+        (
+            self.report_block,
+            self.lbl_report_caption,
+            self.lbl_current_report,
+        ) = self._create_detail_block(self.details_frame, row=1)
+
+        self.status_panel.bind("<Configure>", self._on_panel_resize, add="+")
+        self.apply_theme(self._current_theme)
+        self.back_to_idle()
+
+    def _create_detail_block(self, parent, *, row: int):
+        frame = ctk.CTkFrame(parent, fg_color="transparent")
+        frame.grid(row=row, column=0, sticky="ew", pady=(0, 7 if row == 0 else 0))
+        frame.grid_columnconfigure(0, weight=1)
+
+        caption = ctk.CTkLabel(
+            frame,
             text="",
             font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_FILE_PREFIX_FONT_SIZE, "bold"),
             anchor="w",
             fg_color="transparent",
-            bg_color="transparent",
         )
-        self.lbl_processing_prefix.grid(
-            row=0, column=0, sticky="w", padx=(0, STATUS_PANEL_PREFIX_GAP)
-        )
+        caption.grid(row=0, column=0, sticky="ew")
 
-        self.lbl_current_file = ctk.CTkLabel(
-            self.file_row,
+        value = ctk.CTkLabel(
+            frame,
             text="",
             font=(FONT_FAMILY_PRIMARY, STATUS_PANEL_FILE_TEXT_FONT_SIZE, "normal"),
             anchor="w",
             justify="left",
-            wraplength=STATUS_PANEL_FILE_WRAP_DEFAULT,
+            wraplength=250,
             fg_color="transparent",
-            bg_color="transparent",
         )
-        self.lbl_current_file.grid(row=0, column=1, sticky="ew")
-
-        self.status_panel.bind("<Configure>", self._on_panel_resize)
-
-        # Estados de traduccion
-        self._processing_label_text = ""
-        self._btn_cancel_full_text = ""
-        self._tr = None
-        self._key_status_waiting = "status_waiting"
-        self._key_status_reading = "status_reading"
-        self._key_status_done = "status_done_panel"
-        self._key_processing_label = "processing_label"
-        self._key_btn_cancel = "btn_cancel"
-
-        self.lbl_processing_prefix.configure(text="")
-        self.lbl_current_file.configure(text=" ")
-        self._show_file_row()
-        self._mode = "idle"
-        self._set_status("", with_dots=True)
-        self.apply_theme(self._current_theme)
+        value.grid(row=1, column=0, sticky="ew", pady=(1, 0))
+        return frame, caption, value
 
     def set_translator(self, tr_callable):
         self._tr = tr_callable
         self.refresh_texts()
 
     def refresh_texts(self):
-        if not self._tr:
-            return
-
-        self._processing_label_text = self._tr(self._key_processing_label)
-        if (self.lbl_processing_prefix.cget("text") or "").strip():
-            self.lbl_processing_prefix.configure(text=self._processing_label_text)
-            self._show_file_row()
-
-        cancel_txt = self._tr(self._key_btn_cancel)
-        self._btn_cancel_full_text = cancel_txt
-        self.btn_cancel.configure(text=(cancel_txt if len(cancel_txt) <= 2 else "✕"))
+        self.lbl_title.configure(text=_translate_status(self._tr, "status_title"))
+        self.lbl_progress.configure(text=_translate_status(self._tr, "progress_global"))
+        self.lbl_file_caption.configure(text=_translate_status(self._tr, "status_file_label"))
+        self.lbl_report_caption.configure(text=_translate_status(self._tr, "status_report_label"))
 
         if self._mode == "processing":
-            self._status_base = self._tr(self._key_status_reading)
-        elif self._mode == "idle":
-            self._status_base = self._tr(self._key_status_waiting)
+            self._status_base = _translate_status(self._tr, "status_reading")
+        elif self._mode == "cancelling":
+            self._status_base = _translate_status(self._tr, "status_cancelling")
         elif self._mode == "done":
-            self._status_base = self._tr(self._key_status_done)
+            self._status_base = _translate_status(self._tr, "status_done_panel")
+        elif self._mode == "indeterminate":
+            self._status_base = _translate_status(self._tr, "progress_processing_text")
+        else:
+            self._status_base = _translate_status(self._tr, "status_waiting")
 
         if self._dots_after_id is None:
             self.lbl_status.configure(text=self._status_base)
+        self._apply_state_colors()
 
     def set_backdrop_color(self, color: str):
-        try:
-            self.configure(bg=color)
-        except Exception:
-            pass
-        try:
-            self.status_panel.configure(outside_bg=color)
-        except Exception:
-            pass
+        self.configure(bg_color=color)
+        self.status_panel.configure(outside_bg=color)
 
     def set_backdrop_provider(self, backdrop_provider):
-        try:
-            self.status_panel.configure(backdrop_provider=backdrop_provider)
-        except Exception:
-            pass
+        return None
 
     def refresh_backdrop(self):
-        try:
-            self.status_panel.refresh_backdrop()
-        except Exception:
-            pass
+        return None
 
     def apply_theme(self, theme_name: str):
         self._current_theme = theme_name
         theme = get_theme_tokens(theme_name)
-        red_btn = get_button_tokens("red")
-
-        self.configure(bg=theme["bg_base"])
-
-        try:
-            self.status_panel.configure(
-                outside_bg=theme["bg_base"],
-                fill_color=theme["bg_panel"],
-                border_color=theme["card_border"],
-                border_width=STATUS_PANEL_BORDER_WIDTH,
-                backdrop_provider=getattr(self.status_panel, "_backdrop_provider", None),
-            )
-        except Exception:
-            pass
-
-        try:
-            self.file_row.configure(bg_color="transparent")
-            top_row = self.lbl_status.master
-            if top_row is not None:
-                top_row.configure(bg_color="transparent")
-        except Exception:
-            pass
-
-        self.lbl_percent.configure(bg_color="transparent", text_color=theme["text_primary"])
-        self.lbl_processing_prefix.configure(
-            bg_color="transparent", text_color=theme["accent_blue"]
+        self.configure(bg_color=theme["bg_base"])
+        self.status_panel.configure(
+            outside_bg=theme["bg_base"],
+            fill_color=theme["bg_panel"],
+            border_color=theme["card_border"],
+            border_width=STATUS_PANEL_BORDER_WIDTH,
         )
-        self.lbl_current_file.configure(bg_color="transparent", text_color=theme["text_secondary"])
-        self.lbl_status.configure(bg_color="transparent", text_color=theme["text_primary"])
+
+        self.lbl_title.configure(text_color=theme["text_primary"])
+        self.lbl_progress.configure(text_color=theme["text_primary"])
+        self.lbl_percent.configure(text_color=theme["accent_blue_icon"])
+        self.lbl_file_caption.configure(text_color=theme["text_secondary"])
+        self.lbl_report_caption.configure(text_color=theme["text_secondary"])
+        self.lbl_current_file.configure(text_color=theme["text_secondary"])
+        self.lbl_current_report.configure(text_color=theme["text_secondary"])
+        self.details_separator.configure(fg_color=theme["separator_line"])
+        self.state_row.configure(
+            fg_color=theme["surface_alt"],
+            border_color=theme["border_subtle"],
+        )
+
         self.btn_cancel.configure(
-            fg_color=red_btn["bg"],
-            hover_color=red_btn["hover"],
-            border_color=red_btn["border"],
-            text_color=red_btn["text"],
+            fg_color=theme["danger_bg"],
+            hover_color="#FEE2E2" if str(theme_name).lower() != "dark" else "#5F2121",
+            border_color=theme["danger_border"],
+            text_color=theme["danger_red_deep"],
         )
 
-        progress_stops = [
-            (0.00, "#71B6FF" if theme_name == "Light" else "#5EA8FF"),
-            (0.48, "#4F8FFF" if theme_name == "Light" else "#4D8DFF"),
-            (1.00, "#734EF6" if theme_name == "Light" else "#8A6AFF"),
-        ]
         self.progress_bar.set_colors(
-            track=theme["progress_track"], border=theme["progress_border"], stops=progress_stops
+            track=theme["progress_track"],
+            border=theme["progress_border"],
+            stops=[(0.0, theme["progress_fill"]), (1.0, theme["progress_fill"])],
         )
         self.progress_bar.set(self.current_progress / 100.0)
+        self._apply_state_colors()
+
+    def _apply_state_colors(self):
+        theme = get_theme_tokens(self._current_theme)
+        if self._mode == "done":
+            color = theme["success_green"]
+        elif self._mode == "cancelling":
+            color = theme["danger_red_deep"]
+        elif self._mode in {"processing", "indeterminate"}:
+            color = theme["accent_blue_icon"]
+        else:
+            color = theme["text_muted"]
+
+        self.state_dot.configure(fg_color=color)
+        status_color = color if self._mode != "idle" else theme["text_secondary"]
+        self.lbl_status.configure(text_color=status_color)
+
+    def _update_detail_visibility(self):
+        has_file = bool(self._current_file)
+        has_report = bool(self._current_report)
+
+        if has_file:
+            self.lbl_current_file.configure(text=self._current_file)
+            self.file_block.grid()
+        else:
+            self.lbl_current_file.configure(text="")
+            self.file_block.grid_remove()
+
+        if has_report:
+            self.lbl_current_report.configure(text=self._current_report)
+            self.report_block.grid()
+        else:
+            self.lbl_current_report.configure(text="")
+            self.report_block.grid_remove()
+
+        if has_file or has_report:
+            self.details_separator.grid()
+            self.details_frame.grid()
+        else:
+            self.details_separator.grid_remove()
+            self.details_frame.grid_remove()
 
     def _on_panel_resize(self, event=None):
         try:
-            panel_w = int(self.status_panel.winfo_width())
+            panel_w = max(160, int(self.status_panel.winfo_width()) - 28)
         except Exception:
             return
-
-        usable = max(STATUS_PANEL_MIN_USABLE_WIDTH, panel_w - (STATUS_PANEL_ROW_PADX * 2))
-        try:
-            prefix_w = int(self.lbl_processing_prefix.winfo_reqwidth()) + 6
-        except Exception:
-            prefix_w = 0
-
-        wrap = max(STATUS_PANEL_MIN_WRAP, usable - prefix_w)
-        try:
-            self.lbl_current_file.configure(wraplength=wrap)
-        except Exception:
-            pass
-
-    def _refresh_panel_geometry(self):
-        try:
-            self.update_idletasks()
-        except Exception:
-            pass
-        try:
-            self.status_panel._sync_requested_size()
-        except Exception:
-            pass
-        try:
-            self.status_panel._on_configure()
-        except Exception:
-            pass
-
-    def _show_file_row(self):
-        self.file_row.grid_configure(pady=self._file_row_pady)
-        try:
-            if not self.file_row.winfo_ismapped():
-                self.file_row.grid()
-        except Exception:
+        for label in (self.lbl_current_file, self.lbl_current_report):
             try:
-                self.file_row.grid()
+                label.configure(wraplength=panel_w)
             except Exception:
                 pass
-        self._refresh_panel_geometry()
 
-    def _hide_file_row(self):
-        self.lbl_processing_prefix.configure(text="")
-        self.lbl_current_file.configure(text=" ")
-        self.file_row.grid_configure(pady=self._file_row_pady)
-        try:
-            if not self.file_row.winfo_ismapped():
-                self.file_row.grid()
-        except Exception:
-            try:
-                self.file_row.grid()
-            except Exception:
-                pass
-        self._refresh_panel_geometry()
+    @staticmethod
+    def _truncate_context(value: str) -> str:
+        value = (value or "").strip()
+        if len(value) <= STATUS_PANEL_CONTEXT_MAX_LEN:
+            return value
+        keep = STATUS_PANEL_CONTEXT_MAX_LEN - 1
+        left = keep // 2
+        right = keep - left
+        return f"{value[:left]}…{value[-right:]}"
 
-    def _set_status(self, base_text: str, with_dots: bool):
+    def _set_status(self, base_text: str, *, with_dots: bool):
         self._status_base = base_text or ""
         if with_dots:
             self._dots_phase = 1
             self._start_dots()
         else:
             self._stop_dots()
-        self.lbl_status.configure(text=self._status_base)
+            self.lbl_status.configure(text=self._status_base)
+        self._apply_state_colors()
 
     def _start_dots(self):
         self._stop_dots()
+        self.lbl_status.configure(text=f"{self._status_base}.")
         self._dots_after_id = self.after(STATUS_PANEL_DOTS_INTERVAL_MS, self._tick_dots)
 
     def _stop_dots(self):
@@ -391,21 +386,17 @@ class StatusPanel(tk.Frame):
 
     def _tick_dots(self):
         if not self.winfo_exists():
+            self._dots_after_id = None
             return
         dots = "." * self._dots_phase
-        self._dots_phase += 1
-        if self._dots_phase > 3:
-            self._dots_phase = 1
-
+        self._dots_phase = 1 if self._dots_phase >= 3 else self._dots_phase + 1
         self.lbl_status.configure(text=f"{self._status_base}{dots}")
         self._dots_after_id = self.after(STATUS_PANEL_DOTS_INTERVAL_MS, self._tick_dots)
 
     def get_min_visible_completion_delay_ms(self) -> int:
         if self._processing_started_at is None:
             return 0
-        now = time.monotonic()
-        min_end = self._processing_started_at + self._min_visible_s
-        remaining = max(0.0, min_end - now)
+        remaining = max(0.0, (self._processing_started_at + self._min_visible_s) - time.monotonic())
         return int(remaining * 1000)
 
     def _start_progress_animation(self):
@@ -423,25 +414,24 @@ class StatusPanel(tk.Frame):
 
     def _tick_progress(self):
         if not self.winfo_exists():
+            self._progress_after_id = None
             return
 
         now = time.monotonic()
         dt = now - (self._last_tick or now)
         self._last_tick = now
 
-        # Suavizado de progreso al final
         if self._forced_end_time is not None and now < self._forced_end_time:
             self.target_progress = max(self.target_progress, 98.0)
-        elif self._forced_end_time is not None and now >= self._forced_end_time:
+        elif self._forced_end_time is not None:
             self._forced_end_time = None
             self.target_progress = 100.0
 
         diff = self.target_progress - self.current_progress
-        step = diff * min(1.0, dt * 10.0)
         if abs(diff) < 0.05:
             self.current_progress = self.target_progress
         else:
-            self.current_progress += step
+            self.current_progress += diff * min(1.0, dt * 10.0)
 
         self.progress_bar.set(self.current_progress / 100.0)
         if self._mode != "indeterminate":
@@ -452,48 +442,32 @@ class StatusPanel(tk.Frame):
             self.progress_bar.set(self.current_progress / 100.0)
             if self._mode != "indeterminate":
                 self.lbl_percent.configure(text=f"{int(self.current_progress)}%")
-                if self._mode == "processing" and self.current_progress >= 100.0:
-                    self.btn_cancel.grid_remove()
-                    try:
-                        self.lbl_status.master.update_idletasks()
-                    except Exception:
-                        pass
-            self._stop_progress_animation()
+            self._progress_after_id = None
             return
 
         self._progress_after_id = self.after(STATUS_PANEL_PROGRESS_TICK_MS, self._tick_progress)
 
-    @staticmethod
-    def _ellipsize_middle(s: str, max_len: int = STATUS_PANEL_ELLIPSIS_MAX_LEN) -> str:
-        s = (s or "").strip()
-        if len(s) <= max_len:
-            return s
-        keep = max_len - 1
-        left = keep // 2
-        right = keep - left
-        return f"{s[:left]}…{s[-right:]}"
-
-    def set_progress(self, percentage: float, file_context: str | None = None):
-        new_target = float(max(0, min(100, int(percentage))))
-
+    def set_progress(
+        self,
+        percentage: float,
+        file_context: str | None = None,
+        report_context: str | None = None,
+    ):
+        new_target = float(max(0.0, min(100.0, float(percentage))))
         if new_target >= 100 and self._min_end_time is not None:
             now = time.monotonic()
             self._forced_end_time = self._min_end_time if now < self._min_end_time else None
 
         self.target_progress = new_target
+        if new_target >= 100:
+            self.btn_cancel.grid_remove()
         self._start_progress_animation()
 
-        if file_context and self._mode == "processing":
-            path_txt = self._ellipsize_middle(
-                str(file_context), max_len=STATUS_PANEL_CONTEXT_MAX_LEN
-            )
-            self.lbl_current_file.configure(text=path_txt)
-
-            prefix = self._processing_label_text or _translate_status(
-                self._tr, self._key_processing_label
-            )
-            self.lbl_processing_prefix.configure(text=prefix)
-            self._show_file_row()
+        if file_context is not None:
+            self._current_file = self._truncate_context(str(file_context))
+        if report_context is not None:
+            self._current_report = self._truncate_context(str(report_context))
+        self._update_detail_visibility()
 
     def set_active(
         self,
@@ -504,82 +478,77 @@ class StatusPanel(tk.Frame):
         final_status: str | None = None,
     ):
         if is_active:
-            try:
-                self.btn_cancel.grid()
-                self.btn_cancel.update_idletasks()
-                self.lbl_status.master.update_idletasks()
-            except Exception:
-                pass
-
-            # Reseteo de tiempos para calculo UX
             self._processing_started_at = time.monotonic()
             self._min_end_time = self._processing_started_at + self._min_visible_s
             self._forced_end_time = None
-
-            self.lbl_processing_prefix.configure(text="")
-            self.lbl_current_file.configure(text=" ")
-            self._hide_file_row()
+            self._current_file = ""
+            self._current_report = ""
+            self._update_detail_visibility()
+            self.btn_cancel.configure(state="normal")
 
             if mode == "indeterminate":
+                self.btn_cancel.grid_remove()
                 self._mode = "indeterminate"
                 self.lbl_percent.configure(text="")
                 self.progress_bar.start_indeterminate()
-
-                base = text or _translate_status(self._tr, "progress_processing_text")
-                self._set_status(base, with_dots=True)
+                self._set_status(
+                    text or _translate_status(self._tr, "progress_processing_text"),
+                    with_dots=True,
+                )
             else:
+                self.btn_cancel.grid()
                 self._mode = "processing"
                 self.progress_bar.stop_indeterminate()
-
                 self.current_progress = 0.0
                 self.target_progress = 0.0
                 self.progress_bar.set(0.0)
                 self.lbl_percent.configure(text="0%")
-
-                base = _translate_status(self._tr, self._key_status_reading)
-                self._set_status(base, with_dots=True)
-
+                self._set_status(_translate_status(self._tr, "status_reading"), with_dots=True)
             return
 
         self.btn_cancel.grid_remove()
         self.progress_bar.stop_indeterminate()
-
         if final_status == "success":
             self._mode = "done"
-            base = _translate_status(self._tr, self._key_status_done)
-            self._set_status(base, with_dots=False)
-
             self.current_progress = 100.0
             self.target_progress = 100.0
             self.progress_bar.set(1.0)
             self.lbl_percent.configure(text="100%")
-            self.lbl_processing_prefix.configure(text="")
-            self.lbl_current_file.configure(text=" ")
-            self._hide_file_row()
-
+            # El reporte deja de estar "en generacion" al completar la lectura.
+            # Conservamos el archivo actual como contexto util y retiramos ese bloque.
+            self._current_report = ""
+            self._update_detail_visibility()
+            self._set_status(_translate_status(self._tr, "status_done_panel"), with_dots=False)
         else:
             self.back_to_idle()
+
+    def set_cancelling(self):
+        if self._mode not in {"processing", "indeterminate", "cancelling"}:
+            return
+        self._mode = "cancelling"
+        self.btn_cancel.configure(state="disabled")
+        self._set_status(_translate_status(self._tr, "status_cancelling"), with_dots=True)
 
     def back_to_idle(self):
         if not self.winfo_exists():
             return
-        self._mode = "idle"
-        self.lbl_processing_prefix.configure(text="")
-        self.lbl_current_file.configure(text=" ")
-        self._hide_file_row()
 
+        self._mode = "idle"
+        self._processing_started_at = None
+        self._min_end_time = None
+        self._forced_end_time = None
+        self._stop_progress_animation()
+        self.progress_bar.stop_indeterminate()
         self.current_progress = 0.0
         self.target_progress = 0.0
         self.progress_bar.set(0.0)
         self.lbl_percent.configure(text="0%")
-
-        base = _translate_status(self._tr, self._key_status_waiting)
-        self._set_status(base, with_dots=True)
-
-        try:
-            self.btn_cancel.grid_remove()
-        except Exception:
-            pass
+        self._current_file = ""
+        self._current_report = ""
+        self._update_detail_visibility()
+        self.btn_cancel.configure(state="normal")
+        self.btn_cancel.grid_remove()
+        self._set_status(_translate_status(self._tr, "status_waiting"), with_dots=True)
 
     def cleanup(self):
         self._stop_dots()

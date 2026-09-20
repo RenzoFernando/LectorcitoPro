@@ -184,7 +184,10 @@ class SettingsDialog(BaseDialog):
             text=self.parent_view._tr("btn_shortcut_desktop"),
             command=lambda: self._trigger_shortcut("desktop"),
         )
-        _style_button(self.btn_desktop, "blue")
+        _style_button(self.btn_desktop, "neutral")
+        self.btn_desktop.configure(
+            font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "normal")
+        )
         self.btn_desktop.pack(pady=SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, fill="x")
 
         self.btn_start = ctk.CTkButton(
@@ -192,7 +195,10 @@ class SettingsDialog(BaseDialog):
             text=self.parent_view._tr("btn_shortcut_start"),
             command=lambda: self._trigger_shortcut("start"),
         )
-        _style_button(self.btn_start, "blue")
+        _style_button(self.btn_start, "neutral")
+        self.btn_start.configure(
+            font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "normal")
+        )
         self.btn_start.pack(pady=SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, fill="x")
 
         self.btn_taskbar = ctk.CTkButton(
@@ -200,7 +206,10 @@ class SettingsDialog(BaseDialog):
             text=self.parent_view._tr("btn_shortcut_taskbar"),
             command=lambda: self._trigger_shortcut("taskbar"),
         )
-        _style_button(self.btn_taskbar, "blue")
+        _style_button(self.btn_taskbar, "neutral")
+        self.btn_taskbar.configure(
+            font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "normal")
+        )
         self.btn_taskbar.pack(pady=SETTINGS_DIALOG_SHORTCUT_BUTTON_PADY, fill="x")
 
         self.btn_pin_start = ctk.CTkButton(
@@ -208,7 +217,10 @@ class SettingsDialog(BaseDialog):
             text=self.parent_view._tr("btn_shortcut_pin_start"),
             command=lambda: self._trigger_shortcut("start_pin"),
         )
-        _style_button(self.btn_pin_start, "blue")
+        _style_button(self.btn_pin_start, "neutral")
+        self.btn_pin_start.configure(
+            font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_SECTION_FONT_SIZE, "normal")
+        )
         self.btn_pin_start.pack(pady=SETTINGS_DIALOG_SHORTCUT_LAST_BUTTON_PADY, fill="x")
 
         self.transfer_separator = ctk.CTkFrame(

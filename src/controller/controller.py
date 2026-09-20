@@ -98,6 +98,10 @@ class LectorcitoController:
         )
 
     def run(self):
+        # La ventana se revela desde el propio event loop, nunca durante __init__.
+        # Así Tk termina de crear widgets y recursos antes del primer dibujo visible.
+        utils.log_info("Iniciando event loop de interfaz.", operation="startup_ui")
+        self.view.after(0, self.view.show_main_window)
         self.view.mainloop()
 
     # =========================================================================
@@ -140,8 +144,7 @@ class LectorcitoController:
     def _processing_thread_target(self, folder_path: str, cancel_event: threading.Event):
         overall_status = "error"
         try:
-            folder_name = os.path.basename(folder_path)
-            self.view.after(0, self.view.set_progress, 0, folder_name)
+            self.view.after(0, self.view.set_progress, 0, folder_path, None)
 
             status, report_path = processor.generate_report(
                 source_folder=folder_path,
@@ -166,8 +169,10 @@ class LectorcitoController:
 
         self.view.after(0, self._on_processing_finished, overall_status)
 
-    def _safe_progress_update(self, percentage: float, file_context: str):
-        self.view.after(0, self.view.set_progress, percentage, file_context)
+    def _safe_progress_update(
+        self, percentage: float, file_context: str, report_context: str | None = None
+    ):
+        self.view.after(0, self.view.set_progress, percentage, file_context, report_context)
 
     def _on_processing_finished(self, status: str):
         if status == "success":
@@ -201,8 +206,9 @@ class LectorcitoController:
                 self.view.show_message(title_key, msg_key)
 
     def cancel_processing(self):
-        if self.cancel_event:
+        if self.cancel_event and not self.cancel_event.is_set():
             self.cancel_event.set()
+            self.view.set_processing_cancelling()
 
     # =========================================================================
     # LOGICA DE ARBOL
