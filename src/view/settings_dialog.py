@@ -78,6 +78,10 @@ class SettingsDialog(BaseDialog):
         self.on_import_callback = on_import_callback
         self.result = None
         self.platform_capabilities = self._normalize_platform_capabilities(platform_capabilities)
+        self._save_after_id = None
+        self._closing_settings_saved = False
+        self._last_saved_extension = self.selected_extension
+        self._last_saved_exe_path = self.current_exe_path
 
         self.geometry(f"{SETTINGS_DIALOG_WIDTH}x{SETTINGS_DIALOG_HEIGHT}")
 
@@ -105,7 +109,7 @@ class SettingsDialog(BaseDialog):
         self.fmt_var = ctk.StringVar(value=self.selected_extension)
         self.format_shell = ctk.CTkFrame(
             self.content_frame,
-            fg_color=_get_color_tuple("bg_panel"),
+            fg_color=_get_color_tuple("surface_alt"),
             border_width=SETTINGS_DIALOG_FORMAT_SHELL_BORDER_WIDTH,
             border_color=_get_color_tuple("border_subtle"),
             corner_radius=SETTINGS_DIALOG_FORMAT_SHELL_RADIUS,
@@ -160,6 +164,9 @@ class SettingsDialog(BaseDialog):
         _style_entry(self.entry_exe)
         self.entry_exe.pack(pady=SETTINGS_DIALOG_ENTRY_PADY, fill="x")
         self.entry_exe.insert(0, self.current_exe_path)
+        self.entry_exe.bind("<KeyRelease>", self._schedule_auto_save, add="+")
+        self.entry_exe.bind("<FocusOut>", self._flush_pending_settings, add="+")
+        self.entry_exe.bind("<Return>", self._on_exe_return, add="+")
 
         self.system_section_separator = ctk.CTkFrame(
             self.content_frame,
@@ -335,7 +342,7 @@ class SettingsDialog(BaseDialog):
                 corner_radius=SETTINGS_DIALOG_TOGGLE_RADIUS,
                 border_width=SETTINGS_DIALOG_TOGGLE_BORDER_WIDTH,
                 font=(FONT_FAMILY_PRIMARY, SETTINGS_DIALOG_TOGGLE_FONT_SIZE, "bold"),
-                fg_color=blue["bg"] if is_selected else _get_color_tuple("bg_dialog"),
+                fg_color=blue["bg"] if is_selected else _get_color_tuple("bg_elevated"),
                 hover_color=blue["hover"] if is_selected else neutral["hover"],
                 border_color=blue["border"] if is_selected else _get_color_tuple("border_subtle"),
                 text_color=blue["text"] if is_selected else _get_color_tuple("text"),
@@ -388,8 +395,12 @@ class SettingsDialog(BaseDialog):
         on_import_callback=None,
         platform_capabilities=None,
     ):
+        self._cancel_scheduled_save()
         self.selected_extension = current_extension
         self.current_exe_path = current_exe_path or ""
+        self._last_saved_extension = self.selected_extension
+        self._last_saved_exe_path = self.current_exe_path
+        self._closing_settings_saved = False
         self.on_save_callback = on_save_callback
         self.on_shortcut_callback = on_shortcut_callback
         self.on_export_callback = on_export_callback
@@ -407,6 +418,7 @@ class SettingsDialog(BaseDialog):
         self.refresh_texts()
 
     def present(self):
+        self._closing_settings_saved = False
         super().present()
         try:
             if self.platform_capabilities.get("supports_launcher_configuration", False):
@@ -416,14 +428,59 @@ class SettingsDialog(BaseDialog):
         except Exception:
             pass
 
+    def _cancel_scheduled_save(self):
+        if self._save_after_id is None:
+            return
+        try:
+            self.after_cancel(self._save_after_id)
+        except Exception:
+            pass
+        self._save_after_id = None
+
+    def _current_settings(self):
+        current_path = (
+            self.entry_exe.get().strip().replace('"', "")
+            if self.platform_capabilities.get("supports_launcher_configuration", False)
+            else self.current_exe_path
+        )
+        return self.fmt_var.get(), current_path
+
+    def _persist_current_settings(self):
+        self._cancel_scheduled_save()
+        current_ext, current_path = self._current_settings()
+        if current_ext == self._last_saved_extension and current_path == self._last_saved_exe_path:
+            return
+
+        if self.on_save_callback:
+            self.on_save_callback(current_ext, current_path)
+
+        self.selected_extension = current_ext
+        self.current_exe_path = current_path
+        self._last_saved_extension = current_ext
+        self._last_saved_exe_path = current_path
+
+    def _schedule_auto_save(self, event=None):
+        self._cancel_scheduled_save()
+        try:
+            self._save_after_id = self.after(300, self._persist_current_settings)
+        except Exception:
+            self._save_after_id = None
+
+    def _flush_pending_settings(self, event=None):
+        self._persist_current_settings()
+
+    def _on_exe_return(self, event=None):
+        self._flush_pending_settings()
+        return "break"
+
     def _on_format_change(self, value):
         self.selected_extension = value
         self.fmt_var.set(value)
         self._apply_format_button_styles()
-        if self.on_save_callback:
-            self.on_save_callback(value, self.current_exe_path)
+        self._persist_current_settings()
 
     def _trigger_shortcut(self, shortcut_type):
+        self._flush_pending_settings()
         if shortcut_type not in self.platform_capabilities.get("shortcut_modes", ()):
             return
         current_path_input = (
@@ -435,62 +492,17 @@ class SettingsDialog(BaseDialog):
             self.on_shortcut_callback(shortcut_type, current_path_input, parent_window=self)
 
     def _trigger_export(self):
+        self._flush_pending_settings()
         if self.on_export_callback:
             self.on_export_callback(parent_window=self)
 
     def _trigger_import(self):
+        self._flush_pending_settings()
         if self.on_import_callback:
             self.on_import_callback(parent_window=self)
 
-    def _on_ok(self):
-        final_ext = self.fmt_var.get()
-        final_path = (
-            self.entry_exe.get().strip().replace('"', "")
-            if self.platform_capabilities.get("supports_launcher_configuration", False)
-            else self.current_exe_path
-        )
-        self.result = (final_ext, final_path)
-        if self.on_save_callback:
-            self.on_save_callback(final_ext, final_path)
-        self._close_with_fade_out()
-
-    @classmethod
-    def ask(
-        cls,
-        parent,
-        current_extension,
-        current_exe_path,
-        on_save_callback,
-        on_shortcut_callback,
-        on_export_callback=None,
-        on_import_callback=None,
-        platform_capabilities=None,
-    ):
-        dialog = None
-        try:
-            dialog = cls(
-                parent,
-                current_extension,
-                current_exe_path,
-                on_save_callback,
-                on_shortcut_callback,
-                on_export_callback,
-                on_import_callback,
-                platform_capabilities,
-            )
-            parent.wait_window(dialog)
-            return dialog.result
-        except Exception:
-            try:
-                if hasattr(parent, "restore_ui_from_modal"):
-                    parent.restore_ui_from_modal()
-            except Exception:
-                pass
-            return None
-        finally:
-            if dialog is not None:
-                try:
-                    if dialog.winfo_exists():
-                        dialog.destroy()
-                except Exception:
-                    pass
+    def _close_with_fade_out(self, event=None):
+        if not self._closing_settings_saved:
+            self._closing_settings_saved = True
+            self._flush_pending_settings()
+        return super()._close_with_fade_out(event)

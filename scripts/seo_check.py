@@ -236,7 +236,10 @@ def validate_index(errors: list[str]) -> None:
 
 
 def validate_404(errors: list[str]) -> None:
+    source = (ROOT / "404.html").read_text(encoding="utf-8")
     parser = parse_page(ROOT / "404.html")
+    if '<base href="/LectorcitoPro/"' not in source:
+        fail(errors, "404.html: falta la base del sitio para resolver recursos desde rutas anidadas.")
     if not parser.title or parser.title == "Lectorcito Pro | Auditoría de código y contexto para IA":
         fail(errors, "404.html: necesita un meta-título propio.")
     if len(parser.h1s) != 1:
@@ -274,6 +277,30 @@ def validate_support_files(errors: list[str]) -> None:
     llms = (ROOT / "llms.txt").read_text(encoding="utf-8")
     if "# Lectorcito Pro" not in llms or CANONICAL_URL not in llms:
         fail(errors, "llms.txt: falta identificación o URL oficial.")
+
+
+def validate_branding_migration(errors: list[str]) -> None:
+    branding_dir = ROOT / "resources" / "branding"
+    expected = {
+        "app_icon.ico",
+        "app_icon.png",
+        "logo_light_theme.png",
+        "logo_dark_theme.png",
+    }
+    legacy = {
+        "lector.ico",
+        "lector.png",
+        "logo_claro.png",
+        "logo_oscuro.png",
+    }
+
+    missing = sorted(name for name in expected if not (branding_dir / name).is_file())
+    if missing:
+        fail(errors, f"Faltan recursos de branding renombrados: {', '.join(missing)}")
+
+    remaining_legacy = sorted(name for name in legacy if (branding_dir / name).exists())
+    if remaining_legacy:
+        fail(errors, f"Persisten nombres antiguos en branding: {', '.join(remaining_legacy)}")
 
 
 def validate_icon_migration(errors: list[str]) -> None:
@@ -354,6 +381,7 @@ def main() -> int:
         validate_index(errors)
         validate_404(errors)
         validate_support_files(errors)
+        validate_branding_migration(errors)
         validate_icon_migration(errors)
         validate_generated_metadata(errors)
 

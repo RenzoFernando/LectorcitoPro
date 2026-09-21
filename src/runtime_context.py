@@ -2,24 +2,12 @@ import os
 import sys
 
 
-def is_pyinstaller_frozen() -> bool:
-    return bool(getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"))
-
-
 def is_nuitka_compiled() -> bool:
     return globals().get("__compiled__") is not None
 
 
 def is_frozen_runtime() -> bool:
     return bool(getattr(sys, "frozen", False) or is_nuitka_compiled())
-
-
-def get_runtime_kind() -> str:
-    if is_pyinstaller_frozen():
-        return "pyinstaller"
-    if is_nuitka_compiled():
-        return "nuitka"
-    return "development"
 
 
 def get_runtime_executable_candidates() -> list[str]:

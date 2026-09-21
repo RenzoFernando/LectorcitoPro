@@ -2,40 +2,25 @@
 
   <h1>Lectorcito Pro</h1>
 
-  <img src="https://raw.githubusercontent.com/RenzoFernando/LectorcitoPro/main/resources/branding/lector.png" alt="Logo de Lectorcito Pro" width="175">
+  <img src="https://raw.githubusercontent.com/RenzoFernando/LectorcitoPro/main/resources/branding/app_icon.png" alt="Logo de Lectorcito Pro" width="175">
 
   <br>
 
   <p>
-
     <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest">
-
       <img src="https://img.shields.io/github/v/release/RenzoFernando/LectorcitoPro?style=for-the-badge&label=VERSION%20Actual&color=blue" alt="Release Actual">
-
     </a>
-
     <a href="https://github.com/RenzoFernando/LectorcitoPro/releases/latest">
-
       <img src="https://img.shields.io/badge/VER%20RELEASES-2E9D46?style=for-the-badge" alt="Ver releases">
-
     </a>
-
     <a href="https://renzofernando.github.io/LectorcitoPro/">
-
       <img src="https://img.shields.io/badge/VER%20PÁGINA%20Y%20DESCARGAR-2F6FE4?style=for-the-badge" alt="Abrir página oficial y descargar">
-
     </a>
-
     <br>
-
     <br>
-
     <strong>
-
       Herramienta de escritorio para auditoría de código, documentación técnica y consolidación de contextos para Inteligencia Artificial.
-
     </strong>
-
   </p>
 
 </div>

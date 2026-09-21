@@ -21,11 +21,11 @@ from view.ui_constants import (
 
 
 def get_app_icon_path() -> str:
-    return resource_path(os.path.join("branding", "lector.ico"))
+    return resource_path(os.path.join("branding", "app_icon.ico"))
 
 
 def get_app_icon_png_path() -> str:
-    return resource_path(os.path.join("branding", "lector.png"))
+    return resource_path(os.path.join("branding", "app_icon.png"))
 
 
 def _svg_icon_path(name: str) -> str:
@@ -121,6 +121,90 @@ def load_action_icons(size=ACTION_ICON_SIZE) -> dict:
     return icons
 
 
+def load_disabled_sidebar_icons(size=SIDEBAR_ICON_SIZE) -> dict:
+    """Carga iconos neutros para el estado modal deshabilitado."""
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    icon_names = {
+        "ver": "view",
+        "nover": "hide",
+        "etiqueta": "media",
+        "traducir": "language",
+        "restaurar": "restore",
+        "perfil": "profiles",
+        "github": "github",
+        "info": "info",
+        "ajustes": "settings",
+        "sun": "sun",
+        "moon": "moon",
+    }
+
+    icons = {}
+    for key, svg_name in icon_names.items():
+        icon_size = THEME_TOGGLE_ICON_SIZE if key in {"sun", "moon"} else size
+        icons[key] = _load_svg_icon(
+            svg_name,
+            size=icon_size,
+            light_color=light["text_primary"],
+            dark_color=dark["text_primary"],
+        )
+    return icons
+
+
+def load_disabled_action_icons(size=ACTION_ICON_SIZE) -> dict:
+    """Carga las acciones principales sin color semantico durante un modal."""
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    icon_names = {
+        "choose": "read_complete",
+        "openlect": "readings_folder",
+        "create_tree": "tree",
+        "openlast": "last_report",
+        "selpath": "destination",
+        "delete": "delete",
+    }
+
+    return {
+        key: _load_svg_icon(
+            svg_name,
+            size=size,
+            light_color=light["text_primary"],
+            dark_color=dark["text_primary"],
+        )
+        for key, svg_name in icon_names.items()
+    }
+
+
+def load_add_icon(
+    size=(14, 14),
+    *,
+    light_color: str = "#FFFFFF",
+    dark_color: str = "#FFFFFF",
+) -> ctk.CTkImage | None:
+    return _load_svg_icon(
+        "add",
+        size=size,
+        light_color=light_color,
+        dark_color=dark_color,
+    )
+
+
+def load_delete_icon(
+    size=(14, 14),
+    *,
+    light_color: str | None = None,
+    dark_color: str | None = None,
+) -> ctk.CTkImage | None:
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    return _load_svg_icon(
+        "delete",
+        size=size,
+        light_color=light_color or light["danger_red_deep"],
+        dark_color=dark_color or dark["danger_red_deep"],
+    )
+
+
 def load_close_icon(
     size=(14, 14),
     *,
@@ -212,8 +296,8 @@ def load_info_icon(size=(24, 24)) -> ctk.CTkImage | None:
 
 def load_logo(target_width=LOGO_TARGET_WIDTH) -> ctk.CTkImage | None:
     try:
-        logo_light = Image.open(resource_path(os.path.join("branding", "logo_oscuro.png")))
-        logo_dark = Image.open(resource_path(os.path.join("branding", "logo_claro.png")))
+        logo_light = Image.open(resource_path(os.path.join("branding", "logo_light_theme.png")))
+        logo_dark = Image.open(resource_path(os.path.join("branding", "logo_dark_theme.png")))
 
         ow, oh = logo_light.size
         ratio = oh / ow if ow else 1.0

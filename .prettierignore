@@ -7,3 +7,4 @@ node_modules/
 .venv-build/
 .venv-linux/
 .ruff_cache/
+resources/js/app_meta.js

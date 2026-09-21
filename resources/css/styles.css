@@ -10,7 +10,6 @@
     --text-secondary: #475569;
     --border-color: #d6dceb;
     --primary-blue: #2f6fe4;
-    --primary-blue-hover: #255fd0;
     --primary-purple: #6e63da;
     --primary-purple-soft: rgba(110, 99, 218, 0.1);
     --primary-blue-soft: rgba(47, 111, 228, 0.2);
@@ -185,12 +184,19 @@ body.dark-mode .navbar {
    HERO SECTION
    ========================================= */
 .hero {
+    min-height: calc(100vh - var(--nav-height));
+    min-height: calc(100svh - var(--nav-height));
     padding: 94px 0 84px;
+    display: flex;
+    align-items: center;
     background:
         radial-gradient(circle at top right, var(--primary-purple-soft), transparent 24%),
         radial-gradient(circle at top left, var(--primary-blue-soft), transparent 32%),
         linear-gradient(180deg, var(--surface-color) 0%, var(--bg-color) 100%);
     text-align: left;
+}
+.hero > .container {
+    width: 100%;
 }
 .hero-shell {
     display: flex;
@@ -242,10 +248,6 @@ body.dark-mode .navbar {
 .btn:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
-}
-.btn-sm {
-    padding: 0.55rem 1rem;
-    font-size: 0.9rem;
 }
 .btn-blue {
     background: linear-gradient(
@@ -586,9 +588,6 @@ body.dark-mode .download-card {
     font-size: 0.82rem;
     font-weight: 700;
 }
-.neutral-badge {
-    background: #5872b2;
-}
 .green-badge {
     background: var(--primary-green);
 }
@@ -872,7 +871,6 @@ body.dark-mode .download-card {
     }
 }
 
-
 /* =========================================
    ACCESIBILIDAD, RESUMEN E ICONOS SVG
    ========================================= */
@@ -983,32 +981,6 @@ button:focus-visible {
     display: block;
 }
 
-.quick-summary {
-    max-width: 670px;
-    margin-top: 1.25rem;
-    padding: 1.05rem 1.15rem;
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    background: var(--surface-color);
-    box-shadow: var(--shadow-sm);
-}
-.quick-summary-title {
-    margin-bottom: 0.55rem;
-    font-weight: 800;
-    color: var(--text-primary);
-}
-.quick-summary ul {
-    display: grid;
-    gap: 0.42rem;
-    padding-left: 1.15rem;
-    list-style: disc;
-    color: var(--text-secondary);
-}
-.quick-summary a {
-    color: var(--primary-blue);
-    font-weight: 600;
-}
-
 /* =========================================
    FAQ
    ========================================= */
@@ -1051,13 +1023,6 @@ button:focus-visible {
 }
 .faq-card p {
     color: var(--text-secondary);
-}
-.footer-links {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-    margin: 0.6rem 0;
 }
 .mobile-sticky-cta {
     display: none;
@@ -1104,14 +1069,6 @@ button:focus-visible {
     gap: 0.8rem;
 }
 
-@media (max-width: 980px) {
-    .quick-summary {
-        margin-left: auto;
-        margin-right: auto;
-        text-align: left;
-    }
-}
-
 @media (max-width: 768px) {
     body {
         padding-bottom: calc(76px + env(safe-area-inset-bottom));
@@ -1121,9 +1078,6 @@ button:focus-visible {
     .download-footer-actions .btn,
     .download-footer-actions button {
         width: 100%;
-    }
-    .quick-summary {
-        padding: 1rem;
     }
     .faq-card {
         padding: 1.1rem;

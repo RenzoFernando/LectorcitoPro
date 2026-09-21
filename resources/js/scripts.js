@@ -149,8 +149,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const logoSrc = isDark
-            ? "resources/branding/logo_claro.png"
-            : "resources/branding/logo_oscuro.png";
+            ? "resources/branding/logo_dark_theme.png"
+            : "resources/branding/logo_light_theme.png";
         if (appLogo) appLogo.src = logoSrc;
     }
 

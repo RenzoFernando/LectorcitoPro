@@ -43,8 +43,6 @@ APP_PORTABLE_ARTIFACT_NAME = f"{APP_NAME_INTERNAL}-Portable.exe"
 
 APP_LINUX_EXECUTABLE_NAME = f"{APP_NAME_INTERNAL}-Linux-x86_64"
 
-APP_LINUX_PACKAGE_DIR_NAME = APP_LINUX_EXECUTABLE_NAME
-
 APP_LINUX_ARTIFACT_NAME = APP_LINUX_EXECUTABLE_NAME
 
 APP_LINUX_DESKTOP_ID = "io.github.renzofernando.lectorcitopro"
@@ -55,14 +53,13 @@ APP_RESOURCES_DIR_NAME = "resources"
 
 APP_OUTPUT_DIR_NAME = "downloads"
 
-
 APP_LICENSE_FILE_NAME = "LICENSE"
 
 APP_LICENSE_RELATIVE_PATH = APP_LICENSE_FILE_NAME
 
-APP_ICON_ICO_RELATIVE_PATH = os.path.join(APP_RESOURCES_DIR_NAME, "branding", "lector.ico")
+APP_ICON_ICO_RELATIVE_PATH = os.path.join(APP_RESOURCES_DIR_NAME, "branding", "app_icon.ico")
 
-APP_ICON_PNG_RELATIVE_PATH = os.path.join(APP_RESOURCES_DIR_NAME, "branding", "lector.png")
+APP_ICON_PNG_RELATIVE_PATH = os.path.join(APP_RESOURCES_DIR_NAME, "branding", "app_icon.png")
 
 APP_WEB_META_RELATIVE_PATH = os.path.join(APP_RESOURCES_DIR_NAME, "js", "app_meta.js")
 
@@ -71,7 +68,6 @@ APP_PUBLISHER_URL = APP_WEBSITE_URL
 APP_SUPPORT_URL = APP_REPOSITORY_WEB_URL
 
 APP_UPDATES_URL = f"{APP_REPOSITORY_WEB_URL}/releases/latest"
-
 
 APP_INSTALL_MARKER_FILE = ".lectorcito_installed"
 
@@ -111,11 +107,6 @@ def get_release_download_url() -> str:
 def get_document_title() -> str:
 
     return f"{APP_DISPLAY_NAME} | Auditoría de código y contexto para IA"
-
-
-def get_copyright_text() -> str:
-
-    return f"© {get_current_year()} {APP_AUTHOR}. Todos los derechos reservados."
 
 
 def get_legal_copyright_text() -> str:

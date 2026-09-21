@@ -11,9 +11,9 @@ from view.dialogs import (
     _style_entry,
     _style_scrollable,
 )
+from view.ui_assets import load_add_icon, load_delete_icon
 from view.ui_constants import (
-    COLORS,
-    DIALOG_BUTTON_FONT_SIZE,
+    ACTION_BUTTON_TOKENS,
     FONT_FAMILY_PRIMARY,
     PROFILE_ITEM_BORDER_WIDTH,
     PROFILE_ITEM_DELETE_BUTTON_SIZE,
@@ -23,6 +23,9 @@ from view.ui_constants import (
     PROFILE_ITEM_LABEL_PADY,
     PROFILE_ITEM_PADY,
     PROFILE_ITEM_RADIUS,
+    PROFILES_DIALOG_ACTION_BUTTON_PADX,
+    PROFILES_DIALOG_ACTION_BUTTON_PADY,
+    PROFILES_DIALOG_ACTION_BUTTON_WIDTH,
     PROFILES_DIALOG_ADD_BUTTON_WIDTH,
     PROFILES_DIALOG_BOTTOM_PADX,
     PROFILES_DIALOG_BOTTOM_PADY,
@@ -66,6 +69,7 @@ class ProfilesDialog(BaseDialog):
 
         self.profiles = {}
         self.active_id = "default"
+        self.selected_id = "default"
         self.result = None
         self.parent_view = parent
         self.on_save_callback = on_save_callback
@@ -79,6 +83,8 @@ class ProfilesDialog(BaseDialog):
             "panel": _get_color_tuple("bg_panel"),
             "border": _get_color_tuple("border_subtle"),
         }
+        self.add_icon = load_add_icon((14, 14))
+        self.delete_icon = load_delete_icon((14, 14))
 
         self._build_ui()
         self.load_state(
@@ -124,7 +130,8 @@ class ProfilesDialog(BaseDialog):
 
         self.btn_add = ctk.CTkButton(
             self.bottom_frame,
-            text="+",
+            text="",
+            image=self.add_icon,
             width=PROFILES_DIALOG_ADD_BUTTON_WIDTH,
             command=self._add_profile,
         )
@@ -133,17 +140,45 @@ class ProfilesDialog(BaseDialog):
 
         self.entry_new.bind("<Return>", lambda e: self._add_profile())
 
+        self.actions_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.actions_frame.pack(
+            fill="x",
+            padx=PROFILES_DIALOG_BOTTOM_PADX,
+            pady=PROFILES_DIALOG_ACTION_BUTTON_PADY,
+        )
+
+        self.btn_cancel = ctk.CTkButton(
+            self.actions_frame,
+            text=_tr_text(self.parent_view, "btn_cancel_simple"),
+            width=PROFILES_DIALOG_ACTION_BUTTON_WIDTH,
+            command=self._on_cancel,
+        )
+        _style_button(self.btn_cancel, "red")
+        self.btn_cancel.pack(side="left", padx=PROFILES_DIALOG_ACTION_BUTTON_PADX)
+
+        self.btn_apply = ctk.CTkButton(
+            self.actions_frame,
+            text=_tr_text(self.parent_view, "btn_apply"),
+            width=PROFILES_DIALOG_ACTION_BUTTON_WIDTH,
+            command=self._on_ok,
+        )
+        _style_button(self.btn_apply, "green")
+        self.btn_apply.pack(side="right", padx=PROFILES_DIALOG_ACTION_BUTTON_PADX)
+
     def refresh_texts(self):
         try:
             self.title(self.parent_view._tr("dlg_profiles_title"))
         except Exception:
             pass
         self.lbl_select_profile.configure(text=_tr_text(self.parent_view, "lbl_select_profile"))
+        self.btn_cancel.configure(text=_tr_text(self.parent_view, "btn_cancel_simple"))
+        self.btn_apply.configure(text=_tr_text(self.parent_view, "btn_apply"))
         self._redraw_list()
 
     def load_state(self, profiles_meta: dict, active_id: str, on_save_callback=None):
         self.profiles = copy.deepcopy(profiles_meta) if profiles_meta else {"default": {}}
         self.active_id = active_id if active_id in self.profiles else "default"
+        self.selected_id = self.active_id
         self.on_save_callback = on_save_callback
         self.result = None
         self.refresh_texts()
@@ -173,8 +208,11 @@ class ProfilesDialog(BaseDialog):
             )
             self.btn_add.configure(state="normal")
 
+        self._update_apply_state()
+
     def _create_profile_item(self, pid):
         is_active = pid == self.active_id
+        is_selected = pid == self.selected_id
         is_default = pid == "default"
 
         display_name = self.parent_view._tr("lbl_default_name") if pid == "default" else pid
@@ -182,9 +220,9 @@ class ProfilesDialog(BaseDialog):
 
         item_frame = ctk.CTkFrame(
             self.scroll_frame,
-            fg_color=self.colors["selected"] if is_active else self.colors["panel"],
+            fg_color=self.colors["selected"] if is_selected else self.colors["panel"],
             border_width=PROFILE_ITEM_BORDER_WIDTH,
-            border_color=self.colors["selected_border"] if is_active else self.colors["border"],
+            border_color=self.colors["selected_border"] if is_selected else self.colors["border"],
             corner_radius=PROFILE_ITEM_RADIUS,
         )
         item_frame.pack(fill="x", pady=PROFILE_ITEM_PADY)
@@ -192,8 +230,8 @@ class ProfilesDialog(BaseDialog):
         lbl = ctk.CTkLabel(
             item_frame,
             text=f"  {display_name}{suffix}",
-            font=(FONT_FAMILY_PRIMARY, PROFILE_ITEM_FONT_SIZE, "bold" if is_active else "normal"),
-            text_color=self.colors["selected_text"] if is_active else self.colors["text"],
+            font=(FONT_FAMILY_PRIMARY, PROFILE_ITEM_FONT_SIZE, "bold" if is_selected else "normal"),
+            text_color=self.colors["selected_text"] if is_selected else self.colors["text"],
         )
         lbl.pack(side="left", padx=PROFILE_ITEM_LABEL_PADX, pady=PROFILE_ITEM_LABEL_PADY)
 
@@ -201,17 +239,28 @@ class ProfilesDialog(BaseDialog):
         lbl.bind("<Button-1>", lambda e, p=pid: self._select_profile(p))
 
         if not is_default:
+            destructive_bg = (
+                ACTION_BUTTON_TOKENS["light"]["destructive"]["bg"],
+                ACTION_BUTTON_TOKENS["dark"]["destructive"]["bg"],
+            )
+            destructive_hover = (
+                ACTION_BUTTON_TOKENS["light"]["destructive"]["hover"],
+                ACTION_BUTTON_TOKENS["dark"]["destructive"]["hover"],
+            )
+            destructive_border = (
+                ACTION_BUTTON_TOKENS["light"]["destructive"]["border"],
+                ACTION_BUTTON_TOKENS["dark"]["destructive"]["border"],
+            )
             btn_del = ctk.CTkButton(
                 item_frame,
-                text="✕",
+                text="",
+                image=self.delete_icon,
                 width=PROFILE_ITEM_DELETE_BUTTON_SIZE,
                 height=PROFILE_ITEM_DELETE_BUTTON_SIZE,
-                font=(FONT_FAMILY_PRIMARY, DIALOG_BUTTON_FONT_SIZE, "bold"),
-                fg_color="transparent",
-                hover_color=COLORS["button"]["red"]["hover"],
+                fg_color=destructive_bg,
+                hover_color=destructive_hover,
                 border_width=1,
-                border_color=self.colors["selected_border"] if is_active else self.colors["border"],
-                text_color=self.colors["selected_text"] if is_active else self.colors["text"],
+                border_color=destructive_border,
                 command=lambda p=pid: self._delete_profile(p),
             )
             btn_del.pack(side="right", padx=PROFILE_ITEM_DELETE_PADX)
@@ -237,28 +286,51 @@ class ProfilesDialog(BaseDialog):
 
         self._redraw_list()
 
+    def _restore_after_child_dialog(self):
+        try:
+            if self.winfo_exists() and self._modal_active:
+                self.lift()
+                self.focus_force()
+                self.grab_set()
+        except Exception:
+            pass
+
     def _delete_profile(self, pid):
         if pid == "default":
             return
-        if ConfirmDialog.ask(
-            self.parent_view,
+
+        confirmed = ConfirmDialog.ask(
+            self,
             self.parent_view._tr("confirm_del_title"),
             self.parent_view._tr("confirm_del_profile", pid),
-        ):
-            del self.profiles[pid]
-            if pid == self.active_id:
-                self.active_id = "default"
+        )
+        self._restore_after_child_dialog()
+        if not confirmed:
+            return
 
-            if self.on_save_callback:
-                self.on_save_callback(copy.deepcopy(self.profiles), self.active_id)
+        del self.profiles[pid]
+        if pid == self.active_id:
+            self.active_id = "default"
+        if pid == self.selected_id:
+            self.selected_id = self.active_id if self.active_id in self.profiles else "default"
 
-            self._redraw_list()
+        if self.on_save_callback:
+            self.on_save_callback(copy.deepcopy(self.profiles), self.active_id)
+
+        self._redraw_list()
+
+    def _update_apply_state(self):
+        state = "normal" if self.selected_id != self.active_id else "disabled"
+        try:
+            self.btn_apply.configure(state=state)
+        except Exception:
+            pass
 
     def _select_profile(self, pid):
-        if pid != self.active_id:
-            self.active_id = pid
-            self._redraw_list()
-            self._on_ok()
+        if pid not in self.profiles:
+            return
+        self.selected_id = pid
+        self._redraw_list()
 
     def present(self):
         super().present()
@@ -268,27 +340,7 @@ class ProfilesDialog(BaseDialog):
             pass
 
     def _on_ok(self, event=None):
-        self.result = (self.active_id, copy.deepcopy(self.profiles))
+        if self.selected_id not in self.profiles:
+            return
+        self.result = (self.selected_id, copy.deepcopy(self.profiles))
         self._close_with_fade_out()
-
-    @classmethod
-    def ask(cls, parent, profiles_meta, active_id, on_save_callback=None):
-        dialog = None
-        try:
-            dialog = cls(parent, profiles_meta, active_id, on_save_callback)
-            parent.wait_window(dialog)
-            return dialog.result
-        except Exception:
-            try:
-                if hasattr(parent, "restore_ui_from_modal"):
-                    parent.restore_ui_from_modal()
-            except Exception:
-                pass
-            return None
-        finally:
-            if dialog is not None:
-                try:
-                    if dialog.winfo_exists():
-                        dialog.destroy()
-                except Exception:
-                    pass

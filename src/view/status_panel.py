@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import time
 import tkinter.font as tkfont
 
@@ -9,7 +10,6 @@ from i18n.translations import translate_default
 from view.gradient_progress import GradientProgressBar
 from view.sidebars import BlendedRoundedFrame
 from view.ui_assets import load_cancel_reading_icon, load_status_dot_icon
-from view.ui_scaling import canvas_font
 from view.ui_constants import (
     FONT_BODY,
     FONT_FAMILY_PRIMARY,
@@ -21,11 +21,19 @@ from view.ui_constants import (
     STATUS_PANEL_DEFAULT_MIN_VISIBLE_SECONDS,
     STATUS_PANEL_DOTS_INTERVAL_MS,
     STATUS_PANEL_FILE_TEXT_FONT_SIZE,
+    STATUS_PANEL_PROGRESS_CRUISE_CENTER_BOOST,
+    STATUS_PANEL_PROGRESS_CRUISE_EDGE_PER_SECOND,
     STATUS_PANEL_PROGRESS_HEIGHT,
+    STATUS_PANEL_PROGRESS_LEAD_DAMPING_SPAN,
+    STATUS_PANEL_PROGRESS_MAX_STALL_BOOST,
+    STATUS_PANEL_PROGRESS_MIN_CRUISE_PER_SECOND,
     STATUS_PANEL_PROGRESS_RADIUS,
+    STATUS_PANEL_PROGRESS_STALL_BOOST_AFTER_SECONDS,
     STATUS_PANEL_PROGRESS_TICK_MS,
+    STATUS_PANEL_PROGRESS_VISUAL_LIMIT,
     get_theme_tokens,
 )
+from view.ui_scaling import canvas_font
 
 # =============================================================================
 # PANEL DE ESTADO Y PROGRESO
@@ -78,7 +86,7 @@ class _CenteredIconButton(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self._icon = ctk.CTkLabel(
             self,
-            text="×",
+            text="",
             width=14,
             height=14,
             fg_color="transparent",
@@ -126,7 +134,9 @@ class _CenteredIconButton(ctk.CTkFrame):
     def _apply_visual_state(self):
         if not self._ready:
             return
-        color = self._hover_color if self._hovered and self._state != "disabled" else self._normal_color
+        color = (
+            self._hover_color if self._hovered and self._state != "disabled" else self._normal_color
+        )
         ctk.CTkFrame.configure(self, fg_color=color)
         self._icon.configure(fg_color=color, bg_color=color, text_color=self._icon_color)
         cursor = "arrow" if self._state == "disabled" else "hand2"
@@ -145,7 +155,7 @@ class _CenteredIconButton(ctk.CTkFrame):
         image_supplied = "image" in kwargs
         image = kwargs.pop("image", None) if image_supplied else None
         if image_supplied:
-            self._icon.configure(image=image, text="" if image is not None else "×")
+            self._icon.configure(image=image, text="")
         if "command" in kwargs:
             self._command = kwargs.pop("command")
         if "state" in kwargs:
@@ -194,12 +204,15 @@ class StatusPanel(ctk.CTkFrame):
         self._status_base = ""
         self._dots_after_id = None
         self._dots_phase = 1
+        self._status_layout_after_id = None
         self._tr = None
 
         self.current_progress = 0.0
         self.target_progress = 0.0
+        self._visual_progress_target = 0.0
         self._progress_after_id = None
         self._last_tick = None
+        self._last_real_progress_at = None
         self._current_file = ""
         self._current_report = ""
         self._detail_wrap_width = 220
@@ -258,6 +271,7 @@ class StatusPanel(ctk.CTkFrame):
             fg_color="transparent",
         )
         self.lbl_status.grid(row=0, column=1, sticky="ew", pady=5)
+        self.state_row.bind("<Configure>", self._schedule_status_label_width_sync, add="+")
 
         self._cancel_icon_image = None
         self._cancel_bg = theme["danger_bg"]
@@ -373,6 +387,27 @@ class StatusPanel(ctk.CTkFrame):
         value.grid(row=0, column=0, sticky="ew", padx=(0, 8))
         return frame, value
 
+    def _schedule_status_label_width_sync(self, event=None):
+        if self._status_layout_after_id is not None:
+            return
+        try:
+            self._status_layout_after_id = self.after_idle(self._sync_status_label_width)
+        except Exception:
+            self._status_layout_after_id = None
+
+    def _sync_status_label_width(self):
+        self._status_layout_after_id = None
+        try:
+            if not self.winfo_exists():
+                return
+            _, _, cell_width, _ = self.state_row.grid_bbox(1, 0)
+            if cell_width > 1:
+                # CTkLabel puede conservar un ancho interno menor al asignado por grid
+                # despues de cambios dinamicos de texto. Sincronizarlo evita recortes.
+                self.lbl_status.configure(width=int(cell_width))
+        except Exception:
+            pass
+
     def set_translator(self, tr_callable):
         self._tr = tr_callable
         self.refresh_texts()
@@ -395,16 +430,7 @@ class StatusPanel(ctk.CTkFrame):
         if self._dots_after_id is None:
             self.lbl_status.configure(text=self._status_base)
         self._apply_state_colors()
-
-    def set_backdrop_color(self, color: str):
-        self.configure(bg_color=color)
-        self.status_panel.configure(outside_bg=color)
-
-    def set_backdrop_provider(self, backdrop_provider):
-        return None
-
-    def refresh_backdrop(self):
-        return None
+        self._schedule_status_label_width_sync()
 
     def apply_theme(self, theme_name: str):
         self._current_theme = theme_name
@@ -433,9 +459,7 @@ class StatusPanel(ctk.CTkFrame):
             dark_color=theme["danger_red_deep"],
         )
         self._cancel_bg = theme["danger_bg"]
-        self._cancel_hover_bg = (
-            "#FEE2E2" if str(theme_name).lower() != "dark" else "#5F2121"
-        )
+        self._cancel_hover_bg = "#FEE2E2" if str(theme_name).lower() != "dark" else "#5F2121"
         self.btn_cancel.configure(
             image=self._cancel_icon_image,
             fg_color=self._cancel_bg,
@@ -627,6 +651,7 @@ class StatusPanel(ctk.CTkFrame):
             self._stop_dots()
             self.lbl_status.configure(text=self._status_base)
         self._apply_state_colors()
+        self._schedule_status_label_width_sync()
 
     def _start_dots(self):
         self._stop_dots()
@@ -669,13 +694,66 @@ class StatusPanel(ctk.CTkFrame):
                 pass
         self._progress_after_id = None
 
+    @staticmethod
+    def _progress_gaussian(progress: float) -> float:
+        position = max(0.0, min(1.0, float(progress) / 100.0))
+        return math.exp(-0.5 * ((position - 0.5) / 0.20) ** 2)
+
+    def _advance_visual_progress_target(self, now: float, dt: float):
+        if self._mode != "processing" or self.target_progress >= 100.0:
+            return
+
+        # La barra mantiene una inercia visual continua entre actualizaciones
+        # reales. El progreso real sigue siendo la referencia y, cuanto mayor
+        # sea la ventaja visual, mas se amortigua el avance sintetico.
+        self._visual_progress_target = max(
+            self._visual_progress_target,
+            min(STATUS_PANEL_PROGRESS_VISUAL_LIMIT, self.target_progress + 1.0),
+        )
+
+        gaussian = self._progress_gaussian(self._visual_progress_target)
+        drift_speed = STATUS_PANEL_PROGRESS_CRUISE_EDGE_PER_SECOND + (
+            STATUS_PANEL_PROGRESS_CRUISE_CENTER_BOOST * gaussian
+        )
+
+        lead = max(0.0, self._visual_progress_target - self.target_progress)
+        lead_damping = max(
+            0.22,
+            1.0 / (1.0 + (lead / STATUS_PANEL_PROGRESS_LEAD_DAMPING_SPAN)),
+        )
+        drift_speed *= lead_damping
+
+        if self._last_real_progress_at is not None:
+            stalled_for = max(0.0, now - self._last_real_progress_at)
+            if stalled_for > STATUS_PANEL_PROGRESS_STALL_BOOST_AFTER_SECONDS:
+                stall_boost = min(
+                    STATUS_PANEL_PROGRESS_MAX_STALL_BOOST,
+                    1.0 + (stalled_for - STATUS_PANEL_PROGRESS_STALL_BOOST_AFTER_SECONDS) * 0.055,
+                )
+                drift_speed *= stall_boost
+
+        # Cerca del final la curva vuelve a desacelerar. Se conserva un minimo
+        # de movimiento para que una operacion pesada no parezca congelada.
+        if self._visual_progress_target > 88.0:
+            remaining_factor = max(
+                0.30,
+                min(1.0, (100.0 - self._visual_progress_target) / 12.0),
+            )
+            drift_speed *= remaining_factor
+
+        drift_speed = max(STATUS_PANEL_PROGRESS_MIN_CRUISE_PER_SECOND, drift_speed)
+        self._visual_progress_target = min(
+            STATUS_PANEL_PROGRESS_VISUAL_LIMIT,
+            self._visual_progress_target + (drift_speed * dt),
+        )
+
     def _tick_progress(self):
         if not self.winfo_exists():
             self._progress_after_id = None
             return
 
         now = time.monotonic()
-        dt = now - (self._last_tick or now)
+        dt = max(0.0, min(0.25, now - (self._last_tick or now)))
         self._last_tick = now
 
         if self._forced_end_time is not None and now < self._forced_end_time:
@@ -684,25 +762,43 @@ class StatusPanel(ctk.CTkFrame):
             self._forced_end_time = None
             self.target_progress = 100.0
 
-        diff = self.target_progress - self.current_progress
-        if abs(diff) < 0.05:
-            self.current_progress = self.target_progress
+        if self.target_progress >= 100.0:
+            self._visual_progress_target = 100.0
         else:
-            self.current_progress += diff * min(1.0, dt * 10.0)
+            self._advance_visual_progress_target(now, dt)
 
+        visual_target = max(self.target_progress, self._visual_progress_target)
+        diff = visual_target - self.current_progress
+        if diff > 0.05:
+            # Los saltos del progreso real se absorben gradualmente con la misma
+            # curva gaussiana, evitando avances bruscos entre archivos.
+            gaussian = self._progress_gaussian(self.current_progress)
+            catchup_rate = 3.2 + (5.8 * gaussian)
+            self.current_progress += diff * min(1.0, dt * catchup_rate)
+        elif abs(diff) <= 0.05:
+            self.current_progress = max(self.current_progress, visual_target)
+
+        self.current_progress = max(0.0, min(100.0, self.current_progress))
         self.progress_bar.set(self.current_progress / 100.0)
-        if self._mode != "indeterminate":
-            self.lbl_percent.configure(text=f"{int(self.current_progress)}%")
+        self._set_percent_label()
 
-        if abs(self.target_progress - self.current_progress) < 0.05:
-            self.current_progress = self.target_progress
+        keep_cruising = self._mode == "processing" and self.target_progress < 100.0
+        if not keep_cruising and abs(visual_target - self.current_progress) < 0.05:
+            self.current_progress = max(self.current_progress, visual_target)
             self.progress_bar.set(self.current_progress / 100.0)
-            if self._mode != "indeterminate":
-                self.lbl_percent.configure(text=f"{int(self.current_progress)}%")
+            self._set_percent_label()
             self._progress_after_id = None
             return
 
         self._progress_after_id = self.after(STATUS_PANEL_PROGRESS_TICK_MS, self._tick_progress)
+
+    def _set_percent_label(self):
+        if self._mode == "indeterminate":
+            return
+        display_value = int(round(self.current_progress))
+        if self.target_progress < 100.0:
+            display_value = min(99, display_value)
+        self.lbl_percent.configure(text=f"{display_value}%")
 
     def set_progress(
         self,
@@ -715,9 +811,12 @@ class StatusPanel(ctk.CTkFrame):
             now = time.monotonic()
             self._forced_end_time = self._min_end_time if now < self._min_end_time else None
 
-        self.target_progress = new_target
-        if new_target >= 100:
-            self.btn_cancel.grid_remove()
+        now = time.monotonic()
+        self.target_progress = max(self.target_progress, new_target)
+        self._last_real_progress_at = now
+        if self.target_progress >= 100.0:
+            self._visual_progress_target = 100.0
+        # El boton permanece disponible hasta que el procesamiento finalice realmente.
         self._start_progress_animation()
 
         if file_context is not None:
@@ -758,6 +857,8 @@ class StatusPanel(ctk.CTkFrame):
                 self.progress_bar.stop_indeterminate()
                 self.current_progress = 0.0
                 self.target_progress = 0.0
+                self._visual_progress_target = 0.0
+                self._last_real_progress_at = time.monotonic()
                 self.progress_bar.set(0.0)
                 self.lbl_percent.configure(text="0%")
                 self._set_status(_translate_status(self._tr, "status_reading"), with_dots=True)
@@ -769,6 +870,7 @@ class StatusPanel(ctk.CTkFrame):
             self._mode = "done"
             self.current_progress = 100.0
             self.target_progress = 100.0
+            self._visual_progress_target = 100.0
             self.progress_bar.set(1.0)
             self.lbl_percent.configure(text="100%")
             # El reporte deja de estar "en generacion" al completar la lectura.
@@ -798,6 +900,8 @@ class StatusPanel(ctk.CTkFrame):
         self.progress_bar.stop_indeterminate()
         self.current_progress = 0.0
         self.target_progress = 0.0
+        self._visual_progress_target = 0.0
+        self._last_real_progress_at = None
         self.progress_bar.set(0.0)
         self.lbl_percent.configure(text="0%")
         self._current_file = ""
@@ -810,6 +914,12 @@ class StatusPanel(ctk.CTkFrame):
     def cleanup(self):
         self._stop_dots()
         self._stop_progress_animation()
+        if self._status_layout_after_id is not None:
+            try:
+                self.after_cancel(self._status_layout_after_id)
+            except Exception:
+                pass
+            self._status_layout_after_id = None
         try:
             self.progress_bar.stop_indeterminate()
         except Exception:

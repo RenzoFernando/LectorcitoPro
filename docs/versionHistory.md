@@ -36,7 +36,7 @@
 
 3.  Implementado un formato de versionado para los archivos de salida: `nombre-carpeta_vN.txt`.
 
-4.  Integrado el ícono de la aplicación (`lector.ico`) en la ventana.
+4.  Integrado el ícono de la aplicación (`app_icon.ico`) en la ventana.
 
 5.  Añadida una barra de progreso indeterminada para feedback visual durante el análisis.
 
@@ -50,7 +50,7 @@
 
 3.  Agregado un enlace funcional al repositorio del proyecto dentro de la interfaz.
 
-4.  Corregida la carga del ícono personalizado (`lector.png`) para asegurar su correcta visualización.
+4.  Corregida la carga del ícono personalizado (`app_icon.png`) para asegurar su correcta visualización.
 
 5.  Implementado el botón "Eliminar todas las Lecturas" con su respectivo diálogo de confirmación.
 

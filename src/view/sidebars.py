@@ -31,10 +31,8 @@ class BlendedRoundedFrame(ctk.CTkFrame):
         border_width: int = 1,
         corner_radius: int = 12,
         content_inset: int | None = None,
-        backdrop_provider=None,
     ):
         self._content_inset = int(content_inset if content_inset is not None else 10)
-        self._backdrop_provider = backdrop_provider
         super().__init__(
             parent,
             fg_color=fill_color,
@@ -59,9 +57,6 @@ class BlendedRoundedFrame(ctk.CTkFrame):
         outside_bg = kwargs.pop("outside_bg", None)
         fill_color = kwargs.pop("fill_color", None)
         content_inset = kwargs.pop("content_inset", None)
-        if "backdrop_provider" in kwargs:
-            self._backdrop_provider = kwargs.pop("backdrop_provider")
-
         if outside_bg is not None:
             kwargs["bg_color"] = outside_bg
         if fill_color is not None:
@@ -80,10 +75,6 @@ class BlendedRoundedFrame(ctk.CTkFrame):
 
     config = configure
 
-    def refresh_backdrop(self):
-        # Compatibilidad con llamadas antiguas. Ya no existe un fondo renderizado.
-        return None
-
 
 class PillIconButton(ctk.CTkButton):
     """Boton compacto para la barra superior usando el renderizado nativo de CTk."""
@@ -101,10 +92,8 @@ class PillIconButton(ctk.CTkButton):
         border_color: str | None = None,
         border_width: int = 0,
         command=None,
-        backdrop_provider=None,
         **legacy_kwargs,
     ):
-        self._backdrop_provider = backdrop_provider
         # CTkButton permite transparencia en el fondo, pero no en border_color.
         # El color es irrelevante con border_width=0, por lo que usamos uno valido.
         safe_border_color = border_color
@@ -140,7 +129,6 @@ class PillIconButton(ctk.CTkButton):
         if cnf and isinstance(cnf, dict):
             kwargs = {**cnf, **kwargs}
         kwargs.pop("outside_bg", None)
-        kwargs.pop("backdrop_provider", None)
         kwargs.pop("hover_border_color", None)
         if kwargs.get("border_color") == "transparent":
             kwargs.pop("border_color")
@@ -148,9 +136,6 @@ class PillIconButton(ctk.CTkButton):
         return super().configure(**kwargs)
 
     config = configure
-
-    def refresh_backdrop(self):
-        return None
 
 
 class PillTextButton(ctk.CTkFrame):
@@ -179,7 +164,6 @@ class PillTextButton(ctk.CTkFrame):
         chevron_color: str | None = None,
         content_pad: int = 14,
         text_anchor: str = "w",
-        backdrop_provider=None,
         **legacy_kwargs,
     ):
         self._pill_ready = False
@@ -198,7 +182,6 @@ class PillTextButton(ctk.CTkFrame):
         self._image = image
         self._icon_placeholder = bool(icon_placeholder)
         self._show_chevron = bool(chevron)
-        self._backdrop_provider = backdrop_provider
 
         super().__init__(
             parent,
@@ -372,7 +355,7 @@ class PillTextButton(ctk.CTkFrame):
             dark_color=self._chevron_color,
         )
         if self._chevron_image is None:
-            self._chevron_label.configure(image=None, text="›", text_color=self._chevron_color)
+            self._chevron_label.configure(image=None, text="")
             return
         self._chevron_label.configure(image=self._chevron_image, text="")
 
@@ -484,9 +467,6 @@ class PillTextButton(ctk.CTkFrame):
             if new_chevron != self._show_chevron:
                 self._show_chevron = new_chevron
                 self._sync_chevron()
-        if "backdrop_provider" in kwargs:
-            self._backdrop_provider = kwargs.pop("backdrop_provider")
-
         kwargs.pop("content_pad", None)
         kwargs.pop("text_anchor", None)
 
@@ -532,9 +512,6 @@ class PillTextButton(ctk.CTkFrame):
             return self._command()
         return None
 
-    def refresh_backdrop(self):
-        return None
-
 
 class RightSidebar(ctk.CTkFrame):
     def __init__(
@@ -542,13 +519,11 @@ class RightSidebar(ctk.CTkFrame):
         parent,
         icons: dict,
         current_theme: str,
-        backdrop_provider=None,
         *,
         orientation: str = "vertical",
         auto_pack: bool = True,
     ):
         self._orientation = "horizontal" if orientation == "horizontal" else "vertical"
-        self._backdrop_provider = backdrop_provider
         self.icons = icons
         self.buttons: dict[str, PillIconButton] = {}
 
@@ -600,11 +575,7 @@ class RightSidebar(ctk.CTkFrame):
             hover_color=theme["sidebar_hover"],
             border_color=theme["sidebar_border"],
             border_width=0,
-            backdrop_provider=self._backdrop_provider,
         )
-
-    def refresh_backdrop(self):
-        return None
 
     def apply_theme(self, theme_name: str):
         is_light = str(theme_name).lower() != "dark"

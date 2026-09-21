@@ -6,7 +6,7 @@ import webbrowser
 from dataclasses import dataclass
 from pathlib import Path
 
-from runtime_context import get_runtime_executable_candidates, is_frozen_runtime, is_nuitka_compiled
+from runtime_context import get_runtime_executable_candidates, is_frozen_runtime
 
 
 @dataclass(frozen=True)
@@ -36,9 +36,6 @@ class PlatformService:
             return os.path.normcase(os.path.realpath(clean_path))
         except Exception:
             return os.path.normcase(clean_path)
-
-    def _is_nuitka_compiled(self) -> bool:
-        return is_nuitka_compiled()
 
     def get_runtime_executable(self) -> str:
         for candidate in get_runtime_executable_candidates():

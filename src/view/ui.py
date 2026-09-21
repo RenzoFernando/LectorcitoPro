@@ -11,7 +11,7 @@ import customtkinter as ctk
 
 from app_logging import log_error, log_info, log_warning
 from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL, get_current_year
-from i18n.translations import TRANSLATIONS, translate_default
+from i18n.translations import TRANSLATIONS
 from platform_services import get_platform_service
 from view.dialogs import (
     MessageDialog,
@@ -23,13 +23,17 @@ from view.sidebars import BlendedRoundedFrame, PillTextButton, RightSidebar
 from view.status_panel import StatusPanel
 from view.tags_dialog import TagsConfigDialog
 from view.tooltip import CustomTooltip
-from view.ui_assets import load_action_icons, load_logo, load_sidebar_icons, safe_set_window_icon
+from view.ui_assets import (
+    load_action_icons,
+    load_logo,
+    load_sidebar_icons,
+    safe_set_window_icon,
+)
 from view.ui_constants import *
 from view.ui_constants import (
     AUTHOR,
     BTN_H_MAIN,
     BTN_W_MAIN,
-    COLORS,
     FONT_FAMILY_PRIMARY,
     MAIN_WINDOW_FADE_OUT_INTERVAL_MS,
     MAIN_WINDOW_FADE_OUT_STEP,
@@ -78,6 +82,7 @@ class LectorcitoApp(ctk.CTk):
         self._modal_overlay = None
         self._modal_overlay_sync_after_id = None
         self._modal_action_depth = 0
+        self._modal_action_after_id = None
         self._modal_fail_safe_after_id = None
         self._dialog_cache = {}
         self._is_theme_switching = False
@@ -260,9 +265,7 @@ class LectorcitoApp(ctk.CTk):
             left, top, right, bottom = get_application_workarea(self)
             initial_x = int(left + ((right - left) - self._app_w) / 2)
             initial_y = int(top + ((bottom - top) - self._app_h) / 2)
-            self.geometry(
-                f"{self._app_w}x{self._app_h}{initial_x:+d}{initial_y:+d}"
-            )
+            self.geometry(f"{self._app_w}x{self._app_h}{initial_x:+d}{initial_y:+d}")
             self.update_idletasks()
 
             # La ventana se mapea aun transparente para medir el marco nativo real.
@@ -300,6 +303,8 @@ class LectorcitoApp(ctk.CTk):
             return
 
         log_info("Ventana principal visible.", operation="startup_ui")
+        # Deja preparado el velo modal sin penalizar el primer clic del usuario.
+        self.after_idle(self._ensure_modal_overlay)
 
     def _close_with_fade_out(self):
 
@@ -354,10 +359,6 @@ class LectorcitoApp(ctk.CTk):
             self.center_container.configure(fg_color=theme["bg_base"])
         except Exception:
             pass
-
-    def get_backdrop_patch(self, widget, width=None, height=None):
-        # API conservada para componentes persistentes antiguos. El fondo actual es solido.
-        return None, None
 
     # =========================================================================
 
@@ -446,6 +447,7 @@ class LectorcitoApp(ctk.CTk):
         self.lbl_greeting_title = ctk.CTkLabel(
             self.header_title_frame,
             text="",
+            height=MAIN_WINDOW_GREETING_LABEL_HEIGHT,
             font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_GREETING_FONT_SIZE, "bold"),
             anchor="w",
             justify="left",
@@ -745,9 +747,7 @@ class LectorcitoApp(ctk.CTk):
                 btn.configure(text=self._tr(key_map[key]))
 
         self.status_panel.set_translator(lambda key: self._tr(key))
-        self.lbl_copyright.configure(
-            text=self._tr("footer_copyright", get_current_year(), AUTHOR)
-        )
+        self.lbl_copyright.configure(text=self._tr("footer_copyright", get_current_year(), AUTHOR))
         self.lbl_footer_version.configure(text=f"v{VERSION}")
 
         tooltip_map = {
@@ -1096,14 +1096,18 @@ class LectorcitoApp(ctk.CTk):
         return controls
 
     def _schedule_modal_overlay_sync(self, event=None):
-        if self._modal_overlay is None:
+        overlay = self._modal_overlay
+        if overlay is None:
+            return
+        try:
+            if str(overlay.state()) == "withdrawn":
+                return
+        except Exception:
             return
         if self._modal_overlay_sync_after_id is not None:
             return
         try:
-            self._modal_overlay_sync_after_id = self.after_idle(
-                self._sync_modal_overlay_geometry
-            )
+            self._modal_overlay_sync_after_id = self.after_idle(self._sync_modal_overlay_geometry)
         except Exception:
             self._modal_overlay_sync_after_id = None
 
@@ -1115,7 +1119,6 @@ class LectorcitoApp(ctk.CTk):
         try:
             if not overlay.winfo_exists() or not self.winfo_ismapped():
                 return
-            self.update_idletasks()
             x = int(self.winfo_rootx())
             y = int(self.winfo_rooty())
             width = max(1, int(self.winfo_width()))
@@ -1124,8 +1127,14 @@ class LectorcitoApp(ctk.CTk):
         except Exception:
             pass
 
-    def _create_modal_overlay(self):
-        self._destroy_modal_overlay()
+    def _ensure_modal_overlay(self):
+        overlay = self._modal_overlay
+        try:
+            if overlay is not None and overlay.winfo_exists():
+                return overlay
+        except Exception:
+            pass
+
         theme = get_theme_tokens(self.current_theme)
         overlay = tk.Toplevel(self)
         self._modal_overlay = overlay
@@ -1150,18 +1159,31 @@ class LectorcitoApp(ctk.CTk):
             overlay.bind("<Button>", lambda event: "break", add="+")
             overlay.bind("<Key>", lambda event: "break", add="+")
             overlay.protocol("WM_DELETE_WINDOW", lambda: None)
-            self._sync_modal_overlay_geometry()
-            overlay.deiconify()
-            overlay.lift(self)
-            overlay.update_idletasks()
+            return overlay
         except Exception:
             try:
                 overlay.destroy()
             except Exception:
                 pass
             self._modal_overlay = None
+            return None
 
-    def _destroy_modal_overlay(self):
+    def _show_modal_overlay(self):
+        if not self._startup_visible:
+            return
+        overlay = self._ensure_modal_overlay()
+        if overlay is None:
+            return
+        try:
+            theme = get_theme_tokens(self.current_theme)
+            overlay.configure(bg=theme["modal_overlay"])
+            self._sync_modal_overlay_geometry()
+            overlay.deiconify()
+            overlay.lift(self)
+        except Exception:
+            pass
+
+    def _hide_modal_overlay(self):
         if self._modal_overlay_sync_after_id is not None:
             try:
                 self.after_cancel(self._modal_overlay_sync_after_id)
@@ -1170,63 +1192,22 @@ class LectorcitoApp(ctk.CTk):
             self._modal_overlay_sync_after_id = None
 
         overlay = self._modal_overlay
-        self._modal_overlay = None
         if overlay is None:
             return
         try:
             if overlay.winfo_exists():
-                overlay.destroy()
+                overlay.withdraw()
         except Exception:
             pass
 
     def _enter_modal_visual_state(self):
-        self._modal_control_states = {}
-        for button in self._iter_modal_controls():
-            try:
-                self._modal_control_states[button] = button.cget("state")
-            except Exception:
-                self._modal_control_states[button] = "normal"
-            try:
-                button.configure(state="disabled")
-            except Exception:
-                pass
-
-        theme = get_theme_tokens(self.current_theme)
-        for button in self.main_buttons.values():
-            try:
-                button.configure(
-                    fg_color=theme["surface_alt"],
-                    hover_color=theme["surface_alt"],
-                    border_color=theme["border_subtle"],
-                    text_color=theme["text_muted"],
-                    icon_color=theme["text_muted"],
-                    chevron_color=theme["text_muted"],
-                )
-            except Exception:
-                pass
-
-        if self._startup_visible:
-            try:
-                self.update_idletasks()
-            except Exception:
-                pass
-            self._create_modal_overlay()
+        # El overlay ya bloquea toda interaccion con la ventana principal.
+        # Evitamos cambiar el estado de los botones para no forzar redibujados
+        # de CTkButton ni reconstrucciones visuales de sus SVG.
+        self._show_modal_overlay()
 
     def _leave_modal_visual_state(self):
-        states = self._modal_control_states
-        self._modal_control_states = {}
-        try:
-            self.apply_theme()
-        except Exception:
-            pass
-        for button, state in states.items():
-            try:
-                if button.winfo_exists():
-                    button.configure(state=state)
-            except Exception:
-                pass
-
-        self._destroy_modal_overlay()
+        self._hide_modal_overlay()
 
     def _has_live_modal_dialog(self) -> bool:
 
@@ -1242,10 +1223,8 @@ class LectorcitoApp(ctk.CTk):
                     if not child.winfo_exists():
                         continue
 
-                    if str(child.state()) == "withdrawn":
-                        continue
-
-                    return True
+                    if getattr(child, "_modal_active", False):
+                        return True
 
                 except Exception:
                     pass
@@ -1320,27 +1299,67 @@ class LectorcitoApp(ctk.CTk):
         self._leave_modal_visual_state()
 
     def run_modal_action(self, callback):
-        """Bloquea visualmente la ventana antes de ejecutar una accion modal."""
+        """Bloquea primero la ventana y ejecuta la accion en el siguiente ciclo de UI."""
+        if self._modal_action_after_id is not None or self._is_modal_open:
+            return None
+
         self._modal_action_depth += 1
         self.dim_ui_for_modal()
+
+        def execute():
+            self._modal_action_after_id = None
+            try:
+                callback()
+            finally:
+                self._modal_action_depth = max(0, self._modal_action_depth - 1)
+                self.restore_ui_from_modal()
+
         try:
-            # Fuerza el dibujo del estado bloqueado antes de crear o cargar
-            # cualquier dialogo potencialmente costoso.
-            self.update_idletasks()
-            return callback()
-        finally:
-            self._modal_action_depth = max(0, self._modal_action_depth - 1)
-            self.restore_ui_from_modal()
+            # after_idle permite que Tk pinte el bloqueo antes de construir el dialogo.
+            self._modal_action_after_id = self.after_idle(execute)
+        except Exception:
+            execute()
+        return None
 
     def run_native_modal(self, callback):
         self._native_modal_depth += 1
         self.dim_ui_for_modal()
         try:
-            self.update_idletasks()
             return callback()
         finally:
             self._native_modal_depth = max(0, self._native_modal_depth - 1)
             self.restore_ui_from_modal()
+
+    def _get_message_dialog_owner(self):
+        try:
+            current = self.grab_current()
+        except Exception:
+            current = None
+
+        while current is not None and current is not self:
+            try:
+                if (
+                    getattr(current, "_is_base_dialog", False)
+                    and current.winfo_exists()
+                    and getattr(current, "_modal_active", False)
+                ):
+                    return current
+            except Exception:
+                pass
+            current = getattr(current, "master", None)
+
+        try:
+            for child in reversed(self.winfo_children()):
+                if (
+                    getattr(child, "_is_base_dialog", False)
+                    and child.winfo_exists()
+                    and getattr(child, "_modal_active", False)
+                ):
+                    return child
+        except Exception:
+            pass
+
+        return self
 
     def show_message(self, title_key: str, message_key: str, *args):
 
@@ -1357,8 +1376,12 @@ class LectorcitoApp(ctk.CTk):
                 except Exception:
                     pass
 
+            owner = self._get_message_dialog_owner()
             MessageDialog(
-                self, self._tr(title_key), self._tr(message_key, *args), on_close=_on_message_closed
+                owner,
+                self._tr(title_key),
+                self._tr(message_key, *args),
+                on_close=_on_message_closed,
             )
 
         except Exception as error:

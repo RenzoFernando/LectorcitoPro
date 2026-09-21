@@ -16,11 +16,8 @@ from file_rules import canonical_file_rule, normalize_file_rule_list, normalize_
 from i18n.translations import translate_default
 from platform_services import get_platform_service
 from view.dialogs import ChoiceDialog, ConfirmDialog, ExternalLinkDialog, MessageDialog
-from view.profiles_dialog import ProfilesDialog
-from view.settings_dialog import SettingsDialog
-from view.tags_dialog import TagsConfigDialog
 from view.ui_assets import get_app_icon_png_path
-from view.ui_constants import PROFILE_SWITCH_FADE_DELAY_MS, RESTORE_FADE_DELAY_MS
+from view.ui_constants import RESTORE_FADE_DELAY_MS
 
 
 def _get_effective_launcher_path(

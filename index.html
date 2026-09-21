@@ -15,7 +15,7 @@
         <link rel="manifest" href="manifest.webmanifest" />
         <link rel="sitemap" type="application/xml" href="sitemap.xml" />
         <link rel="stylesheet" href="resources/css/styles.css" />
-        <link rel="icon" type="image/x-icon" href="resources/branding/lector.ico" />
+        <link rel="icon" type="image/x-icon" href="resources/branding/app_icon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -36,7 +36,7 @@
         <meta property="og:site_name" content="Lectorcito Pro" />
         <meta
             property="og:image"
-            content="https://renzofernando.github.io/LectorcitoPro/resources/branding/lector.png"
+            content="https://renzofernando.github.io/LectorcitoPro/resources/branding/app_icon.png"
         />
         <meta property="og:image:alt" content="Identidad visual de Lectorcito Pro" />
 
@@ -51,7 +51,7 @@
         />
         <meta
             name="twitter:image"
-            content="https://renzofernando.github.io/LectorcitoPro/resources/branding/lector.png"
+            content="https://renzofernando.github.io/LectorcitoPro/resources/branding/app_icon.png"
         />
         <meta name="twitter:image:alt" content="Identidad visual de Lectorcito Pro" />
 
@@ -151,7 +151,7 @@
         <nav class="navbar" aria-label="Navegación principal">
             <a class="logo-container" href="#intro" aria-label="Ir al inicio de Lectorcito Pro">
                 <img
-                    src="resources/branding/logo_oscuro.png"
+                    src="resources/branding/logo_light_theme.png"
                     alt="Lectorcito Pro"
                     id="app-logo"
                     class="nav-logo"
@@ -195,8 +195,8 @@
                         <p class="hero-desc">
                             <strong id="hero-app-name">Lectorcito Pro</strong> es una herramienta de
                             escritorio para desarrolladores que necesitan reunir proyectos complejos
-                            en un único reporte TXT o Markdown, con filtros de inclusión, exclusión y
-                            manejo de archivos multimedia.
+                            en un único reporte TXT o Markdown, con filtros de inclusión, exclusión
+                            y manejo de archivos multimedia.
                         </p>
 
                         <div class="hero-buttons" aria-label="Acciones principales">
@@ -224,7 +224,7 @@
 
                     <div class="hero-image fade-in-up">
                         <img
-                            src="resources/branding/lector.png"
+                            src="resources/branding/app_icon.png"
                             alt="Identidad visual de Lectorcito Pro"
                             class="floating-img"
                             decoding="async"
@@ -247,9 +247,9 @@
                                 <h3>Configura los filtros</h3>
                                 <p>
                                     Antes de leer, usa <strong>Qué No Ver</strong> para excluir
-                                    carpetas pesadas como <code>node_modules</code> o <code>venv</code>,
-                                    y <strong>Qué Ver</strong> para definir las extensiones o archivos
-                                    que sí deben procesarse.
+                                    carpetas pesadas como <code>node_modules</code> o
+                                    <code>venv</code>, y <strong>Qué Ver</strong> para definir las
+                                    extensiones o archivos que sí deben procesarse.
                                 </p>
                             </div>
                         </div>
@@ -259,8 +259,8 @@
                             <div class="timeline-content">
                                 <h3>Selecciona y genera</h3>
                                 <p>
-                                    Presiona <strong>Generar Lectura Completa</strong>, selecciona la
-                                    carpeta raíz del proyecto y deja que la aplicación escanee de
+                                    Presiona <strong>Generar Lectura Completa</strong>, selecciona
+                                    la carpeta raíz del proyecto y deja que la aplicación escanee de
                                     forma recursiva el contenido permitido.
                                 </p>
                             </div>
@@ -272,8 +272,8 @@
                                 <h3>Usa el resultado</h3>
                                 <p>
                                     El reporte se guarda automáticamente. Luego puedes abrir el
-                                    archivo más reciente y usarlo para revisión, documentación o como
-                                    contexto de trabajo para modelos de IA.
+                                    archivo más reciente y usarlo para revisión, documentación o
+                                    como contexto de trabajo para modelos de IA.
                                 </p>
                             </div>
                         </div>
@@ -281,7 +281,11 @@
                 </div>
             </section>
 
-            <section id="main-menu" class="section alt-bg section-anchor" aria-labelledby="menu-title">
+            <section
+                id="main-menu"
+                class="section alt-bg section-anchor"
+                aria-labelledby="menu-title"
+            >
                 <div class="container">
                     <h2 class="section-title" id="menu-title">Funciones del menú principal</h2>
                     <p class="section-subtitle">
@@ -291,11 +295,13 @@
 
                     <div class="cards-grid">
                         <article class="feature-card fade-in-up">
-                            <div class="card-header color-blue"><h3>1. Seleccionar destino</h3></div>
+                            <div class="card-header color-blue">
+                                <h3>1. Seleccionar destino</h3>
+                            </div>
                             <div class="card-body">
                                 <p>
-                                    Permite elegir una carpeta externa personalizada para guardar los
-                                    reportes generados.
+                                    Permite elegir una carpeta externa personalizada para guardar
+                                    los reportes generados.
                                 </p>
                             </div>
                         </article>
@@ -306,9 +312,9 @@
                             </div>
                             <div class="card-body">
                                 <p>
-                                    <strong>Es la función principal.</strong> Selecciona la carpeta del
-                                    proyecto, aplica los filtros configurados y crea un archivo único
-                                    con el contenido permitido.
+                                    <strong>Es la función principal.</strong> Selecciona la carpeta
+                                    del proyecto, aplica los filtros configurados y crea un archivo
+                                    único con el contenido permitido.
                                 </p>
                             </div>
                         </article>
@@ -331,8 +337,8 @@
                             </div>
                             <div class="card-body">
                                 <p>
-                                    Abre el gestor de archivos del sistema directamente en la carpeta
-                                    donde se guardan los reportes.
+                                    Abre el gestor de archivos del sistema directamente en la
+                                    carpeta donde se guardan los reportes.
                                 </p>
                             </div>
                         </article>
@@ -353,8 +359,8 @@
                             <div class="card-header color-red"><h3>6. Eliminar lecturas</h3></div>
                             <div class="card-body">
                                 <p>
-                                    Borra los archivos de la carpeta de lecturas actual para preparar
-                                    un nuevo proceso.
+                                    Borra los archivos de la carpeta de lecturas actual para
+                                    preparar un nuevo proceso.
                                 </p>
                             </div>
                         </article>
@@ -479,8 +485,8 @@
                                 <div>
                                     <h4>Restaurar fábrica</h4>
                                     <p>
-                                        Devuelve la configuración a su estado original para reiniciar
-                                        la experiencia o corregir ajustes conflictivos.
+                                        Devuelve la configuración a su estado original para
+                                        reiniciar la experiencia o corregir ajustes conflictivos.
                                     </p>
                                 </div>
                             </div>
@@ -542,9 +548,9 @@
                         <article class="faq-card fade-in-up" data-faq-item>
                             <h3>¿Cómo funcionan Qué Ver y Qué No Ver?</h3>
                             <p>
-                                Qué Ver define extensiones y carpetas relevantes para la lectura. Qué
-                                No Ver excluye carpetas y archivos completos, y puede apoyarse en
-                                reglas compatibles con .gitignore.
+                                Qué Ver define extensiones y carpetas relevantes para la lectura.
+                                Qué No Ver excluye carpetas y archivos completos, y puede apoyarse
+                                en reglas compatibles con .gitignore.
                             </p>
                         </article>
                         <article class="faq-card fade-in-up" data-faq-item>
@@ -581,7 +587,7 @@
                         <article class="download-card fade-in-up recommended-card">
                             <div class="download-icon">
                                 <img
-                                    src="resources/branding/lector.png"
+                                    src="resources/branding/app_icon.png"
                                     alt="Lectorcito Pro para Windows"
                                     loading="lazy"
                                     decoding="async"
@@ -600,12 +606,17 @@
                                     <li><strong>Sistema:</strong> Windows 10 / 11</li>
                                     <li><strong>Enfoque:</strong> Integración</li>
                                 </ul>
-                                <div class="download-info-panel" id="download-installer-info" hidden>
+                                <div
+                                    class="download-info-panel"
+                                    id="download-installer-info"
+                                    hidden
+                                >
                                     <strong>Instalable para Windows</strong>
                                     <p>
-                                        Si Windows muestra una advertencia de seguridad, verifica que
-                                        el archivo provenga del canal oficial. La aplicación no
-                                        requiere modificar la configuración de seguridad del sistema.
+                                        Si Windows muestra una advertencia de seguridad, verifica
+                                        que el archivo provenga del canal oficial. La aplicación no
+                                        requiere modificar la configuración de seguridad del
+                                        sistema.
                                     </p>
                                 </div>
                                 <div class="download-actions">
@@ -631,7 +642,7 @@
                         <article class="download-card fade-in-up portable-card">
                             <div class="download-icon">
                                 <img
-                                    src="resources/branding/lector.png"
+                                    src="resources/branding/app_icon.png"
                                     alt="Lectorcito Pro Portable para Windows"
                                     loading="lazy"
                                     decoding="async"
@@ -653,8 +664,8 @@
                                     <strong>Portable para Windows</strong>
                                     <p>
                                         Si Windows muestra una advertencia de seguridad, verifica el
-                                        origen del archivo. La versión portable no requiere modificar
-                                        la configuración de seguridad del sistema.
+                                        origen del archivo. La versión portable no requiere
+                                        modificar la configuración de seguridad del sistema.
                                     </p>
                                 </div>
                                 <div class="download-actions">
@@ -680,7 +691,7 @@
                         <article class="download-card linux-card fade-in-up">
                             <div class="download-icon">
                                 <img
-                                    src="resources/branding/lector.png"
+                                    src="resources/branding/app_icon.png"
                                     alt="Lectorcito Pro Portable para Linux"
                                     loading="lazy"
                                     decoding="async"
@@ -741,7 +752,10 @@
                             class="btn btn-outline btn-repo btn-repo-wide"
                             id="download-repo-link"
                         >
-                            <span class="svg-icon icon-github btn-icon-img" aria-hidden="true"></span>
+                            <span
+                                class="svg-icon icon-github btn-icon-img"
+                                aria-hidden="true"
+                            ></span>
                             Ver repositorio
                         </a>
                         <a

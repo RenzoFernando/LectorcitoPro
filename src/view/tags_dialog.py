@@ -1,5 +1,6 @@
 import copy
 import os
+import threading
 from tkinter import filedialog
 
 import customtkinter as ctk
@@ -22,7 +23,6 @@ from view.dialogs import (
 )
 from view.ui_assets import load_checkmark_icon, load_close_icon
 from view.ui_constants import (
-    COLORS,
     DIALOG_BUTTON_FONT_SIZE,
     FONT_FAMILY_PRIMARY,
     NEUTRAL_WHITE,
@@ -31,6 +31,7 @@ from view.ui_constants import (
     TAGS_DIALOG_AUTODETECT_BUTTON_HEIGHT,
     TAGS_DIALOG_AUTODETECT_BUTTON_PADX,
     TAGS_DIALOG_AUTODETECT_BUTTON_WIDTH,
+    TAGS_DIALOG_AUTODETECT_START_DELAY_MS,
     TAGS_DIALOG_BUTTON_FRAME_PADY,
     TAGS_DIALOG_EXTRA_CHECKBOX_PADX,
     TAGS_DIALOG_EXTRA_CHECKBOX_PADY,
@@ -205,7 +206,9 @@ class _AlignedCheckBox(ctk.CTkFrame):
 class _TagCloseButton(ctk.CTkFrame):
     """Boton de cierre cuadrado y sin contorno para las etiquetas."""
 
-    def __init__(self, parent, *, image, size: int, corner_radius: int, text_color, hover_color, command):
+    def __init__(
+        self, parent, *, image, size: int, corner_radius: int, text_color, hover_color, command
+    ):
         super().__init__(
             parent,
             width=size,
@@ -222,7 +225,7 @@ class _TagCloseButton(ctk.CTkFrame):
 
         self._label = ctk.CTkLabel(
             self,
-            text="" if image is not None else "×",
+            text="",
             image=image,
             width=14,
             height=14,
@@ -316,8 +319,10 @@ class TagsConfigDialog(BaseDialog):
         self._resize_after_id = None
         self._last_window_size = None
         self._last_layout_widths = None
-        self._mousewheel_targets = {}
+        self._rendered_tag_signature = None
         self._initial_state_signature = None
+        self._autodetect_running = False
+        self._autodetect_start_after_id = None
 
         self.tag_colors = self._build_tag_colors()
         self.close_icon = load_close_icon((14, 14))
@@ -416,6 +421,20 @@ class TagsConfigDialog(BaseDialog):
     def _tr(self, key: str, *args):
         return _tr_text(self._parent, key, *args)
 
+    def _tag_lists_signature(self, folders=None, files=None):
+        def freeze(items):
+            result = []
+            for item in items or []:
+                if isinstance(item, dict):
+                    result.append((str(item.get("nombre", "")), str(item.get("estado", "activo"))))
+                else:
+                    result.append((str(item), "activo"))
+            return tuple(result)
+
+        folder_items = self.folders_list if folders is None else folders
+        file_items = self.files_list if files is None else files
+        return freeze(folder_items), freeze(file_items)
+
     def _state_signature(self):
         def freeze(items):
             result = []
@@ -467,7 +486,6 @@ class TagsConfigDialog(BaseDialog):
             widget.bind(
                 "<MouseWheel>",
                 lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf),
-                add="+",
             )
         except Exception:
             pass
@@ -475,12 +493,10 @@ class TagsConfigDialog(BaseDialog):
             widget.bind(
                 "<Button-4>",
                 lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf),
-                add="+",
             )
             widget.bind(
                 "<Button-5>",
                 lambda event, sf=scroll_frame: self._on_mousewheel_scroll(event, sf),
-                add="+",
             )
         except Exception:
             pass
@@ -634,6 +650,14 @@ class TagsConfigDialog(BaseDialog):
         extra_checkbox_text=None,
         extra_checkbox_value=False,
     ):
+        next_folders = copy.deepcopy(initial_folders) if initial_folders is not None else []
+        next_files = normalize_file_tag_list(initial_files)
+        self._sort_tag_list(next_folders)
+        self._sort_tag_list(next_files)
+        needs_redraw = (
+            self._tag_lists_signature(next_folders, next_files) != self._rendered_tag_signature
+        )
+
         self.current_title = title
         self.folders_prompt = folders_prompt
         self.files_prompt = files_prompt
@@ -648,12 +672,9 @@ class TagsConfigDialog(BaseDialog):
         )
         self.extra_checkbox_text = extra_checkbox_text
         self.extra_checkbox_value = bool(extra_checkbox_value)
-        self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
-        self.files_list = normalize_file_tag_list(initial_files)
-        self._sort_tag_list(self.folders_list)
-        self._sort_tag_list(self.files_list)
+        self.folders_list = next_folders
+        self.files_list = next_files
         self.result = None
-        self._last_layout_widths = None
         self._last_window_size = None
         if self.folders_entry is not None:
             self.folders_entry.delete(0, "end")
@@ -663,11 +684,18 @@ class TagsConfigDialog(BaseDialog):
             self.extra_checkbox_var.set(self.extra_checkbox_value)
         self._initial_state_signature = self._state_signature()
         self.refresh_texts()
-        self._schedule_layout_refresh(reset=True)
+
+        if needs_redraw:
+            self._last_layout_widths = None
+            self._schedule_layout_refresh(reset=True)
 
     def present(self):
         super().present()
-        self._schedule_layout_refresh(reset=True)
+        if (
+            self._last_layout_widths is None
+            or self._rendered_tag_signature != self._tag_lists_signature()
+        ):
+            self._schedule_layout_refresh(reset=True)
         try:
             if self.files_entry is not None:
                 self.files_entry.focus_set()
@@ -790,12 +818,9 @@ class TagsConfigDialog(BaseDialog):
         label_padding = self._get_horizontal_padding_total(
             scale_tk_value(self, TAGS_DIALOG_PILL_LABEL_PADX)
         )
-        close_width = (
-            scale_tk_value(self, TAGS_DIALOG_PILL_CLOSE_SIZE)
-            + self._get_horizontal_padding_total(
-                scale_tk_value(self, TAGS_DIALOG_PILL_CLOSE_PADX)
-            )
-        )
+        close_width = scale_tk_value(
+            self, TAGS_DIALOG_PILL_CLOSE_SIZE
+        ) + self._get_horizontal_padding_total(scale_tk_value(self, TAGS_DIALOG_PILL_CLOSE_PADX))
         safety_width = scale_tk_value(self, TAGS_DIALOG_PILL_WIDTH_SAFETY_PX)
         return label_width + label_padding + close_width + safety_width
 
@@ -932,83 +957,140 @@ class TagsConfigDialog(BaseDialog):
                 btn_auto.pack(side="left", padx=TAGS_DIALOG_AUTODETECT_BUTTON_PADX)
                 self.btn_auto = btn_auto
 
+    def _set_autodetect_controls_state(self, enabled: bool):
+        state = "normal" if enabled else "disabled"
+        try:
+            if self.btn_auto is not None:
+                self.btn_auto.configure(state=state)
+            self.ok_button.configure(state=state)
+            self.cancel_button.configure(state=state)
+            if self.folders_entry is not None:
+                self.folders_entry.configure(state=state)
+            if self.files_entry is not None:
+                self.files_entry.configure(state=state)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _collect_autodetect_rules(
+        path: str,
+        excl_folders_set: set[str],
+        excl_files_rules: list[str],
+        media_rules: list[str],
+        current_file_rules: list[str],
+    ) -> list[str]:
+        added_rules = []
+        seen_rules = set()
+
+        for root, dirs, files in os.walk(path):
+            dirs[:] = [d for d in dirs if d not in excl_folders_set]
+
+            for filename in files:
+                if matches_file_rule(filename, excl_files_rules):
+                    continue
+
+                _, ext = os.path.splitext(filename)
+                candidate_rule = normalize_file_rule(ext)
+                if not candidate_rule:
+                    candidate_rule = normalize_file_rule(filename)
+
+                if not candidate_rule or candidate_rule in seen_rules:
+                    continue
+                if matches_file_rule(filename, media_rules):
+                    continue
+                if matches_file_rule(filename, current_file_rules):
+                    continue
+
+                seen_rules.add(candidate_rule)
+                current_file_rules.append(candidate_rule)
+                added_rules.append(candidate_rule)
+
+        return added_rules
+
+    def _finish_autodetect(self, added_rules: list[str] | None, error: Exception | None = None):
+        self._autodetect_running = False
+        self._autodetect_start_after_id = None
+        self._set_autodetect_controls_state(True)
+
+        try:
+            if not self.winfo_exists():
+                return
+        except Exception:
+            return
+
+        if error is not None:
+            log_error("Error autodetectando.", error, operation="autodetect_project_tags")
+            self._parent.show_message("error_title", "msg_error_generic")
+            return
+
+        added_rules = list(added_rules or [])
+        if added_rules:
+            self.files_list.extend({"nombre": rule, "estado": "activo"} for rule in added_rules)
+            self._sort_tag_list(self.files_list)
+            self._last_layout_widths = None
+            self._redraw_tag_list(self.files_list)
+            self._parent.show_message("info_title", "msg_autodetect_result", str(len(added_rules)))
+        else:
+            self._parent.show_message("info_title", "msg_autodetect_none")
+
+    def _start_autodetect_worker(
+        self,
+        path: str,
+        excl_folders_set: set[str],
+        excl_files_rules: list[str],
+        media_rules: list[str],
+        current_file_rules: list[str],
+    ):
+        self._autodetect_start_after_id = None
+
+        def worker():
+            try:
+                added_rules = self._collect_autodetect_rules(
+                    path,
+                    excl_folders_set,
+                    excl_files_rules,
+                    media_rules,
+                    current_file_rules,
+                )
+                self.after(0, self._finish_autodetect, added_rules, None)
+            except Exception as error:
+                try:
+                    self.after(0, self._finish_autodetect, None, error)
+                except Exception:
+                    pass
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _on_autodetect(self):
+        if self._autodetect_running:
+            return
+
         path = filedialog.askdirectory(parent=self, title=self._parent._tr("btn_autodetect"))
         if not path:
             return
-
-        added_count = 0
 
         excl_folders_set = {t["nombre"] for t in self.excluded_folders if t["estado"] == "activo"}
         excl_files_rules = [t["nombre"] for t in self.excluded_files if t["estado"] == "activo"]
         media_rules = list(self.media_extensions)
         current_file_rules = [t["nombre"] for t in self.files_list]
-        added_rules = []
-        seen_rules = set()
+
+        self._autodetect_running = True
+        self._set_autodetect_controls_state(False)
 
         try:
-            if self.btn_auto is not None:
-                self.btn_auto.configure(state="disabled")
-            self.ok_button.configure(state="disabled")
-            self.cancel_button.configure(state="disabled")
-            if self.folders_entry is not None:
-                self.folders_entry.configure(state="disabled")
-            if self.files_entry is not None:
-                self.files_entry.configure(state="disabled")
-        except Exception:
-            pass
-
-        try:
-            for root, dirs, files in os.walk(path):
-                dirs[:] = [d for d in dirs if d not in excl_folders_set]
-
-                for filename in files:
-                    if matches_file_rule(filename, excl_files_rules):
-                        continue
-
-                    _, ext = os.path.splitext(filename)
-                    candidate_rule = normalize_file_rule(ext)
-                    if not candidate_rule:
-                        candidate_rule = normalize_file_rule(filename)
-
-                    if not candidate_rule:
-                        continue
-                    if candidate_rule in seen_rules:
-                        continue
-                    if matches_file_rule(filename, media_rules):
-                        continue
-                    if matches_file_rule(filename, current_file_rules):
-                        continue
-
-                    seen_rules.add(candidate_rule)
-                    current_file_rules.append(candidate_rule)
-                    added_rules.append(candidate_rule)
-                    added_count += 1
-
-            if added_rules:
-                self.files_list.extend({"nombre": rule, "estado": "activo"} for rule in added_rules)
-                self._sort_tag_list(self.files_list)
-                self._last_layout_widths = None
-                self._redraw_tag_list(self.files_list)
-                self._parent.show_message("info_title", "msg_autodetect_result", str(added_count))
-            else:
-                self._parent.show_message("info_title", "msg_autodetect_none")
-
-        except Exception as e:
-            log_error("Error autodetectando.", e, operation="autodetect_project_tags")
-            self._parent.show_message("error_title", "msg_error_generic")
-        finally:
-            try:
-                if self.btn_auto is not None:
-                    self.btn_auto.configure(state="normal")
-                self.ok_button.configure(state="normal")
-                self.cancel_button.configure(state="normal")
-                if self.folders_entry is not None:
-                    self.folders_entry.configure(state="normal")
-                if self.files_entry is not None:
-                    self.files_entry.configure(state="normal")
-            except Exception:
-                pass
+            # El escaneo arranca en un ciclo posterior para que Tk alcance a
+            # repintar el estado bloqueado antes de recorrer el proyecto.
+            self._autodetect_start_after_id = self.after(
+                TAGS_DIALOG_AUTODETECT_START_DELAY_MS,
+                self._start_autodetect_worker,
+                path,
+                excl_folders_set,
+                excl_files_rules,
+                media_rules,
+                current_file_rules,
+            )
+        except Exception as error:
+            self._finish_autodetect(None, error)
 
     def redraw_all_tags(self):
         if not self.winfo_exists():
@@ -1017,14 +1099,16 @@ class TagsConfigDialog(BaseDialog):
             self._redraw_tags_in_frame(self.folders_scroll_frame, self.folders_list)
 
         self._redraw_tags_in_frame(self.files_scroll_frame, self.files_list)
+        self._rendered_tag_signature = self._tag_lists_signature()
 
     def _redraw_tag_list(self, tag_list):
         if not self.winfo_exists():
             return
         if not self.single_mode and tag_list is self.folders_list:
             self._redraw_tags_in_frame(self.folders_scroll_frame, self.folders_list)
-            return
-        self._redraw_tags_in_frame(self.files_scroll_frame, self.files_list)
+        else:
+            self._redraw_tags_in_frame(self.files_scroll_frame, self.files_list)
+        self._rendered_tag_signature = self._tag_lists_signature()
 
     def _redraw_tags_in_frame(self, frame, tag_list):
         canvas = self._get_scroll_canvas(frame)
@@ -1197,6 +1281,8 @@ class TagsConfigDialog(BaseDialog):
             self._redraw_tag_list(tag_list)
 
     def _on_cancel(self, event=None):
+        if self._autodetect_running:
+            return "break"
         if not self._confirm_discard_changes():
             return "break"
         return super()._on_cancel(event)
@@ -1206,6 +1292,8 @@ class TagsConfigDialog(BaseDialog):
         return "break"
 
     def _on_ok(self, event=None):
+        if self._autodetect_running:
+            return "break"
         self.files_list = normalize_file_tag_list(self.files_list)
         self._sort_tag_list(self.folders_list)
         self._sort_tag_list(self.files_list)
@@ -1221,54 +1309,3 @@ class TagsConfigDialog(BaseDialog):
             else:
                 self.result = (self.folders_list, self.files_list)
         super()._on_ok(event)
-
-    @classmethod
-    def get_input(
-        cls,
-        parent,
-        title,
-        folders_prompt,
-        initial_folders,
-        files_prompt,
-        initial_files,
-        allow_autodetect=False,
-        excluded_folders=None,
-        excluded_files=None,
-        media_extensions=None,
-        forbidden_items=None,
-        extra_checkbox_text=None,
-        extra_checkbox_value=False,
-    ):
-        dialog = None
-        try:
-            dialog = cls(
-                parent,
-                title,
-                folders_prompt,
-                initial_folders,
-                files_prompt,
-                initial_files,
-                allow_autodetect,
-                excluded_folders,
-                excluded_files,
-                media_extensions,
-                forbidden_items,
-                extra_checkbox_text,
-                extra_checkbox_value,
-            )
-            parent.wait_window(dialog)
-            return dialog.result
-        except Exception:
-            try:
-                if hasattr(parent, "restore_ui_from_modal"):
-                    parent.restore_ui_from_modal()
-            except Exception:
-                pass
-            return None
-        finally:
-            if dialog is not None:
-                try:
-                    if dialog.winfo_exists():
-                        dialog.destroy()
-                except Exception:
-                    pass

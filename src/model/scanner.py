@@ -163,6 +163,7 @@ class ProjectScanner:
                         os.path.join(relative_root, directory), True, gitignore_rules
                     )
                 ]
+                dirs.sort(key=str.casefold)
                 filenames.sort()
 
                 report_files = []

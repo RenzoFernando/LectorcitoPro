@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-import tkinter.font as tkfont
 
 import customtkinter as ctk
 
@@ -96,82 +95,6 @@ def scale_tk_value(widget, value):
 def canvas_font(widget, family: str, logical_size: int, weight: str = "normal"):
     px = max(1, int(round(abs(logical_size) * get_widget_scaling(widget))))
     return family, -px, weight
-
-
-def _font_object(widget, family: str, pixel_size: int, weight: str = "normal"):
-    return tkfont.Font(root=widget, family=family, size=-max(1, int(pixel_size)), weight=weight)
-
-
-def fit_canvas_font(
-    widget,
-    texts,
-    family: str,
-    base_size: int,
-    min_size: int,
-    max_width: int,
-    max_height: int | None = None,
-    weight: str = "normal",
-):
-    if isinstance(texts, str):
-        texts = [texts]
-    clean_texts = [str(text or "") for text in texts]
-    scale = get_widget_scaling(widget)
-    start_px = max(1, int(round(abs(base_size) * scale)))
-    min_px = max(1, int(round(abs(min_size) * scale)))
-    if min_px > start_px:
-        min_px = start_px
-    available_width = max(1, int(max_width))
-    available_height = None if max_height is None else max(1, int(max_height))
-
-    selected_px = min_px
-    for px in range(start_px, min_px - 1, -1):
-        font = _font_object(widget, family, px, weight)
-        width_ok = all(font.measure(text) <= available_width for text in clean_texts)
-        height_ok = available_height is None or font.metrics("linespace") <= available_height
-        if width_ok and height_ok:
-            selected_px = px
-            break
-
-    return family, -selected_px, weight
-
-
-def measure_canvas_text(widget, text: str, font_spec) -> tuple[int, int]:
-    family = font_spec[0]
-    raw_size = int(font_spec[1])
-    weight = font_spec[2] if len(font_spec) > 2 else "normal"
-    px = abs(raw_size)
-    font = _font_object(widget, family, px, weight)
-    return int(font.measure(str(text or ""))), int(font.metrics("linespace"))
-
-
-def wrapped_line_count(widget, text: str, font_spec, max_width: int) -> int:
-    family = font_spec[0]
-    raw_size = int(font_spec[1])
-    weight = font_spec[2] if len(font_spec) > 2 else "normal"
-    font = _font_object(widget, family, abs(raw_size), weight)
-    width = max(1, int(max_width))
-    words = str(text or "").split()
-    if not words:
-        return 1
-
-    lines = 1
-    current = ""
-    for word in words:
-        candidate = word if not current else f"{current} {word}"
-        if font.measure(candidate) <= width:
-            current = candidate
-            continue
-        if current:
-            lines += 1
-            current = ""
-        if font.measure(word) <= width:
-            current = word
-            continue
-        word_width = max(1, int(font.measure(word)))
-        extra_lines = max(1, (word_width + width - 1) // width)
-        lines += extra_lines - 1
-        current = word
-    return max(1, lines)
 
 
 def _windows_monitor_workarea(widget, prefer_pointer: bool):
@@ -314,10 +237,6 @@ def configure_application_scaling(root, prefer_pointer: bool = True) -> bool:
     _STATE["auto_window_scale"] = auto_window_scale
     _STATE["auto_widget_scale"] = auto_widget_scale
     return changed
-
-
-def refresh_application_scaling(root) -> bool:
-    return configure_application_scaling(root, prefer_pointer=False)
 
 
 def get_application_workarea(root):

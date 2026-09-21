@@ -77,9 +77,7 @@ def create_critical_error_log(message: str, exception: Exception = None) -> str:
             with open(output_path, "x", encoding="utf-8") as outfile:
                 outfile.write(f"Fecha: {datetime.now():%Y-%m-%d %H:%M:%S}\n")
                 outfile.write(f"Lectorcito Pro: {APP_VERSION}\n")
-                outfile.write(
-                    f"Plataforma: {platform.system()} {platform.release()}\n"
-                )
+                outfile.write(f"Plataforma: {platform.system()} {platform.release()}\n")
                 outfile.write(f"Error: {message}\n\n")
                 if exception is not None:
                     outfile.writelines(
@@ -127,7 +125,3 @@ def log_error(message: str, exception: Exception = None, operation: str = "", fi
     _LOGGER.error(
         _context_message(message, operation, file_path), exc_info=exc_info, extra=_extra()
     )
-
-
-def get_logger() -> logging.Logger:
-    return _LOGGER

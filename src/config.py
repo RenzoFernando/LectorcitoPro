@@ -156,10 +156,6 @@ def build_runtime_config(profiles: dict | None = None, active_id: str = "default
     return runtime_config
 
 
-def _normalize_profiles_meta(profiles: dict) -> dict:
-    return clone_profiles_meta(profiles)
-
-
 # =============================================================================
 # PERFILES Y VALORES POR DEFECTO
 # =============================================================================

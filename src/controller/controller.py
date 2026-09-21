@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 from tkinter import filedialog
 
 import config
@@ -10,6 +11,9 @@ from i18n.translations import translate_default
 from model import processor
 from platform_services import get_platform_service
 from view.ui import LectorcitoApp
+from view.ui_constants import STATUS_CANCELLING_MIN_VISIBLE_MS
+
+PROCESSING_UI_POLL_INTERVAL_MS = 32
 
 # =============================================================================
 # CONTROLADOR PRINCIPAL
@@ -25,6 +29,11 @@ class LectorcitoController:
         self.last_report_path = None
         self.is_processing = False
         self.cancel_event = None
+        self._cancel_requested_at = None
+        self._processing_state_lock = threading.Lock()
+        self._pending_progress_update = None
+        self._pending_processing_status = None
+        self._processing_poll_after_id = None
 
         self._assign_commands()
         self._update_active_lecturas_path()
@@ -36,12 +45,10 @@ class LectorcitoController:
         self.view.main_buttons["selpath"].configure(
             command=modal_action(lambda: handlers.select_destination_path(self))
         )
-        self.view.main_buttons["choose"].configure(
-            command=modal_action(self.select_reading_type)
-        )
-        self.view.main_buttons["create_tree"].configure(
-            command=modal_action(self.create_tree_structure)
-        )
+        # Estas acciones ya bloquean la interfaz mediante su selector nativo.
+        # Evitar un modal exterior permite activar correctamente el estado de procesamiento.
+        self.view.main_buttons["choose"].configure(command=self.select_reading_type)
+        self.view.main_buttons["create_tree"].configure(command=self.create_tree_structure)
         self.view.main_buttons["openlect"].configure(
             command=lambda: handlers.open_destination_folder(self)
         )
@@ -77,9 +84,7 @@ class LectorcitoController:
         self.view.sidebar_buttons["github"].configure(
             command=modal_action(self.open_repository_link)
         )
-        self.view.sidebar_buttons["info"].configure(
-            command=modal_action(self.open_manual_link)
-        )
+        self.view.sidebar_buttons["info"].configure(command=modal_action(self.open_manual_link))
         self.view.sidebar_buttons["ajustes"].configure(
             command=modal_action(lambda: handlers.show_settings_dialog(self))
         )
@@ -144,8 +149,12 @@ class LectorcitoController:
 
         self.is_processing = True
         self.cancel_event = threading.Event()
+        self._cancel_requested_at = None
+        self._reset_processing_dispatch()
 
         self.view.toggle_ui_for_processing(is_active=True)
+        self.view.set_progress(0, folder_path, None)
+        self._schedule_processing_poll()
 
         thread = threading.Thread(
             target=self._processing_thread_target,
@@ -157,8 +166,6 @@ class LectorcitoController:
     def _processing_thread_target(self, folder_path: str, cancel_event: threading.Event):
         overall_status = "error"
         try:
-            self.view.after(0, self.view.set_progress, 0, folder_path, None)
-
             status, report_path = processor.generate_report(
                 source_folder=folder_path,
                 output_path=self.config["lecturas_path"],
@@ -180,23 +187,85 @@ class LectorcitoController:
             )
             overall_status = "error"
 
-        self.view.after(0, self._on_processing_finished, overall_status)
+        with self._processing_state_lock:
+            self._pending_processing_status = overall_status
 
     def _safe_progress_update(
         self, percentage: float, file_context: str, report_context: str | None = None
     ):
-        self.view.after(0, self.view.set_progress, percentage, file_context, report_context)
+        cancel_event = self.cancel_event
+        if cancel_event is None or cancel_event.is_set():
+            return
+
+        with self._processing_state_lock:
+            self._pending_progress_update = (percentage, file_context, report_context)
+
+    def _reset_processing_dispatch(self):
+        if self._processing_poll_after_id is not None:
+            try:
+                self.view.after_cancel(self._processing_poll_after_id)
+            except Exception:
+                pass
+            self._processing_poll_after_id = None
+
+        with self._processing_state_lock:
+            self._pending_progress_update = None
+            self._pending_processing_status = None
+
+    def _schedule_processing_poll(self):
+        if self._processing_poll_after_id is not None or not self.is_processing:
+            return
+        self._processing_poll_after_id = self.view.after(
+            PROCESSING_UI_POLL_INTERVAL_MS, self._poll_processing_state
+        )
+
+    def _poll_processing_state(self):
+        self._processing_poll_after_id = None
+
+        with self._processing_state_lock:
+            progress_update = self._pending_progress_update
+            self._pending_progress_update = None
+            finished_status = self._pending_processing_status
+            if finished_status is not None:
+                self._pending_processing_status = None
+
+        if finished_status is not None:
+            if finished_status == "success" and progress_update is not None:
+                self.view.set_progress(*progress_update)
+            self._on_processing_finished(finished_status)
+            return
+
+        cancel_event = self.cancel_event
+        if progress_update is not None and cancel_event is not None and not cancel_event.is_set():
+            self.view.set_progress(*progress_update)
+
+        if self.is_processing:
+            self._schedule_processing_poll()
 
     def _on_processing_finished(self, status: str):
         if status == "success":
             self.view.set_progress(100)
+            delay = self.view.get_min_visible_completion_delay_ms()
+        elif status == "cancelled":
+            delay = self._get_cancelling_visible_delay_ms()
+        else:
+            delay = 0
 
-        delay = self.view.get_min_visible_completion_delay_ms() if status == "success" else 0
         self.view.after(delay, self._finalize_ui_and_message, status)
+
+    def _get_cancelling_visible_delay_ms(self) -> int:
+        requested_at = self._cancel_requested_at
+        if requested_at is None:
+            return STATUS_CANCELLING_MIN_VISIBLE_MS
+
+        elapsed_ms = max(0.0, (time.monotonic() - requested_at) * 1000.0)
+        return max(0, int(STATUS_CANCELLING_MIN_VISIBLE_MS - elapsed_ms))
 
     def _finalize_ui_and_message(self, status: str):
         self.is_processing = False
+        self._reset_processing_dispatch()
         self.cancel_event = None
+        self._cancel_requested_at = None
         self.view.toggle_ui_for_processing(is_active=False, final_status=status)
 
         if status == "success":
@@ -220,7 +289,10 @@ class LectorcitoController:
 
     def cancel_processing(self):
         if self.cancel_event and not self.cancel_event.is_set():
+            self._cancel_requested_at = time.monotonic()
             self.cancel_event.set()
+            with self._processing_state_lock:
+                self._pending_progress_update = None
             self.view.set_processing_cancelling()
 
     # =========================================================================

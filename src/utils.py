@@ -53,6 +53,10 @@ def setup_logging():
     configure_logging(config.LOG_FILE_PATH)
 
 
+def create_critical_error_log(message: str, exception: Exception = None) -> str:
+    return _create_critical_error_log(message, exception)
+
+
 def log_error(message: str, exception: Exception = None, operation: str = "", file_path: str = ""):
     _log_error(message, exception, operation=operation, file_path=file_path)
 
@@ -63,7 +67,3 @@ def log_warning(message: str, operation: str = "", file_path: str = ""):
 
 def log_info(message: str, operation: str = "", file_path: str = ""):
     _log_info(message, operation=operation, file_path=file_path)
-
-
-def get_log_path() -> str:
-    return config.LOG_FILE_PATH if config else "error.log"
