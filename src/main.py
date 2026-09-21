@@ -8,7 +8,6 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 import utils
 from app_meta import APP_DISPLAY_NAME
-from controller.controller import LectorcitoController
 from i18n.translations import translate_default
 
 # =============================================================================
@@ -98,6 +97,10 @@ def main():
     utils.log_info("Inicio de aplicacion.", operation="startup")
 
     try:
+        # La importacion principal queda dentro del bloque protegido para que
+        # cualquier fallo del runtime compilado pueda registrarse y mostrarse.
+        from controller.controller import LectorcitoController
+
         app = LectorcitoController()
         app.run()
 
