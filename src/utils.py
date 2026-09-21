@@ -1,6 +1,7 @@
 import os
 
 from app_logging import configure_logging
+from app_logging import create_critical_error_log as _create_critical_error_log
 from app_logging import log_error as _log_error
 from app_logging import log_info as _log_info
 from app_logging import log_warning as _log_warning

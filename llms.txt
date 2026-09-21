@@ -1,0 +1,26 @@
+# Lectorcito Pro
+
+Lectorcito Pro es una aplicación de escritorio para Windows y Linux desarrollada en Python. Analiza proyectos de software de forma recursiva y consolida el contenido relevante en reportes TXT o Markdown para revisión, documentación técnica o uso como contexto para modelos de Inteligencia Artificial.
+
+## Capacidades públicas documentadas
+
+- Generación de lecturas completas de proyectos.
+- Generación de estructura de árbol sin leer el contenido de los archivos.
+- Reglas configurables de inclusión, exclusión y archivos multimedia que solo se listan.
+- Compatibilidad con reglas de .gitignore como apoyo para exclusiones.
+- Perfiles reutilizables, temas claro/oscuro e interfaz en español e inglés.
+- Distribuciones oficiales para Windows 10/11 y Linux x86_64.
+
+## Rutas y fuentes principales
+
+- Sitio oficial: https://renzofernando.github.io/LectorcitoPro/
+- Código fuente: https://github.com/RenzoFernando/LectorcitoPro
+- Releases: https://github.com/RenzoFernando/LectorcitoPro/releases/latest
+- Historial de versiones: https://github.com/RenzoFernando/LectorcitoPro/blob/main/docs/versionHistory.md
+- Licencia: https://github.com/RenzoFernando/LectorcitoPro/blob/main/LICENSE
+
+## Alcance
+
+El sitio público describe la aplicación y enlaza sus descargas oficiales. No debe interpretarse como una API, un servicio web de procesamiento remoto ni una afirmación adicional de seguridad más allá de lo documentado por el proyecto.
+
+Las rutas /page/, /build/, /dist/ y /downloads/ no forman parte del contenido público indexable del sitio.

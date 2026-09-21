@@ -209,6 +209,8 @@ class ProfilesDialog(BaseDialog):
                 font=(FONT_FAMILY_PRIMARY, DIALOG_BUTTON_FONT_SIZE, "bold"),
                 fg_color="transparent",
                 hover_color=COLORS["button"]["red"]["hover"],
+                border_width=1,
+                border_color=self.colors["selected_border"] if is_active else self.colors["border"],
                 text_color=self.colors["selected_text"] if is_active else self.colors["text"],
                 command=lambda p=pid: self._delete_profile(p),
             )

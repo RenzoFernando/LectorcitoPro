@@ -112,19 +112,6 @@ class SettingsDialog(BaseDialog):
         )
         self.format_shell.pack(pady=SETTINGS_DIALOG_FORMAT_SHELL_PADY, anchor="w")
 
-        self.btn_fmt_txt = ctk.CTkButton(
-            self.format_shell,
-            text=_tr_text(self.parent_view, "btn_format_txt"),
-            width=SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH,
-            height=SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT,
-            command=lambda: self._on_format_change(".txt"),
-        )
-        self.btn_fmt_txt.pack(
-            side="left",
-            padx=SETTINGS_DIALOG_FORMAT_BUTTON_PAD,
-            pady=SETTINGS_DIALOG_FORMAT_BUTTON_PAD,
-        )
-
         self.btn_fmt_md = ctk.CTkButton(
             self.format_shell,
             text=_tr_text(self.parent_view, "btn_format_md"),
@@ -133,6 +120,19 @@ class SettingsDialog(BaseDialog):
             command=lambda: self._on_format_change(".md"),
         )
         self.btn_fmt_md.pack(
+            side="left",
+            padx=SETTINGS_DIALOG_FORMAT_BUTTON_PAD,
+            pady=SETTINGS_DIALOG_FORMAT_BUTTON_PAD,
+        )
+
+        self.btn_fmt_txt = ctk.CTkButton(
+            self.format_shell,
+            text=_tr_text(self.parent_view, "btn_format_txt"),
+            width=SETTINGS_DIALOG_FORMAT_BUTTON_WIDTH,
+            height=SETTINGS_DIALOG_FORMAT_BUTTON_HEIGHT,
+            command=lambda: self._on_format_change(".txt"),
+        )
+        self.btn_fmt_txt.pack(
             side="left",
             padx=(0, SETTINGS_DIALOG_FORMAT_BUTTON_PAD),
             pady=SETTINGS_DIALOG_FORMAT_BUTTON_PAD,
@@ -412,7 +412,7 @@ class SettingsDialog(BaseDialog):
             if self.platform_capabilities.get("supports_launcher_configuration", False):
                 self.entry_exe.focus_set()
             else:
-                self.btn_fmt_txt.focus_set()
+                self.btn_fmt_md.focus_set()
         except Exception:
             pass
 

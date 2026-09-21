@@ -1,4 +1,5 @@
 import os
+import threading
 from fnmatch import fnmatchcase
 
 from app_logging import log_error, log_warning
@@ -139,7 +140,9 @@ class ProjectScanner:
 
         return ignored
 
-    def scan_project(self, source_folder: str) -> ReportProject:
+    def scan_project(
+        self, source_folder: str, cancel_event: threading.Event | None = None
+    ) -> ReportProject:
         source_folder = os.path.abspath(source_folder)
         project = ReportProject(
             name=os.path.basename(os.path.normpath(source_folder)), source_path=source_folder
@@ -148,6 +151,8 @@ class ProjectScanner:
 
         try:
             for root, dirs, filenames in os.walk(source_folder, topdown=True):
+                if cancel_event is not None and cancel_event.is_set():
+                    break
                 relative_root = os.path.relpath(root, source_folder)
                 relative_root = "" if relative_root == "." else relative_root
                 dirs[:] = [
@@ -162,6 +167,8 @@ class ProjectScanner:
 
                 report_files = []
                 for filename in filenames:
+                    if cancel_event is not None and cancel_event.is_set():
+                        break
                     if matches_file_rule(filename, self.excluded_files):
                         continue
                     if self._is_gitignore_excluded(
@@ -192,6 +199,8 @@ class ProjectScanner:
                             files=report_files,
                         )
                     )
+                if cancel_event is not None and cancel_event.is_set():
+                    break
         except OSError as error:
             log_error(
                 "Error recorriendo el proyecto.",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
+from view.ui_assets import load_chevron_icon
 from view.ui_constants import (
     BTN_H_ICON,
     COLORS,
@@ -110,18 +111,24 @@ class PillIconButton(ctk.CTkButton):
         if safe_border_color in (None, "transparent"):
             safe_border_color = hover_color
 
+        # La barra superior no usa contorno de hover. El estado interactivo se
+        # comunica solo mediante el color de fondo, igual que el resto de botones.
+        legacy_kwargs.pop("hover_border_color", None)
+
         super().__init__(
             parent,
             text="",
             image=image,
             width=width,
             height=height,
-            corner_radius=8,
+            corner_radius=6,
             fg_color=fg_color,
             hover_color=hover_color,
             bg_color="transparent",
             border_color=safe_border_color,
             border_width=max(0, int(border_width)),
+            border_spacing=0,
+            anchor="center",
             command=command,
         )
         try:
@@ -134,6 +141,7 @@ class PillIconButton(ctk.CTkButton):
             kwargs = {**cnf, **kwargs}
         kwargs.pop("outside_bg", None)
         kwargs.pop("backdrop_provider", None)
+        kwargs.pop("hover_border_color", None)
         if kwargs.get("border_color") == "transparent":
             kwargs.pop("border_color")
         kwargs["bg_color"] = "transparent"
@@ -146,7 +154,7 @@ class PillIconButton(ctk.CTkButton):
 
 
 class PillTextButton(ctk.CTkFrame):
-    """Accion de texto con slot de icono estable y chevron vectorial de texto."""
+    """Accion de texto con slot de icono estable y chevron centrado."""
 
     def __init__(
         self,
@@ -249,19 +257,38 @@ class PillTextButton(ctk.CTkFrame):
         )
         self._text_label.grid(row=0, column=1, sticky="ew")
 
-        self._chevron_label = ctk.CTkLabel(
+        self._chevron_host = ctk.CTkFrame(
             self,
-            text="›" if self._show_chevron else "",
-            width=18,
-            font=(FONT_FAMILY_PRIMARY, 18, "bold"),
-            text_color=self._chevron_color,
-            fg_color="transparent",
-            bg_color="transparent",
+            width=20,
+            height=20,
+            fg_color=fg_color,
+            bg_color=fg_color,
         )
-        self._chevron_label.grid(row=0, column=2, padx=(10, content_pad), sticky="e")
+        self._chevron_host.grid(row=0, column=2, padx=(8, content_pad))
+        self._chevron_host.grid_propagate(False)
+        self._chevron_host.grid_rowconfigure(0, weight=1)
+        self._chevron_host.grid_columnconfigure(0, weight=1)
+
+        self._chevron_image = None
+        self._chevron_label = ctk.CTkLabel(
+            self._chevron_host,
+            text="",
+            width=14,
+            height=14,
+            font=(FONT_FAMILY_PRIMARY, 18, "normal"),
+            text_color=self._chevron_color,
+            fg_color=fg_color,
+            bg_color=fg_color,
+            anchor="center",
+            justify="center",
+        )
+        # Grid centra el glyph dentro de todo el slot y evita offsets dependientes
+        # del redondeo de place()/DPI.
+        self._chevron_label.grid(row=0, column=0)
 
         self._pill_ready = True
         self._sync_icon()
+        self._sync_chevron()
         self._bind_interaction_tree()
         self._apply_visual_state()
 
@@ -272,6 +299,7 @@ class PillTextButton(ctk.CTkFrame):
             self._icon_label,
             self._placeholder,
             self._text_label,
+            self._chevron_host,
             self._chevron_label,
         )
 
@@ -332,11 +360,36 @@ class PillTextButton(ctk.CTkFrame):
             self._placeholder.configure(border_color=self._icon_color)
             self._placeholder.pack(expand=True)
 
+    def _sync_chevron(self):
+        if not self._show_chevron:
+            self._chevron_image = None
+            self._chevron_label.configure(image=None, text="")
+            return
+
+        self._chevron_image = load_chevron_icon(
+            (14, 14),
+            light_color=self._chevron_color,
+            dark_color=self._chevron_color,
+        )
+        if self._chevron_image is None:
+            self._chevron_label.configure(image=None, text="›", text_color=self._chevron_color)
+            return
+        self._chevron_label.configure(image=self._chevron_image, text="")
+
     def _apply_icon_surface(self, color):
         # Los hijos transparentes de CTk pueden heredar el fondo exterior del
         # contenedor. Igualamos su superficie al boton para evitar cuadrados
         # visibles detras de SVG con transparencia.
         for widget in (self._icon_host, self._icon_label, self._placeholder):
+            try:
+                widget.configure(fg_color=color, bg_color=color)
+            except Exception:
+                pass
+
+    def _apply_chevron_surface(self, color):
+        # El chevron no ocupa toda la altura: asi no tapa el borde redondeado
+        # del boton y mantiene visible el stroke en el extremo derecho.
+        for widget in (self._chevron_host, self._chevron_label):
             try:
                 widget.configure(fg_color=color, bg_color=color)
             except Exception:
@@ -349,6 +402,7 @@ class PillTextButton(ctk.CTkFrame):
         if base != self._applied_bg_color:
             ctk.CTkFrame.configure(self, fg_color=base)
             self._apply_icon_surface(base)
+            self._apply_chevron_surface(base)
             self._applied_bg_color = base
 
         cursor = "arrow" if disabled else "hand2"
@@ -407,7 +461,7 @@ class PillTextButton(ctk.CTkFrame):
             new_color = kwargs.pop("chevron_color")
             if new_color != self._chevron_color:
                 self._chevron_color = new_color
-                self._chevron_label.configure(text_color=self._chevron_color)
+                self._sync_chevron()
         if "fg_color" in kwargs:
             new_color = kwargs.pop("fg_color")
             if new_color != self._normal_color:
@@ -429,7 +483,7 @@ class PillTextButton(ctk.CTkFrame):
             new_chevron = bool(kwargs.pop("chevron"))
             if new_chevron != self._show_chevron:
                 self._show_chevron = new_chevron
-                self._chevron_label.configure(text="›" if self._show_chevron else "")
+                self._sync_chevron()
         if "backdrop_provider" in kwargs:
             self._backdrop_provider = kwargs.pop("backdrop_provider")
 
@@ -544,6 +598,7 @@ class RightSidebar(ctk.CTkFrame):
             outside_bg="transparent",
             fg_color="transparent",
             hover_color=theme["sidebar_hover"],
+            border_color=theme["sidebar_border"],
             border_width=0,
             backdrop_provider=self._backdrop_provider,
         )
@@ -561,6 +616,7 @@ class RightSidebar(ctk.CTkFrame):
                 "fg_color": "transparent",
                 "hover_color": theme["sidebar_hover"],
                 "outside_bg": "transparent",
+                "border_color": theme["sidebar_border"],
                 "border_width": 0,
             }
             if key == "theme_icon":

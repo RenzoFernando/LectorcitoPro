@@ -17,11 +17,10 @@ from view.dialogs import (
     ConfirmDialog,
     _get_color_tuple,
     _style_button,
-    _style_checkbox,
     _style_entry,
     _style_scrollable,
 )
-from view.ui_assets import load_close_icon
+from view.ui_assets import load_checkmark_icon, load_close_icon
 from view.ui_constants import (
     COLORS,
     DIALOG_BUTTON_FONT_SIZE,
@@ -54,13 +53,18 @@ from view.ui_constants import (
     TAGS_DIALOG_SECTION_LABEL_FONT_SIZE,
     TAGS_DIALOG_SECTION_LABEL_PADX,
     TAGS_DIALOG_SECTION_LABEL_PADY,
+    TAGS_DIALOG_SECTION_MIN_HEIGHT,
     TAGS_DIALOG_SEPARATOR_HEIGHT,
     TAGS_DIALOG_SEPARATOR_PADY,
+    TAGS_DIALOG_SINGLE_HEIGHT,
+    TAGS_DIALOG_SINGLE_SECTION_MIN_HEIGHT,
     TAGS_DIALOG_TAG_FONT_SIZE,
     TAGS_DIALOG_WIDTH,
     TAGS_DIALOG_WRAP_SAFETY_PX,
+    get_button_tokens,
     mix_color,
 )
+from view.ui_scaling import scale_tk_value
 
 # =============================================================================
 # DIALOGO DE CONFIGURACION DE ETIQUETAS
@@ -75,6 +79,194 @@ def _tr_text(parent, key: str, *args):
         except Exception:
             pass
     return translate_default(key, *args)
+
+
+class _AlignedCheckBox(ctk.CTkFrame):
+    def __init__(self, parent, *, text: str, variable):
+        super().__init__(parent, fg_color="transparent")
+        self._variable = variable
+        self._blue = get_button_tokens("blue")
+        self._hovered = False
+
+        self._box = ctk.CTkFrame(
+            self,
+            width=22,
+            height=22,
+            corner_radius=6,
+            border_width=1,
+            fg_color=_get_color_tuple("bg_panel"),
+            border_color=_get_color_tuple("border_strong"),
+        )
+        self._box.grid(row=0, column=0, sticky="w")
+        self._box.grid_propagate(False)
+        self._box.grid_rowconfigure(0, weight=1)
+        self._box.grid_columnconfigure(0, weight=1)
+
+        self._mark_image = load_checkmark_icon(
+            (14, 14),
+            light_color="#FFFFFF",
+            dark_color="#FFFFFF",
+        )
+        self._mark = ctk.CTkLabel(
+            self._box,
+            text="",
+            image=self._mark_image,
+            width=14,
+            height=14,
+            fg_color="transparent",
+            bg_color="transparent",
+            anchor="center",
+        )
+        # Grid mantiene el centro geometrico del glyph aunque cambie el DPI.
+        self._mark.grid(row=0, column=0)
+
+        self._label = ctk.CTkLabel(
+            self,
+            text=text,
+            height=22,
+            font=(FONT_FAMILY_PRIMARY, DIALOG_BUTTON_FONT_SIZE),
+            text_color=_get_color_tuple("text"),
+            fg_color="transparent",
+            anchor="w",
+        )
+        self._label.grid(row=0, column=1, sticky="w", padx=(8, 0))
+
+        for widget in (self, self._box, self._mark, self._label):
+            widget.bind("<Button-1>", self._toggle_from_event, add="+")
+            widget.bind("<Enter>", self._on_enter, add="+")
+            widget.bind("<Leave>", self._on_leave, add="+")
+            try:
+                widget.configure(cursor="hand2")
+            except Exception:
+                pass
+
+        self._trace_id = self._variable.trace_add("write", self._on_variable_change)
+        self._sync_visual()
+
+    def _toggle(self):
+        self._variable.set(not bool(self._variable.get()))
+
+    def _toggle_from_event(self, event=None):
+        self._toggle()
+        return "break"
+
+    def _pointer_inside(self) -> bool:
+        try:
+            x, y = self.winfo_pointerxy()
+            left = self.winfo_rootx()
+            top = self.winfo_rooty()
+            return left <= x < left + self.winfo_width() and top <= y < top + self.winfo_height()
+        except Exception:
+            return False
+
+    def _on_enter(self, event=None):
+        self._hovered = True
+        self._sync_visual()
+
+    def _on_leave(self, event=None):
+        if self._pointer_inside():
+            return
+        self._hovered = False
+        self._sync_visual()
+
+    def _on_variable_change(self, *args):
+        self._sync_visual()
+
+    def _sync_visual(self):
+        selected = bool(self._variable.get())
+        if selected:
+            self._box.configure(
+                fg_color=self._blue["hover"] if self._hovered else self._blue["bg"],
+                border_color=self._blue["border"],
+            )
+            self._mark.grid()
+        else:
+            self._box.configure(
+                fg_color=(
+                    _get_color_tuple("surface_alt")
+                    if self._hovered
+                    else _get_color_tuple("bg_panel")
+                ),
+                border_color=_get_color_tuple("border_strong"),
+            )
+            self._mark.grid_remove()
+
+    def set_text(self, text: str):
+        self._label.configure(text=text)
+
+    def destroy(self):
+        try:
+            self._variable.trace_remove("write", self._trace_id)
+        except Exception:
+            pass
+        super().destroy()
+
+
+class _TagCloseButton(ctk.CTkFrame):
+    """Boton de cierre cuadrado y sin contorno para las etiquetas."""
+
+    def __init__(self, parent, *, image, size: int, corner_radius: int, text_color, hover_color, command):
+        super().__init__(
+            parent,
+            width=size,
+            height=size,
+            corner_radius=corner_radius,
+            fg_color="transparent",
+            border_width=0,
+        )
+        self._command = command
+        self._hover_color = hover_color
+        self.grid_propagate(False)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        self._label = ctk.CTkLabel(
+            self,
+            text="" if image is not None else "×",
+            image=image,
+            width=14,
+            height=14,
+            font=(FONT_FAMILY_PRIMARY, DIALOG_BUTTON_FONT_SIZE, "bold"),
+            text_color=text_color,
+            fg_color="transparent",
+            bg_color="transparent",
+            anchor="center",
+        )
+        self._label.grid(row=0, column=0)
+
+        for widget in (self, self._label):
+            widget.bind("<Button-1>", self._invoke, add="+")
+            widget.bind("<Enter>", self._on_enter, add="+")
+            widget.bind("<Leave>", self._on_leave, add="+")
+            try:
+                widget.configure(cursor="hand2")
+            except Exception:
+                pass
+
+    def _pointer_inside(self) -> bool:
+        try:
+            x, y = self.winfo_pointerxy()
+            left = self.winfo_rootx()
+            top = self.winfo_rooty()
+            return left <= x < left + self.winfo_width() and top <= y < top + self.winfo_height()
+        except Exception:
+            return False
+
+    def _set_surface(self, color):
+        self.configure(fg_color=color)
+        self._label.configure(fg_color=color, bg_color=color)
+
+    def _on_enter(self, event=None):
+        self._set_surface(self._hover_color)
+
+    def _on_leave(self, event=None):
+        if not self._pointer_inside():
+            self._set_surface("transparent")
+
+    def _invoke(self, event=None):
+        if callable(self._command):
+            self._command()
+        return "break"
 
 
 class TagsConfigDialog(BaseDialog):
@@ -116,6 +308,8 @@ class TagsConfigDialog(BaseDialog):
         self.files_prompt = files_prompt
         self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
         self.files_list = normalize_file_tag_list(initial_files)
+        self._sort_tag_list(self.folders_list)
+        self._sort_tag_list(self.files_list)
         self._parent = parent
         self._layout_retry_after_id = None
         self._layout_retry_count = 0
@@ -126,11 +320,12 @@ class TagsConfigDialog(BaseDialog):
         self._initial_state_signature = None
 
         self.tag_colors = self._build_tag_colors()
-        self.close_icon = load_close_icon((12, 12))
+        self.close_icon = load_close_icon((14, 14))
 
         self.tag_font = ctk.CTkFont(family=FONT_FAMILY_PRIMARY, size=TAGS_DIALOG_TAG_FONT_SIZE)
 
-        self.geometry(f"{TAGS_DIALOG_WIDTH}x{TAGS_DIALOG_HEIGHT}")
+        dialog_height = TAGS_DIALOG_SINGLE_HEIGHT if self.single_mode else TAGS_DIALOG_HEIGHT
+        self.geometry(f"{TAGS_DIALOG_WIDTH}x{dialog_height}")
         self.main_frame = self._create_card_frame()
         self.main_frame.grid_columnconfigure(0, weight=1)
 
@@ -146,26 +341,25 @@ class TagsConfigDialog(BaseDialog):
 
         if self.single_mode:
             self._create_tag_section(0, files_prompt, "files", text_color)
-            self.main_frame.grid_rowconfigure(1, weight=1)
+            self.main_frame.grid_rowconfigure(
+                1, weight=1, minsize=TAGS_DIALOG_SINGLE_SECTION_MIN_HEIGHT
+            )
         else:
             self._create_tag_section(0, folders_prompt, "folders", text_color)
             self._create_tag_section(1, files_prompt, "files", text_color)
-            self.main_frame.grid_rowconfigure(1, weight=1)
-            self.main_frame.grid_rowconfigure(4, weight=1)
+            self.main_frame.grid_rowconfigure(1, weight=1, minsize=TAGS_DIALOG_SECTION_MIN_HEIGHT)
+            self.main_frame.grid_rowconfigure(4, weight=1, minsize=TAGS_DIALOG_SECTION_MIN_HEIGHT)
 
         separator_row = 6
         button_row = 7
 
         if self.extra_checkbox_text:
             self.extra_checkbox_var = ctk.BooleanVar(value=self.extra_checkbox_value)
-            self.extra_checkbox = ctk.CTkCheckBox(
+            self.extra_checkbox = _AlignedCheckBox(
                 self.main_frame,
                 text=self.extra_checkbox_text,
                 variable=self.extra_checkbox_var,
-                onvalue=True,
-                offvalue=False,
             )
-            _style_checkbox(self.extra_checkbox)
             self.extra_checkbox.grid(
                 row=6,
                 column=0,
@@ -421,7 +615,7 @@ class TagsConfigDialog(BaseDialog):
         if self.btn_auto is not None:
             self.btn_auto.configure(text=_tr_text(self._parent, "btn_autodetect"))
         if self.extra_checkbox is not None:
-            self.extra_checkbox.configure(text=self.extra_checkbox_text or "")
+            self.extra_checkbox.set_text(self.extra_checkbox_text or "")
         self.ok_button.configure(text=_tr_text(self._parent, "btn_ok"))
         self.cancel_button.configure(text=_tr_text(self._parent, "btn_cancel_simple"))
 
@@ -456,6 +650,8 @@ class TagsConfigDialog(BaseDialog):
         self.extra_checkbox_value = bool(extra_checkbox_value)
         self.folders_list = copy.deepcopy(initial_folders) if initial_folders is not None else []
         self.files_list = normalize_file_tag_list(initial_files)
+        self._sort_tag_list(self.folders_list)
+        self._sort_tag_list(self.files_list)
         self.result = None
         self._last_layout_widths = None
         self._last_window_size = None
@@ -526,48 +722,44 @@ class TagsConfigDialog(BaseDialog):
         visible_widths = []
         fallback_widths = []
         canvas = self._get_scroll_canvas(frame)
-        if canvas is not None:
+
+        # Frame y canvas ya representan el viewport real. No se descuentan
+        # margenes adicionales porque eso provoca saltos de linea prematuros.
+        for widget in (frame, canvas):
+            if widget is None:
+                continue
             try:
-                width = int(canvas.winfo_width()) - 12
-                if width > 0:
+                width = int(widget.winfo_width())
+                if width > 1:
                     visible_widths.append(width)
             except Exception:
                 pass
             try:
-                width = int(canvas.winfo_reqwidth()) - 12
-                if width > 0:
+                width = int(widget.winfo_reqwidth())
+                if width > 1:
                     fallback_widths.append(width)
             except Exception:
                 pass
-        try:
-            width = int(frame.winfo_width()) - 16
-            if width > 0:
-                visible_widths.append(width)
-        except Exception:
-            pass
-        try:
-            width = int(frame.winfo_reqwidth()) - 16
-            if width > 0:
-                fallback_widths.append(width)
-        except Exception:
-            pass
-        try:
-            width = int(self.main_frame.winfo_width()) - 40
-            if width > 0:
-                visible_widths.append(width)
-        except Exception:
-            pass
-        try:
-            width = int(self.winfo_width()) - 56
-            if width > 0:
-                visible_widths.append(width)
-        except Exception:
-            pass
+
         if visible_widths:
             return min(visible_widths)
         if fallback_widths:
             return min(fallback_widths)
         return 0
+
+    @staticmethod
+    def _tag_sort_key(tag_data):
+        if isinstance(tag_data, dict):
+            name = str(tag_data.get("nombre", "") or "")
+        else:
+            name = str(tag_data or "")
+        alpha_name = name.lstrip("._- ")
+        return (alpha_name.casefold(), name.casefold(), name)
+
+    def _sort_tag_list(self, tag_list):
+        if not isinstance(tag_list, list):
+            return
+        tag_list.sort(key=self._tag_sort_key)
 
     def _get_horizontal_padding_total(self, padding_value):
         if isinstance(padding_value, (tuple, list)):
@@ -587,12 +779,25 @@ class TagsConfigDialog(BaseDialog):
         try:
             label_width = int(self.tag_font.measure(str(tag_name)))
         except Exception:
-            label_width = max(8, int(len(str(tag_name)) * TAGS_DIALOG_TAG_FONT_SIZE * 0.72))
-        label_width += self._get_horizontal_padding_total(TAGS_DIALOG_PILL_LABEL_PADX)
-        close_width = TAGS_DIALOG_PILL_CLOSE_SIZE + self._get_horizontal_padding_total(
-            TAGS_DIALOG_PILL_CLOSE_PADX
+            label_width = max(
+                8,
+                scale_tk_value(
+                    self,
+                    int(len(str(tag_name)) * TAGS_DIALOG_TAG_FONT_SIZE * 0.72),
+                ),
+            )
+
+        label_padding = self._get_horizontal_padding_total(
+            scale_tk_value(self, TAGS_DIALOG_PILL_LABEL_PADX)
         )
-        return label_width + close_width + TAGS_DIALOG_PILL_WIDTH_SAFETY_PX
+        close_width = (
+            scale_tk_value(self, TAGS_DIALOG_PILL_CLOSE_SIZE)
+            + self._get_horizontal_padding_total(
+                scale_tk_value(self, TAGS_DIALOG_PILL_CLOSE_PADX)
+            )
+        )
+        safety_width = scale_tk_value(self, TAGS_DIALOG_PILL_WIDTH_SAFETY_PX)
+        return label_width + label_padding + close_width + safety_width
 
     def _refresh_layout_when_ready(self):
         self._layout_retry_after_id = None
@@ -782,6 +987,7 @@ class TagsConfigDialog(BaseDialog):
 
             if added_rules:
                 self.files_list.extend({"nombre": rule, "estado": "activo"} for rule in added_rules)
+                self._sort_tag_list(self.files_list)
                 self._last_layout_widths = None
                 self._redraw_tag_list(self.files_list)
                 self._parent.show_message("info_title", "msg_autodetect_result", str(added_count))
@@ -835,59 +1041,60 @@ class TagsConfigDialog(BaseDialog):
         if container_width < 220:
             return
 
-        space_between_pills = TAGS_DIALOG_PILL_SPACING
-        usable_width = max(1, container_width - TAGS_DIALOG_WRAP_SAFETY_PX)
+        space_between_pills = scale_tk_value(self, TAGS_DIALOG_PILL_SPACING)
+        usable_width = max(
+            1,
+            container_width - scale_tk_value(self, TAGS_DIALOG_WRAP_SAFETY_PX),
+        )
 
+        self._sort_tag_list(tag_list)
         measured_items = [
             (index, tag_data, self._estimate_pill_width(tag_data["nombre"]))
             for index, tag_data in enumerate(tag_list)
         ]
 
+        # El orden visual es alfabético. Cada fila se calcula con el espaciado
+        # mínimo; las filas completas se justifican y la última queda compacta.
         rows = []
-        pending_items = list(measured_items)
-
-        while pending_items:
-            current_items = [pending_items.pop(0)]
-            current_row_width = current_items[0][2]
-
-            while pending_items:
-                remaining_width = usable_width - current_row_width - space_between_pills
-                if remaining_width <= 0:
-                    break
-
-                selected_index = None
-                if pending_items[0][2] <= remaining_width:
-                    selected_index = 0
-                else:
-                    best_width = -1
-                    for candidate_index, candidate in enumerate(pending_items):
-                        candidate_width = candidate[2]
-                        if candidate_width <= remaining_width and candidate_width > best_width:
-                            selected_index = candidate_index
-                            best_width = candidate_width
-
-                if selected_index is None:
-                    break
-
-                selected_item = pending_items.pop(selected_index)
-                current_items.append(selected_item)
-                current_row_width += space_between_pills + selected_item[2]
-
+        current_items = []
+        current_row_width = 0
+        for item in measured_items:
+            item_width = min(item[2], usable_width)
+            next_width = (
+                item_width
+                if not current_items
+                else current_row_width + space_between_pills + item_width
+            )
+            if current_items and next_width > usable_width:
+                rows.append(current_items)
+                current_items = [item]
+                current_row_width = item_width
+            else:
+                current_items.append(item)
+                current_row_width = next_width
+        if current_items:
             rows.append(current_items)
 
         row_container = ctk.CTkFrame(frame, fg_color="transparent")
         row_container.pack(fill="x", anchor="nw")
 
-        for row_items in rows:
+        for row_index, row_items in enumerate(rows):
             current_row = ctk.CTkFrame(row_container, fg_color="transparent")
             current_row.pack(fill="x", anchor="w", pady=TAGS_DIALOG_ROW_PADY)
+            justify_row = row_index < len(rows) - 1 and len(row_items) > 1
 
-            gap_count = max(0, len(row_items) - 1)
             for position, (index, tag_data, _) in enumerate(row_items):
+                item_column = position * 2
                 pill_frame = self._create_pill_frame(current_row, tag_data, index, tag_list)
-                pill_frame.pack(
-                    side="left", padx=(0, space_between_pills if position < gap_count else 0)
-                )
+                pill_frame.grid(row=0, column=item_column, sticky="w")
+
+                if position < len(row_items) - 1:
+                    spacer_column = item_column + 1
+                    current_row.grid_columnconfigure(
+                        spacer_column,
+                        weight=1 if justify_row else 0,
+                        minsize=space_between_pills,
+                    )
 
         self._configure_mousewheel_for_scrollable(frame)
         if canvas is not None:
@@ -915,20 +1122,15 @@ class TagsConfigDialog(BaseDialog):
         )
         label.pack(side="left", padx=TAGS_DIALOG_PILL_LABEL_PADX, pady=TAGS_DIALOG_PILL_LABEL_PADY)
 
-        close_button = ctk.CTkButton(
+        close_button = _TagCloseButton(
             pill_frame,
-            text="" if self.close_icon is not None else "×",
             image=self.close_icon,
-            width=TAGS_DIALOG_PILL_CLOSE_SIZE,
-            height=TAGS_DIALOG_PILL_CLOSE_SIZE,
+            size=TAGS_DIALOG_PILL_CLOSE_SIZE,
             corner_radius=TAGS_DIALOG_PILL_CLOSE_RADIUS,
-            font=(FONT_FAMILY_PRIMARY, DIALOG_BUTTON_FONT_SIZE, "bold"),
             text_color=colors["text"],
-            fg_color="transparent",
             hover_color=colors["hover"],
-            command=lambda i=index, tags=tag_list: self._delete_tag(i, tags),
+            command=lambda item=tag_data, tags=tag_list: self._delete_tag_item(item, tags),
         )
-
         close_button.pack(
             side="right", padx=TAGS_DIALOG_PILL_CLOSE_PADX, pady=TAGS_DIALOG_PILL_CLOSE_PADY
         )
@@ -964,6 +1166,7 @@ class TagsConfigDialog(BaseDialog):
             return
 
         tag_list.append({"nombre": tag_to_check, "estado": "activo"})
+        self._sort_tag_list(tag_list)
         entry.delete(0, "end")
         self._last_layout_widths = None
         self._redraw_tag_list(tag_list)
@@ -973,6 +1176,18 @@ class TagsConfigDialog(BaseDialog):
             tag_list.pop(index)
             self._last_layout_widths = None
             self._redraw_tag_list(tag_list)
+
+    def _delete_tag_item(self, tag_data, tag_list):
+        for index, current in enumerate(tag_list):
+            if current is tag_data:
+                self._delete_tag(index, tag_list)
+                return
+        try:
+            tag_list.remove(tag_data)
+        except ValueError:
+            return
+        self._last_layout_widths = None
+        self._redraw_tag_list(tag_list)
 
     def _toggle_tag_state(self, event, index, tag_list):
         if index < len(tag_list):
@@ -992,6 +1207,8 @@ class TagsConfigDialog(BaseDialog):
 
     def _on_ok(self, event=None):
         self.files_list = normalize_file_tag_list(self.files_list)
+        self._sort_tag_list(self.folders_list)
+        self._sort_tag_list(self.files_list)
         if self.single_mode:
             self.result = (None, self.files_list)
         else:

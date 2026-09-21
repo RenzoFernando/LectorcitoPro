@@ -13,11 +13,14 @@ TRANSLATIONS = {
         "greeting_user": "¡Hola, {}!",
         "main_action_prompt": "Selecciona una acción:",
         "footer_copyright": "Copyright © {} - {}",
-        "manual_title": "Manual de Usuario",
+        "manual_title": "Lectorcito Pro",
         "info_title": "Información",
         "error_title": "Error",
         "critical_error_title": "Error Crítico {}",
-        "critical_error_message": "Error crítico:\n\n{}\n\nDetalles en:\n{}",
+        "critical_error_label": "Error crítico:",
+        "critical_error_message": "{}\n\nDetalles en:\n{}",
+        "btn_open_log_folder": "Abrir carpeta de logs",
+        "critical_log_folder_error": "No se pudo abrir la carpeta de logs.",
         "fallback_user": "Usuario",
         # --- SALUDOS ---
         "greet_m": [
@@ -115,7 +118,7 @@ TRANSLATIONS = {
         "msg_restore_success": "¡Ajustes restaurados a los valores por defecto!",
         "dlg_external_link_title": "Abrir enlace externo",
         "msg_open_repository_confirm": "Se abrirá el navegador para abrir el repositorio. ¿Desea continuar?",
-        "msg_open_manual_confirm": "Se abrirá el navegador para abrir el manual/documentación. ¿Desea continuar?",
+        "msg_open_manual_confirm": "Se abrirá el navegador para acceder al sitio oficial y la documentación. ¿Desea continuar?",
         # --- PERFILES ---
         "dlg_profiles_title": "Gestión de Perfiles",
         "lbl_select_profile": "Seleccione un Perfil de Trabajo",
@@ -204,7 +207,7 @@ TRANSLATIONS = {
         "tooltip_restaurar": "Restaurar todas las configuraciones a su estado inicial.",
         "tooltip_github": "Abrir el repositorio del proyecto en GitHub.",
         "tooltip_perfil": "Gestionar perfiles de configuración (ej: Java, Python).",
-        "tooltip_info": "Abrir el manual de usuario y documentación online.",
+        "tooltip_info": "Abrir el sitio oficial y la documentación online.",
         "tooltip_ajustes": "Configuración general, formato de reportes y accesos directos.",
     },
     "en": {
@@ -214,11 +217,14 @@ TRANSLATIONS = {
         "greeting_user": "Hello, {}!",
         "main_action_prompt": "Select an action:",
         "footer_copyright": "Copyright © {} - {}",
-        "manual_title": "User Manual",
+        "manual_title": "Lectorcito Pro",
         "info_title": "Information",
         "error_title": "Error",
         "critical_error_title": "Critical Error {}",
-        "critical_error_message": "Critical error:\n\n{}\n\nDetails at:\n{}",
+        "critical_error_label": "Critical error:",
+        "critical_error_message": "{}\n\nDetails at:\n{}",
+        "btn_open_log_folder": "Open logs folder",
+        "critical_log_folder_error": "The logs folder could not be opened.",
         "fallback_user": "User",
         # --- GREETINGS ---
         "greet_m": [
@@ -316,7 +322,7 @@ TRANSLATIONS = {
         "msg_restore_success": "Settings have been restored to default!",
         "dlg_external_link_title": "Open external link",
         "msg_open_repository_confirm": "The browser will open to access the repository. Do you want to continue?",
-        "msg_open_manual_confirm": "The browser will open to access the manual/documentation. Do you want to continue?",
+        "msg_open_manual_confirm": "The browser will open the official site and online documentation. Do you want to continue?",
         # --- PROFILES ---
         "dlg_profiles_title": "Profile Management",
         "lbl_select_profile": "Select Work Profile",
@@ -405,7 +411,7 @@ TRANSLATIONS = {
         "tooltip_restaurar": "Restore all settings to their default state.",
         "tooltip_github": "Open the project repository on GitHub.",
         "tooltip_perfil": "Manage configuration profiles (e.g., Java, Python).",
-        "tooltip_info": "Open the user manual and online documentation.",
+        "tooltip_info": "Open the official site and online documentation.",
         "tooltip_ajustes": "General settings, report format, and shortcuts.",
     },
 }

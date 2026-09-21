@@ -31,7 +31,7 @@ APP_REPOSITORY_WEB_URL = (
 
 APP_WEBSITE_URL = "https://renzofernando.github.io/LectorcitoPro/"
 
-APP_MANUAL_TITLE = "Manual de Usuario"
+APP_MANUAL_TITLE = APP_DISPLAY_NAME
 
 APP_EXECUTABLE_NAME = f"{APP_NAME_INTERNAL}.exe"
 
@@ -110,7 +110,7 @@ def get_release_download_url() -> str:
 
 def get_document_title() -> str:
 
-    return f"{APP_MANUAL_TITLE} - {APP_DISPLAY_NAME}"
+    return f"{APP_DISPLAY_NAME} | Auditoría de código y contexto para IA"
 
 
 def get_copyright_text() -> str:
@@ -182,9 +182,6 @@ def get_web_meta_payload() -> dict:
         "portableArtifactName": APP_PORTABLE_ARTIFACT_NAME,
         "linuxArtifactName": APP_LINUX_ARTIFACT_NAME,
         "releaseBasename": APP_RELEASE_BASENAME,
-        "currentYear": get_current_year(),
-        "copyrightText": get_copyright_text(),
-        "legalCopyright": APP_LEGAL_COPYRIGHT,
         "trademark": APP_TRADEMARK,
     }
 

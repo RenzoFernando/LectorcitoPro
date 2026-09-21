@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /LectorcitoPro/
+Disallow: /LectorcitoPro/page/
+Disallow: /LectorcitoPro/build/
+Disallow: /LectorcitoPro/dist/
+Disallow: /LectorcitoPro/downloads/
+Disallow: /LectorcitoPro/docs/
+Disallow: /LectorcitoPro/src/
+Disallow: /LectorcitoPro/scripts/
+Disallow: /LectorcitoPro/requirements/
+Disallow: /LectorcitoPro/README.md
+
+Sitemap: https://renzofernando.github.io/LectorcitoPro/sitemap.xml

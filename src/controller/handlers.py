@@ -84,8 +84,10 @@ def select_destination_path(controller):
         controller.view.show_message("info_title", "dest_set_default_msg")
 
     elif choice == "custom":
-        path = filedialog.askdirectory(
-            parent=controller.view, title=controller.view._tr("btn_sel_lecturas")
+        path = controller.view.run_native_modal(
+            lambda: filedialog.askdirectory(
+                parent=controller.view, title=controller.view._tr("btn_sel_lecturas")
+            )
         )
         if path:
             custom_path = os.path.join(path, "Lecturas")
@@ -832,6 +834,8 @@ def save_preferences_silent(controller):
 
 
 def toggle_theme(controller):
+    if getattr(controller.view, "_is_theme_switching", False):
+        return
     new_theme = "Dark" if controller.view.current_theme == "Light" else "Light"
     controller.config["theme"] = new_theme
     controller.view.switch_theme_animated(new_theme)

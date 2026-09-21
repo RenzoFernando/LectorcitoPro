@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import datetime
+import getpass
 import os
 import random
 import tkinter as tk
+import tkinter.font as tkfont
 
 import customtkinter as ctk
 
 from app_logging import log_error, log_info, log_warning
-from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL
+from app_meta import APP_DISPLAY_NAME, APP_WEBSITE_URL, get_current_year
 from i18n.translations import TRANSLATIONS, translate_default
 from platform_services import get_platform_service
 from view.dialogs import (
@@ -33,12 +35,11 @@ from view.ui_constants import (
     MAIN_WINDOW_FADE_OUT_STEP,
     REPO_URL,
     VERSION,
-    YEAR,
     get_theme_tokens,
 )
 from view.ui_scaling import (
     configure_application_scaling,
-    fit_canvas_font,
+    get_application_workarea,
     scale_tk_value,
 )
 
@@ -71,6 +72,12 @@ class LectorcitoApp(ctk.CTk):
         self.REPO_URL = REPO_URL
         self.tooltips: dict[str, CustomTooltip] = {}
         self._is_modal_open = False
+        self._modal_depth = 0
+        self._native_modal_depth = 0
+        self._modal_control_states = {}
+        self._modal_overlay = None
+        self._modal_overlay_sync_after_id = None
+        self._modal_action_depth = 0
         self._modal_fail_safe_after_id = None
         self._dialog_cache = {}
         self._is_theme_switching = False
@@ -87,6 +94,7 @@ class LectorcitoApp(ctk.CTk):
         self.maxsize(self._app_w, self._app_h)
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self._close_with_fade_out)
+        self.bind("<Configure>", self._schedule_modal_overlay_sync, add="+")
 
         safe_set_window_icon(self)
 
@@ -108,6 +116,28 @@ class LectorcitoApp(ctk.CTk):
     def _schedule_header_refresh(self, event=None):
         self._refresh_header_canvas()
 
+    def _get_current_user_name(self) -> str:
+        candidates = []
+        try:
+            candidates.append(getpass.getuser())
+        except Exception:
+            pass
+        try:
+            candidates.append(os.getlogin())
+        except OSError:
+            pass
+        for key in ("USERNAME", "USER", "LOGNAME"):
+            candidates.append(os.environ.get(key, ""))
+
+        for candidate in candidates:
+            clean = str(candidate or "").strip()
+            if not clean:
+                continue
+            clean = clean.rsplit("\\", 1)[-1].split("@", 1)[0].strip()
+            if clean:
+                return clean.lower().capitalize()
+        return self._tr("fallback_user")
+
     def _refresh_header_canvas(self):
         if not hasattr(self, "lbl_greeting_title"):
             return
@@ -115,25 +145,54 @@ class LectorcitoApp(ctk.CTk):
         title_text = self._header_greeting_title or ""
         subtitle_text = self._header_greeting_subtitle or ""
         try:
-            title_font = fit_canvas_font(
-                self,
-                title_text,
-                FONT_FAMILY_PRIMARY,
-                MAIN_WINDOW_GREETING_FONT_SIZE,
-                MAIN_WINDOW_GREETING_MIN_FONT_SIZE,
-                max(180, MAIN_WINDOW_HEADER_TEXT_WIDTH - 4),
-                weight="bold",
-            )
+            actual_width = int(self.header_message_frame.winfo_width())
+        except Exception:
+            actual_width = 0
+        available_width = max(
+            180,
+            actual_width - 4 if actual_width > 40 else MAIN_WINDOW_HEADER_TEXT_WIDTH,
+        )
+
+        def fit_font_size(text: str, preferred: int, minimum: int, weight: str) -> int:
+            for size in range(preferred, minimum - 1, -1):
+                try:
+                    pixel_size = max(1, int(scale_tk_value(self, size)))
+                    font = tkfont.Font(
+                        root=self,
+                        family=FONT_FAMILY_PRIMARY,
+                        size=-pixel_size,
+                        weight=weight,
+                    )
+                    if font.measure(text) <= available_width:
+                        return size
+                except Exception:
+                    break
+            return minimum
+
+        title_size = fit_font_size(
+            title_text,
+            MAIN_WINDOW_GREETING_FONT_SIZE,
+            MAIN_WINDOW_GREETING_MIN_FONT_SIZE,
+            "bold",
+        )
+        subtitle_size = fit_font_size(
+            subtitle_text,
+            MAIN_WINDOW_SUBTITLE_FONT_SIZE,
+            MAIN_WINDOW_SUBTITLE_MIN_FONT_SIZE,
+            "normal",
+        )
+        try:
             self.lbl_greeting_title.configure(
                 text=title_text,
                 text_color=theme["text_primary"],
-                font=title_font,
+                font=(FONT_FAMILY_PRIMARY, title_size, "bold"),
+                wraplength=0,
             )
             self.lbl_greeting_subtitle.configure(
                 text=subtitle_text,
                 text_color=theme["text_secondary"],
-                font=(FONT_FAMILY_PRIMARY, 13, "normal"),
-                wraplength=max(180, MAIN_WINDOW_HEADER_TEXT_WIDTH - 4),
+                font=(FONT_FAMILY_PRIMARY, subtitle_size, "normal"),
+                wraplength=0,
             )
         except Exception:
             pass
@@ -142,13 +201,16 @@ class LectorcitoApp(ctk.CTk):
         footer_height = max(1, scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT))
         footer_clearance = footer_height + scale_tk_value(self, 8)
         center_pady = scale_tk_value(self, MAIN_WINDOW_CENTER_PADY)
+        header_clearance = scale_tk_value(
+            self, MAIN_WINDOW_HEADER_MIN_HEIGHT + MAIN_WINDOW_HEADER_CONTENT_GAP
+        )
 
         try:
             self.center_container.grid_configure(
                 padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
-                pady=(center_pady[0], center_pady[1] + footer_clearance),
+                pady=(header_clearance, center_pady[1] + footer_clearance),
             )
-            self.header_frame.configure(height=MAIN_WINDOW_HEADER_MIN_HEIGHT)
+            self.header_frame.configure(height=scale_tk_value(self, MAIN_WINDOW_HEADER_MIN_HEIGHT))
             self.footer_frame.configure(height=footer_height)
         except Exception:
             pass
@@ -157,8 +219,35 @@ class LectorcitoApp(ctk.CTk):
 
         return _get_widget_window_rect(self)
 
+    def _center_main_window_on_workarea(self, max_attempts: int = 6):
+        try:
+            left, top, right, bottom = get_application_workarea(self)
+            target_cx = int((left + right) / 2)
+            target_cy = int((top + bottom) / 2)
+        except Exception:
+            return
+
+        for _ in range(max(1, int(max_attempts))):
+            try:
+                self.update_idletasks()
+                rect = _get_widget_window_rect(self)
+                if rect == (0, 0, 0, 0):
+                    return
+                actual_cx = int((rect[0] + rect[2]) / 2)
+                actual_cy = int((rect[1] + rect[3]) / 2)
+                dx = target_cx - actual_cx
+                dy = target_cy - actual_cy
+                if abs(dx) <= 1 and abs(dy) <= 1:
+                    return
+
+                new_x = int(self.winfo_x()) + dx
+                new_y = int(self.winfo_y()) + dy
+                self.geometry(f"{new_x:+d}{new_y:+d}")
+            except Exception:
+                return
+
     def show_main_window(self):
-        """Muestra el root una sola vez, ya dimensionado y completamente dibujado."""
+        """Muestra el root una sola vez, centrado y completamente dibujado."""
         if getattr(self, "_startup_visible", False):
             return
 
@@ -168,34 +257,48 @@ class LectorcitoApp(ctk.CTk):
             pass
 
         try:
-            self.geometry(f"{self._app_w}x{self._app_h}")
+            left, top, right, bottom = get_application_workarea(self)
+            initial_x = int(left + ((right - left) - self._app_w) / 2)
+            initial_y = int(top + ((bottom - top) - self._app_h) / 2)
+            self.geometry(
+                f"{self._app_w}x{self._app_h}{initial_x:+d}{initial_y:+d}"
+            )
             self.update_idletasks()
 
-            screen_w = max(1, int(self.winfo_screenwidth()))
-            screen_h = max(1, int(self.winfo_screenheight()))
-            actual_w = max(1, int(self.winfo_width()))
-            actual_h = max(1, int(self.winfo_height()))
-            x = max(0, int((screen_w - actual_w) / 2))
-            y = max(0, int((screen_h - actual_h) / 2))
-            final_geometry = f"{self._app_w}x{self._app_h}+{x}+{y}"
-            self.geometry(final_geometry)
-            self.update_idletasks()
-
-            # La ventana se mapea aun transparente y solo se revela cuando su
-            # geometria final ya esta aplicada. Evita el destello cuadrado inicial.
+            # La ventana se mapea aun transparente para medir el marco nativo real.
+            # Después se corrige su centro contra el area util del monitor elegido.
             self.deiconify()
             self.update_idletasks()
-            self.geometry(final_geometry)
-        except Exception as error:
-            log_warning(str(error), operation="show_main_window")
-
-        try:
-            self.attributes("-alpha", 1.0)
-            self.lift()
+            self._center_main_window_on_workarea()
+            self.update_idletasks()
         except Exception as error:
             log_warning(str(error), operation="show_main_window")
 
         self._startup_visible = True
+        try:
+            self.lift()
+            self.after(MAIN_WINDOW_FADE_OUT_INTERVAL_MS, self._fade_in_on_startup)
+        except Exception as error:
+            log_warning(str(error), operation="show_main_window")
+            try:
+                self.attributes("-alpha", 1.0)
+            except Exception:
+                pass
+            log_info("Ventana principal visible.", operation="startup_ui")
+
+    def _fade_in_on_startup(self):
+        try:
+            alpha = float(self.attributes("-alpha"))
+            next_alpha = min(1.0, alpha + MAIN_WINDOW_FADE_OUT_STEP)
+            self.attributes("-alpha", next_alpha)
+        except Exception as error:
+            log_warning(str(error), operation="startup_fade_in")
+            next_alpha = 1.0
+
+        if next_alpha < 1.0:
+            self.after(MAIN_WINDOW_FADE_OUT_INTERVAL_MS, self._fade_in_on_startup)
+            return
+
         log_info("Ventana principal visible.", operation="startup_ui")
 
     def _close_with_fade_out(self):
@@ -270,6 +373,12 @@ class LectorcitoApp(ctk.CTk):
 
         footer_height = max(1, scale_tk_value(self, MAIN_WINDOW_FOOTER_HEIGHT))
         center_pady = scale_tk_value(self, MAIN_WINDOW_CENTER_PADY)
+        header_clearance = scale_tk_value(
+            self, MAIN_WINDOW_HEADER_MIN_HEIGHT + MAIN_WINDOW_HEADER_CONTENT_GAP
+        )
+
+        self._create_header(self)
+
         self.center_container = ctk.CTkFrame(
             self,
             fg_color=theme["bg_base"],
@@ -280,20 +389,10 @@ class LectorcitoApp(ctk.CTk):
             column=0,
             sticky="nsew",
             padx=scale_tk_value(self, MAIN_WINDOW_SIDE_PADX),
-            pady=(center_pady[0], center_pady[1] + footer_height + scale_tk_value(self, 8)),
+            pady=(header_clearance, center_pady[1] + footer_height + scale_tk_value(self, 8)),
         )
         self.center_container.grid_columnconfigure(0, weight=1)
         self.center_container.grid_rowconfigure(2, weight=1)
-
-        self._create_header(self.center_container)
-
-        self.header_separator = ctk.CTkFrame(
-            self.center_container,
-            height=1,
-            fg_color=theme["separator_line"],
-            corner_radius=0,
-        )
-        self.header_separator.grid(row=1, column=0, sticky="ew", pady=(0, 10))
 
         self._create_main_buttons(self.center_container)
         self._create_status_area(self.center_container)
@@ -302,51 +401,87 @@ class LectorcitoApp(ctk.CTk):
     def _create_header(self, parent):
         theme = get_theme_tokens(self.current_theme)
 
-        self.header_frame = ctk.CTkFrame(
+        # El encabezado replica la superficie y la linea del pie de pagina.
+        self.header_frame = tk.Frame(
             parent,
-            height=MAIN_WINDOW_HEADER_MIN_HEIGHT,
-            fg_color=theme["bg_base"],
-            corner_radius=0,
+            height=scale_tk_value(self, MAIN_WINDOW_HEADER_MIN_HEIGHT),
+            bg=theme["bg_footer"],
+            bd=0,
+            highlightthickness=0,
         )
-        self.header_frame.grid(row=0, column=0, sticky="ew")
+        self.header_frame.place(relx=0.0, rely=0.0, anchor="nw", relwidth=1.0)
+        self.header_frame.grid_propagate(False)
+        self.header_frame.pack_propagate(False)
         self.header_frame.grid_columnconfigure(0, weight=1, minsize=0)
         self.header_frame.grid_columnconfigure(1, weight=0)
-        self.header_frame.grid_rowconfigure(0, weight=1)
-        self.header_frame.grid_propagate(False)
+        self.header_frame.grid_rowconfigure(0, weight=1, uniform="header_rows")
+        self.header_frame.grid_rowconfigure(1, weight=1, uniform="header_rows")
 
-        self.header_text_frame = ctk.CTkFrame(
+        # El bloque de texto ocupa las dos filas. Un espaciador flexible arriba
+        # acerca el saludo al mensaje sin mover la fila inferior de iconos.
+        self.header_text_stack = ctk.CTkFrame(
             self.header_frame,
-            width=MAIN_WINDOW_HEADER_TEXT_WIDTH,
-            height=MAIN_WINDOW_HEADER_MIN_HEIGHT,
             fg_color="transparent",
+            bg_color=theme["bg_footer"],
         )
-        self.header_text_frame.grid(row=0, column=0, sticky="w", padx=(12, 4))
-        self.header_text_frame.grid_columnconfigure(0, weight=1)
-        self.header_text_frame.grid_rowconfigure(0, weight=1)
-        self.header_text_frame.grid_rowconfigure(3, weight=1)
-        self.header_text_frame.grid_propagate(False)
+        self.header_text_stack.grid(
+            row=0,
+            column=0,
+            rowspan=2,
+            sticky="nsew",
+            padx=(MAIN_WINDOW_HEADER_TEXT_SIDE_PAD, 12),
+            pady=(MAIN_WINDOW_HEADER_TOP_INSET, MAIN_WINDOW_HEADER_BOTTOM_INSET),
+        )
+        self.header_text_stack.grid_columnconfigure(0, weight=1)
+        self.header_text_stack.grid_rowconfigure(0, weight=1)
+
+        self.header_title_frame = ctk.CTkFrame(
+            self.header_text_stack,
+            fg_color="transparent",
+            bg_color=theme["bg_footer"],
+        )
+        self.header_title_frame.grid(row=1, column=0, sticky="ew")
+        self.header_title_frame.grid_columnconfigure(0, weight=1)
 
         self.lbl_greeting_title = ctk.CTkLabel(
-            self.header_text_frame,
+            self.header_title_frame,
             text="",
             font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_GREETING_FONT_SIZE, "bold"),
             anchor="w",
+            justify="left",
+            wraplength=MAIN_WINDOW_HEADER_TEXT_WIDTH,
             fg_color="transparent",
+            bg_color=theme["bg_footer"],
             text_color=theme["text_primary"],
         )
-        self.lbl_greeting_title.grid(row=1, column=0, sticky="ew")
+        self.lbl_greeting_title.grid(row=0, column=0, sticky="ew")
+
+        self.header_message_frame = ctk.CTkFrame(
+            self.header_text_stack,
+            fg_color="transparent",
+            bg_color=theme["bg_footer"],
+        )
+        self.header_message_frame.grid(
+            row=2,
+            column=0,
+            sticky="ew",
+            pady=(MAIN_WINDOW_HEADER_TEXT_GAP, 0),
+        )
+        self.header_message_frame.grid_columnconfigure(0, weight=1)
 
         self.lbl_greeting_subtitle = ctk.CTkLabel(
-            self.header_text_frame,
+            self.header_message_frame,
             text="",
-            font=(FONT_FAMILY_PRIMARY, 13, "normal"),
+            font=(FONT_FAMILY_PRIMARY, MAIN_WINDOW_SUBTITLE_FONT_SIZE, "normal"),
             anchor="w",
             justify="left",
-            wraplength=MAIN_WINDOW_HEADER_TEXT_WIDTH - 4,
+            wraplength=MAIN_WINDOW_HEADER_TEXT_WIDTH,
             fg_color="transparent",
+            bg_color=theme["bg_footer"],
             text_color=theme["text_secondary"],
         )
-        self.lbl_greeting_subtitle.grid(row=2, column=0, sticky="ew", pady=(2, 0))
+        self.lbl_greeting_subtitle.grid(row=0, column=0, sticky="ew")
+        self.header_message_frame.bind("<Configure>", self._schedule_header_refresh, add="+")
 
         self.right_sidebar = RightSidebar(
             self.header_frame,
@@ -355,8 +490,25 @@ class LectorcitoApp(ctk.CTk):
             orientation="horizontal",
             auto_pack=False,
         )
-        self.right_sidebar.grid(row=0, column=1, padx=(4, 0))
+        self.right_sidebar.grid(
+            row=1,
+            column=1,
+            sticky="se",
+            padx=(0, MAIN_WINDOW_HEADER_TEXT_SIDE_PAD),
+            pady=(MAIN_WINDOW_HEADER_TEXT_GAP, MAIN_WINDOW_HEADER_BOTTOM_INSET),
+        )
+        self.right_sidebar.configure(bg_color=theme["bg_footer"], fg_color="transparent")
         self.sidebar_buttons = self.right_sidebar.buttons
+
+        self.header_separator = tk.Frame(
+            self.header_frame,
+            height=scale_tk_value(self, MAIN_WINDOW_HEADER_LINE_HEIGHT),
+            bg=theme["separator_line"],
+            bd=0,
+            highlightthickness=0,
+        )
+        self.header_separator.place(relx=0.0, rely=1.0, anchor="sw", relwidth=1.0)
+        self.header_frame.lift()
 
     def _create_main_buttons(self, parent):
         theme = get_theme_tokens(self.current_theme)
@@ -520,12 +672,12 @@ class LectorcitoApp(ctk.CTk):
         self.footer_frame.place(relx=0.0, rely=1.0, anchor="sw", relwidth=1.0)
         self.footer_frame.lift()
 
-        self.footer_line = ctk.CTkFrame(
+        self.footer_line = tk.Frame(
             self.footer_frame,
             height=MAIN_WINDOW_FOOTER_LINE_HEIGHT,
-            corner_radius=0,
-            fg_color=theme["separator_line"],
-            bg_color=theme["bg_footer"],
+            bg=theme["separator_line"],
+            bd=0,
+            highlightthickness=0,
         )
         self.footer_line.pack(side="top", fill="x")
 
@@ -565,17 +717,14 @@ class LectorcitoApp(ctk.CTk):
         self.lbl_footer_version = ctk.CTkLabel(
             self.footer_brand,
             text=f"v{VERSION}",
-            font=FONT_AUXILIARY,
+            font=FONT_AUXILIARY_EMPHASIS,
             fg_color="transparent",
             bg_color=theme["bg_footer"],
         )
         self.lbl_footer_version.pack(side="left", padx=(scale_tk_value(self, 6), 0))
 
     def update_ui_texts(self):
-        try:
-            user = os.getlogin().lower().capitalize()
-        except OSError:
-            user = self._tr("fallback_user")
+        user = self._get_current_user_name()
 
         hour = datetime.datetime.now().hour
         greet_key = "greet_m" if 5 <= hour < 12 else "greet_a" if 12 <= hour < 19 else "greet_n"
@@ -596,7 +745,9 @@ class LectorcitoApp(ctk.CTk):
                 btn.configure(text=self._tr(key_map[key]))
 
         self.status_panel.set_translator(lambda key: self._tr(key))
-        self.lbl_copyright.configure(text=self._tr("footer_copyright", YEAR, AUTHOR))
+        self.lbl_copyright.configure(
+            text=self._tr("footer_copyright", get_current_year(), AUTHOR)
+        )
         self.lbl_footer_version.configure(text=f"v{VERSION}")
 
         tooltip_map = {
@@ -639,7 +790,6 @@ class LectorcitoApp(ctk.CTk):
 
         for frame in (
             self.center_container,
-            self.header_frame,
             self.main_content_frame,
             self.left_actions_frame,
             self.progress_frame,
@@ -649,9 +799,20 @@ class LectorcitoApp(ctk.CTk):
             except Exception:
                 pass
 
-        self.lbl_greeting_title.configure(text_color=theme["text_primary"])
-        self.lbl_greeting_subtitle.configure(text_color=theme["text_secondary"])
-        self.header_separator.configure(fg_color=theme["separator_line"])
+        self.header_frame.configure(bg=theme["bg_footer"])
+        self.header_text_stack.configure(bg_color=theme["bg_footer"], fg_color="transparent")
+        self.header_title_frame.configure(bg_color=theme["bg_footer"], fg_color="transparent")
+        self.header_message_frame.configure(bg_color=theme["bg_footer"], fg_color="transparent")
+        self.right_sidebar.configure(bg_color=theme["bg_footer"], fg_color="transparent")
+        self.lbl_greeting_title.configure(
+            bg_color=theme["bg_footer"],
+            text_color=theme["text_primary"],
+        )
+        self.lbl_greeting_subtitle.configure(
+            bg_color=theme["bg_footer"],
+            text_color=theme["text_secondary"],
+        )
+        self.header_separator.configure(bg=theme["separator_line"])
 
         for card in (self.primary_actions_card, self.secondary_actions_card):
             card.configure(
@@ -679,12 +840,12 @@ class LectorcitoApp(ctk.CTk):
             )
 
         self.footer_frame.configure(bg=theme["bg_footer"])
-        self.footer_line.configure(bg_color=theme["bg_footer"], fg_color=theme["separator_line"])
+        self.footer_line.configure(bg=theme["separator_line"])
         self.footer_brand.configure(bg_color=theme["bg_footer"])
         self.lbl_copyright.configure(
             bg_color=theme["bg_footer"],
             fg_color="transparent",
-            text_color=theme["text_primary"],
+            text_color=theme["text_secondary"],
         )
         self.lbl_footer_logo.configure(
             bg_color=theme["bg_footer"], text_color=theme["text_primary"]
@@ -696,16 +857,53 @@ class LectorcitoApp(ctk.CTk):
         self._schedule_header_refresh()
 
     def switch_theme_animated(self, new_theme: str):
-        """Aplica el tema sin ocultar ni reconstruir la ventana principal."""
+        """Oculta suavemente la ventana, aplica el tema y vuelve a mostrarla."""
         if new_theme == self.current_theme or self._is_theme_switching:
             return
         self._is_theme_switching = True
+        self._theme_switch_target = new_theme
         CustomTooltip.hide_global()
+        self._fade_out_for_theme_switch()
+
+    def _fade_out_for_theme_switch(self):
         try:
-            self.current_theme = new_theme
+            alpha = float(self.attributes("-alpha"))
+            next_alpha = max(0.0, alpha - MAIN_WINDOW_FADE_OUT_STEP)
+            self.attributes("-alpha", next_alpha)
+        except Exception:
+            self._apply_theme_switch_midpoint()
+            return
+
+        if next_alpha > 0.0:
+            self.after(MAIN_WINDOW_FADE_OUT_INTERVAL_MS, self._fade_out_for_theme_switch)
+            return
+        self.after(MAIN_WINDOW_FADE_OUT_INTERVAL_MS, self._apply_theme_switch_midpoint)
+
+    def _apply_theme_switch_midpoint(self):
+        try:
+            target = getattr(self, "_theme_switch_target", self.current_theme)
+            self.current_theme = target
             self.apply_theme()
+            self.update_idletasks()
+        except Exception as error:
+            log_warning(str(error), operation="theme_switch")
         finally:
-            self._is_theme_switching = False
+            self.after(THEME_SWITCH_SETTLE_MS, self._fade_in_after_theme_switch)
+
+    def _fade_in_after_theme_switch(self):
+        try:
+            alpha = float(self.attributes("-alpha"))
+            next_alpha = min(1.0, alpha + MAIN_WINDOW_FADE_OUT_STEP)
+            self.attributes("-alpha", next_alpha)
+        except Exception:
+            next_alpha = 1.0
+
+        if next_alpha < 1.0:
+            self.after(MAIN_WINDOW_FADE_OUT_INTERVAL_MS, self._fade_in_after_theme_switch)
+            return
+
+        self._theme_switch_target = None
+        self._is_theme_switching = False
 
     def switch_profile_animated(self, apply_callback, complete_callback=None):
         """Cambia de perfil en sitio para evitar parpadeos de la ventana principal."""
@@ -891,7 +1089,149 @@ class LectorcitoApp(ctk.CTk):
         except Exception:
             self._modal_fail_safe_after_id = None
 
+    def _iter_modal_controls(self):
+        controls = []
+        controls.extend(self.main_buttons.values())
+        controls.extend(self.sidebar_buttons.values())
+        return controls
+
+    def _schedule_modal_overlay_sync(self, event=None):
+        if self._modal_overlay is None:
+            return
+        if self._modal_overlay_sync_after_id is not None:
+            return
+        try:
+            self._modal_overlay_sync_after_id = self.after_idle(
+                self._sync_modal_overlay_geometry
+            )
+        except Exception:
+            self._modal_overlay_sync_after_id = None
+
+    def _sync_modal_overlay_geometry(self):
+        self._modal_overlay_sync_after_id = None
+        overlay = self._modal_overlay
+        if overlay is None:
+            return
+        try:
+            if not overlay.winfo_exists() or not self.winfo_ismapped():
+                return
+            self.update_idletasks()
+            x = int(self.winfo_rootx())
+            y = int(self.winfo_rooty())
+            width = max(1, int(self.winfo_width()))
+            height = max(1, int(self.winfo_height()))
+            overlay.geometry(f"{width}x{height}{x:+d}{y:+d}")
+        except Exception:
+            pass
+
+    def _create_modal_overlay(self):
+        self._destroy_modal_overlay()
+        theme = get_theme_tokens(self.current_theme)
+        overlay = tk.Toplevel(self)
+        self._modal_overlay = overlay
+        try:
+            overlay.withdraw()
+            overlay.overrideredirect(True)
+            overlay.transient(self)
+            overlay.configure(
+                bg=theme["modal_overlay"],
+                takefocus=0,
+                bd=0,
+                highlightthickness=0,
+            )
+            try:
+                overlay.attributes("-toolwindow", True)
+            except Exception:
+                pass
+            try:
+                overlay.attributes("-alpha", MAIN_WINDOW_MODAL_OVERLAY_ALPHA)
+            except Exception:
+                pass
+            overlay.bind("<Button>", lambda event: "break", add="+")
+            overlay.bind("<Key>", lambda event: "break", add="+")
+            overlay.protocol("WM_DELETE_WINDOW", lambda: None)
+            self._sync_modal_overlay_geometry()
+            overlay.deiconify()
+            overlay.lift(self)
+            overlay.update_idletasks()
+        except Exception:
+            try:
+                overlay.destroy()
+            except Exception:
+                pass
+            self._modal_overlay = None
+
+    def _destroy_modal_overlay(self):
+        if self._modal_overlay_sync_after_id is not None:
+            try:
+                self.after_cancel(self._modal_overlay_sync_after_id)
+            except Exception:
+                pass
+            self._modal_overlay_sync_after_id = None
+
+        overlay = self._modal_overlay
+        self._modal_overlay = None
+        if overlay is None:
+            return
+        try:
+            if overlay.winfo_exists():
+                overlay.destroy()
+        except Exception:
+            pass
+
+    def _enter_modal_visual_state(self):
+        self._modal_control_states = {}
+        for button in self._iter_modal_controls():
+            try:
+                self._modal_control_states[button] = button.cget("state")
+            except Exception:
+                self._modal_control_states[button] = "normal"
+            try:
+                button.configure(state="disabled")
+            except Exception:
+                pass
+
+        theme = get_theme_tokens(self.current_theme)
+        for button in self.main_buttons.values():
+            try:
+                button.configure(
+                    fg_color=theme["surface_alt"],
+                    hover_color=theme["surface_alt"],
+                    border_color=theme["border_subtle"],
+                    text_color=theme["text_muted"],
+                    icon_color=theme["text_muted"],
+                    chevron_color=theme["text_muted"],
+                )
+            except Exception:
+                pass
+
+        if self._startup_visible:
+            try:
+                self.update_idletasks()
+            except Exception:
+                pass
+            self._create_modal_overlay()
+
+    def _leave_modal_visual_state(self):
+        states = self._modal_control_states
+        self._modal_control_states = {}
+        try:
+            self.apply_theme()
+        except Exception:
+            pass
+        for button, state in states.items():
+            try:
+                if button.winfo_exists():
+                    button.configure(state=state)
+            except Exception:
+                pass
+
+        self._destroy_modal_overlay()
+
     def _has_live_modal_dialog(self) -> bool:
+
+        if self._modal_action_depth > 0 or self._native_modal_depth > 0:
+            return True
 
         try:
             for child in self.winfo_children():
@@ -927,7 +1267,7 @@ class LectorcitoApp(ctk.CTk):
 
             return
 
-        self.restore_ui_from_modal()
+        self.restore_ui_from_modal(force=True)
 
     def get_min_visible_completion_delay_ms(self) -> int:
 
@@ -956,13 +1296,51 @@ class LectorcitoApp(ctk.CTk):
 
     def dim_ui_for_modal(self):
         CustomTooltip.hide_global()
+        if self._modal_depth == 0:
+            self._enter_modal_visual_state()
+        self._modal_depth += 1
         self._is_modal_open = True
         self._schedule_modal_fail_safe()
 
-    def restore_ui_from_modal(self):
+    def restore_ui_from_modal(self, force: bool = False):
         CustomTooltip.hide_global()
+        if force:
+            self._modal_depth = 0
+        elif self._modal_depth > 0:
+            self._modal_depth -= 1
+
+        if self._modal_depth > 0:
+            self._is_modal_open = True
+            self._schedule_modal_fail_safe()
+            return
+
         self._cancel_modal_fail_safe()
+        self._modal_depth = 0
         self._is_modal_open = False
+        self._leave_modal_visual_state()
+
+    def run_modal_action(self, callback):
+        """Bloquea visualmente la ventana antes de ejecutar una accion modal."""
+        self._modal_action_depth += 1
+        self.dim_ui_for_modal()
+        try:
+            # Fuerza el dibujo del estado bloqueado antes de crear o cargar
+            # cualquier dialogo potencialmente costoso.
+            self.update_idletasks()
+            return callback()
+        finally:
+            self._modal_action_depth = max(0, self._modal_action_depth - 1)
+            self.restore_ui_from_modal()
+
+    def run_native_modal(self, callback):
+        self._native_modal_depth += 1
+        self.dim_ui_for_modal()
+        try:
+            self.update_idletasks()
+            return callback()
+        finally:
+            self._native_modal_depth = max(0, self._native_modal_depth - 1)
+            self.restore_ui_from_modal()
 
     def show_message(self, title_key: str, message_key: str, *args):
 
@@ -996,7 +1374,7 @@ class LectorcitoApp(ctk.CTk):
         else:
             if not get_platform_service().open_url(APP_WEBSITE_URL):
                 log_warning(
-                    "No se pudo abrir el manual de usuario.",
+                    "No se pudo abrir el sitio oficial de Lectorcito Pro.",
                     operation="show_app_info",
                     file_path=APP_WEBSITE_URL,
                 )

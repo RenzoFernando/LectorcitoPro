@@ -1,0 +1,12 @@
+{
+    "id": "./",
+    "name": "Lectorcito Pro",
+    "short_name": "Lectorcito Pro",
+    "description": "Sitio oficial de Lectorcito Pro, aplicación de escritorio para auditoría de código, documentación técnica y contexto para IA.",
+    "lang": "es",
+    "start_url": "./",
+    "scope": "./",
+    "display": "browser",
+    "background_color": "#f4f6fb",
+    "theme_color": "#2f6fe4"
+}

@@ -10,6 +10,7 @@ export default [
             globals: {
                 document: "readonly",
                 IntersectionObserver: "readonly",
+                navigator: "readonly",
                 URL: "readonly",
                 window: "readonly"
             }

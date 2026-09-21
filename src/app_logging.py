@@ -1,6 +1,9 @@
 import logging
 import os
 import platform
+import re
+import traceback
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 from app_meta import APP_VERSION
@@ -9,9 +12,13 @@ _LOGGER_NAME = "lectorcito"
 _LOGGER = logging.getLogger(_LOGGER_NAME)
 _LOGGER.propagate = False
 _LOGGER.addHandler(logging.NullHandler())
+_CONFIGURED_LOG_PATH = ""
+_CRITICAL_LOG_RE = re.compile(r"^error_(\d+)\.log$", re.IGNORECASE)
 
 
 def configure_logging(log_file_path: str, level: int = logging.INFO):
+    global _CONFIGURED_LOG_PATH
+
     clean_path = os.path.abspath(os.path.expanduser(str(log_file_path or "error.log")))
     _LOGGER.setLevel(level)
 
@@ -37,7 +44,54 @@ def configure_logging(log_file_path: str, level: int = logging.INFO):
     )
     handler.setFormatter(formatter)
     _LOGGER.addHandler(handler)
+    _CONFIGURED_LOG_PATH = clean_path
     return clean_path
+
+
+def _next_critical_log_path(log_directory: str) -> str:
+    highest = 0
+    try:
+        for name in os.listdir(log_directory):
+            match = _CRITICAL_LOG_RE.match(name)
+            if match:
+                highest = max(highest, int(match.group(1)))
+    except OSError:
+        pass
+
+    return os.path.join(log_directory, f"error_{highest + 1:03d}.log")
+
+
+def create_critical_error_log(message: str, exception: Exception = None) -> str:
+    """Crea un archivo independiente para cada error crítico de la aplicación."""
+    base_path = _CONFIGURED_LOG_PATH or os.path.abspath("error.log")
+    log_directory = os.path.dirname(base_path) or os.getcwd()
+
+    try:
+        os.makedirs(log_directory, exist_ok=True)
+    except OSError:
+        return base_path
+
+    while True:
+        output_path = _next_critical_log_path(log_directory)
+        try:
+            with open(output_path, "x", encoding="utf-8") as outfile:
+                outfile.write(f"Fecha: {datetime.now():%Y-%m-%d %H:%M:%S}\n")
+                outfile.write(f"Lectorcito Pro: {APP_VERSION}\n")
+                outfile.write(
+                    f"Plataforma: {platform.system()} {platform.release()}\n"
+                )
+                outfile.write(f"Error: {message}\n\n")
+                if exception is not None:
+                    outfile.writelines(
+                        traceback.format_exception(
+                            type(exception), exception, exception.__traceback__
+                        )
+                    )
+            return output_path
+        except FileExistsError:
+            continue
+        except OSError:
+            return base_path
 
 
 def _context_message(message: str, operation: str = "", file_path: str = "") -> str:

@@ -30,11 +30,18 @@ class LectorcitoController:
         self._update_active_lecturas_path()
 
     def _assign_commands(self):
+        def modal_action(callback):
+            return lambda: self.view.run_modal_action(callback)
+
         self.view.main_buttons["selpath"].configure(
-            command=lambda: handlers.select_destination_path(self)
+            command=modal_action(lambda: handlers.select_destination_path(self))
         )
-        self.view.main_buttons["choose"].configure(command=self.select_reading_type)
-        self.view.main_buttons["create_tree"].configure(command=self.create_tree_structure)
+        self.view.main_buttons["choose"].configure(
+            command=modal_action(self.select_reading_type)
+        )
+        self.view.main_buttons["create_tree"].configure(
+            command=modal_action(self.create_tree_structure)
+        )
         self.view.main_buttons["openlect"].configure(
             command=lambda: handlers.open_destination_folder(self)
         )
@@ -42,18 +49,18 @@ class LectorcitoController:
             command=lambda: handlers.open_last_report(self)
         )
         self.view.main_buttons["delete"].configure(
-            command=lambda: handlers.delete_all_readings(self)
+            command=modal_action(lambda: handlers.delete_all_readings(self))
         )
         self.view.btn_cancel.configure(command=self.cancel_processing)
 
         self.view.sidebar_buttons["ver"].configure(
-            command=lambda: handlers.show_view_config_dialog(self)
+            command=modal_action(lambda: handlers.show_view_config_dialog(self))
         )
         self.view.sidebar_buttons["nover"].configure(
-            command=lambda: handlers.show_no_view_config_dialog(self)
+            command=modal_action(lambda: handlers.show_no_view_config_dialog(self))
         )
         self.view.sidebar_buttons["etiqueta"].configure(
-            command=lambda: handlers.show_etiqueta_config_dialog(self)
+            command=modal_action(lambda: handlers.show_etiqueta_config_dialog(self))
         )
         self.view.sidebar_buttons["theme_icon"].configure(
             command=lambda: handlers.toggle_theme(self)
@@ -62,15 +69,19 @@ class LectorcitoController:
             command=lambda: handlers.toggle_language(self)
         )
         self.view.sidebar_buttons["restaurar"].configure(
-            command=lambda: handlers.restore_default_settings(self)
+            command=modal_action(lambda: handlers.restore_default_settings(self))
         )
         self.view.sidebar_buttons["perfil"].configure(
-            command=lambda: handlers.manage_profiles(self)
+            command=modal_action(lambda: handlers.manage_profiles(self))
         )
-        self.view.sidebar_buttons["github"].configure(command=self.open_repository_link)
-        self.view.sidebar_buttons["info"].configure(command=self.open_manual_link)
+        self.view.sidebar_buttons["github"].configure(
+            command=modal_action(self.open_repository_link)
+        )
+        self.view.sidebar_buttons["info"].configure(
+            command=modal_action(self.open_manual_link)
+        )
         self.view.sidebar_buttons["ajustes"].configure(
-            command=lambda: handlers.show_settings_dialog(self)
+            command=modal_action(lambda: handlers.show_settings_dialog(self))
         )
 
     def open_repository_link(self):
@@ -112,12 +123,14 @@ class LectorcitoController:
         if not self._check_destination_path():
             return
 
-        path = filedialog.askdirectory(
-            parent=self.view,
-            title=self.view._tr("btn_choose_folder"),
-            initialdir=self.platform.get_dialog_initial_directory(
-                self.config.get("last_read_folder", "")
-            ),
+        path = self.view.run_native_modal(
+            lambda: filedialog.askdirectory(
+                parent=self.view,
+                title=self.view._tr("btn_choose_folder"),
+                initialdir=self.platform.get_dialog_initial_directory(
+                    self.config.get("last_read_folder", "")
+                ),
+            )
         )
 
         if path:
@@ -218,8 +231,10 @@ class LectorcitoController:
         if self.is_processing or not self._check_destination_path():
             return
 
-        source_path = filedialog.askdirectory(
-            parent=self.view, title=self.view._tr("btn_create_tree")
+        source_path = self.view.run_native_modal(
+            lambda: filedialog.askdirectory(
+                parent=self.view, title=self.view._tr("btn_create_tree")
+            )
         )
         if not source_path:
             return

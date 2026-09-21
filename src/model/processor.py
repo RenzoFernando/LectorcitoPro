@@ -1,3 +1,4 @@
+import math
 import os
 import threading
 
@@ -9,6 +10,22 @@ from model.scanner import ProjectScanner
 # =============================================================================
 # UTILIDADES DEL PROCESADOR
 # =============================================================================
+
+
+READING_START_GRACE_SECONDS = 0.22
+READING_PACE_BUDGET_SECONDS = 0.36
+READING_PACE_MIN_DELAY_SECONDS = 0.001
+
+
+def _reading_pace_delay(progress_fraction: float, file_count: int) -> float:
+    if file_count <= 0:
+        return 0.0
+
+    position = max(0.0, min(1.0, float(progress_fraction)))
+    gaussian_speed = math.exp(-0.5 * ((position - 0.5) / 0.22) ** 2)
+    edge_weight = 1.35 - (0.70 * gaussian_speed)
+    delay = (READING_PACE_BUDGET_SECONDS / file_count) * edge_weight
+    return delay if delay >= READING_PACE_MIN_DELAY_SECONDS else 0.0
 
 
 def _get_tr(config: dict, key: str, *args) -> str:
@@ -122,8 +139,15 @@ def generate_report(
     if report_extension not in {".md", ".txt"}:
         report_extension = ".md"
 
+    # Breve margen cancelable antes del escaneo. Mantiene la respuesta rápida,
+    # pero evita que una selección accidental termine antes de poder cancelarse.
+    if cancel_event.wait(READING_START_GRACE_SECONDS):
+        return "cancelled", None
+
     scanner = ProjectScanner(config)
-    project = scanner.scan_project(source_folder)
+    project = scanner.scan_project(source_folder, cancel_event=cancel_event)
+    if cancel_event.is_set():
+        return "cancelled", None
     if project.file_count == 0:
         return "no_files", None
 
@@ -153,6 +177,11 @@ def generate_report(
 
                 for report_file in folder.files:
                     if cancel_event.is_set():
+                        break
+
+                    pace_position = (processed_files + 0.5) / max(1, project.file_count)
+                    pace_delay = _reading_pace_delay(pace_position, project.file_count)
+                    if pace_delay > 0 and cancel_event.wait(pace_delay):
                         break
 
                     if progress_callback:

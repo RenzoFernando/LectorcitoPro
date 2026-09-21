@@ -29,7 +29,7 @@ def get_app_icon_png_path() -> str:
 
 
 def _svg_icon_path(name: str) -> str:
-    return resource_path(os.path.join("icons", "svg", f"{name}.svg"))
+    return resource_path(os.path.join("icons", f"{name}.svg"))
 
 
 def _load_svg_icon(
@@ -121,14 +121,81 @@ def load_action_icons(size=ACTION_ICON_SIZE) -> dict:
     return icons
 
 
-def load_close_icon(size=(14, 14)) -> ctk.CTkImage | None:
+def load_close_icon(
+    size=(14, 14),
+    *,
+    light_color: str | None = None,
+    dark_color: str | None = None,
+) -> ctk.CTkImage | None:
     light = get_theme_tokens("Light")
     dark = get_theme_tokens("Dark")
     return _load_svg_icon(
         "close",
         size=size,
-        light_color=light["accent_blue"],
-        dark_color=dark["accent_blue_icon"],
+        light_color=light_color or light["accent_blue"],
+        dark_color=dark_color or dark["accent_blue_icon"],
+    )
+
+
+def load_cancel_reading_icon(
+    size=(14, 14),
+    *,
+    light_color: str | None = None,
+    dark_color: str | None = None,
+) -> ctk.CTkImage | None:
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    return _load_svg_icon(
+        "cancel_reading",
+        size=size,
+        light_color=light_color or light["danger_red_deep"],
+        dark_color=dark_color or dark["danger_red_deep"],
+    )
+
+
+def load_chevron_icon(
+    size=(14, 14),
+    *,
+    light_color: str | None = None,
+    dark_color: str | None = None,
+) -> ctk.CTkImage | None:
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    return _load_svg_icon(
+        "chevron_right",
+        size=size,
+        light_color=light_color or light["accent_blue"],
+        dark_color=dark_color or dark["accent_blue_icon"],
+    )
+
+
+def load_status_dot_icon(
+    size=(10, 10),
+    *,
+    light_color: str | None = None,
+    dark_color: str | None = None,
+) -> ctk.CTkImage | None:
+    light = get_theme_tokens("Light")
+    dark = get_theme_tokens("Dark")
+    return _load_svg_icon(
+        "status_dot",
+        size=size,
+        light_color=light_color or light["text_muted"],
+        dark_color=dark_color or dark["text_muted"],
+    )
+
+
+def load_checkmark_icon(
+    size=(14, 14),
+    *,
+    light_color: str | None = None,
+    dark_color: str | None = None,
+) -> ctk.CTkImage | None:
+    return _load_svg_icon(
+        "checkmark",
+        size=size,
+        light_color=light_color or "#FFFFFF",
+        dark_color=dark_color or "#FFFFFF",
     )
 
 

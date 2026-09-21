@@ -179,6 +179,10 @@ def _style_checkbox(widget):
         hover_color=blue["hover"],
         border_color=_get_color_tuple("border_strong"),
         checkmark_color=_get_color_tuple("bg_elevated"),
+        checkbox_width=22,
+        checkbox_height=22,
+        corner_radius=6,
+        border_width=1,
     )
 
 

@@ -160,6 +160,12 @@ try {
         "pyproject.toml",
         "README.md",
         "index.html",
+        "404.html",
+        "robots.txt",
+        "sitemap.xml",
+        "llms.txt",
+        "manifest.webmanifest",
+        "scripts\seo_check.py",
         "LICENSE"
     )
 
