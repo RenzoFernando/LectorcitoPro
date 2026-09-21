@@ -49,8 +49,8 @@ def _translate_status(tr_callable, key: str) -> str:
     return translate_default(key)
 
 
-class _CenteredIconButton(ctk.CTkFrame):
-    """Boton compacto cuyo SVG permanece centrado en un area fija."""
+class _CenteredIconButton(ctk.CTkButton):
+    """Boton iconografico nativo con SVG centrado y sin estado visual recursivo."""
 
     def __init__(
         self,
@@ -62,128 +62,22 @@ class _CenteredIconButton(ctk.CTkFrame):
         border_width: int = 1,
         command=None,
     ):
-        self._ready = False
-        self._command = command
-        self._state = "normal"
-        self._normal_color = "transparent"
-        self._hover_color = "transparent"
-        self._icon_color = "#DC2626"
-        self._hovered = False
-
         super().__init__(
             parent,
+            text="",
+            image=None,
             width=width,
             height=height,
             corner_radius=corner_radius,
             border_width=border_width,
-            fg_color=self._normal_color,
             border_color="#FCA5A5",
-        )
-        self.grid_propagate(False)
-        self.pack_propagate(False)
-
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-        self._icon = ctk.CTkLabel(
-            self,
-            text="",
-            width=14,
-            height=14,
-            fg_color="transparent",
-            bg_color="transparent",
-            text_color=self._icon_color,
+            fg_color="#FEF2F2",
+            hover_color="#FEE2E2",
+            text_color="#DC2626",
+            border_spacing=0,
             anchor="center",
+            command=command,
         )
-        # El layout centra el SVG en la celda completa; no se usan offsets fijos.
-        self._icon.grid(row=0, column=0)
-
-        for widget in (self, self._icon):
-            widget.bind("<Button-1>", self._on_click, add="+")
-            widget.bind("<Enter>", self._on_enter, add="+")
-            widget.bind("<Leave>", self._on_leave, add="+")
-
-        self._ready = True
-        self._apply_visual_state()
-
-    def _pointer_inside(self) -> bool:
-        try:
-            x, y = self.winfo_pointerxy()
-            left = self.winfo_rootx()
-            top = self.winfo_rooty()
-            return left <= x < left + self.winfo_width() and top <= y < top + self.winfo_height()
-        except Exception:
-            return False
-
-    def _on_enter(self, event=None):
-        if self._state == "disabled":
-            return
-        self._hovered = True
-        self._apply_visual_state()
-
-    def _on_leave(self, event=None):
-        if self._pointer_inside():
-            return
-        self._hovered = False
-        self._apply_visual_state()
-
-    def _on_click(self, event=None):
-        if self._state != "disabled":
-            self.invoke()
-        return "break"
-
-    def _apply_visual_state(self):
-        if not self._ready:
-            return
-        color = (
-            self._hover_color if self._hovered and self._state != "disabled" else self._normal_color
-        )
-        ctk.CTkFrame.configure(self, fg_color=color)
-        self._icon.configure(fg_color=color, bg_color=color, text_color=self._icon_color)
-        cursor = "arrow" if self._state == "disabled" else "hand2"
-        for widget in (self, self._icon):
-            try:
-                widget.configure(cursor=cursor)
-            except Exception:
-                pass
-
-    def configure(self, cnf=None, **kwargs):
-        if cnf and isinstance(cnf, dict):
-            kwargs = {**cnf, **kwargs}
-        if not getattr(self, "_ready", False):
-            return ctk.CTkFrame.configure(self, **kwargs)
-
-        image_supplied = "image" in kwargs
-        image = kwargs.pop("image", None) if image_supplied else None
-        if image_supplied:
-            self._icon.configure(image=image, text="")
-        if "command" in kwargs:
-            self._command = kwargs.pop("command")
-        if "state" in kwargs:
-            self._state = str(kwargs.pop("state"))
-        if "fg_color" in kwargs:
-            self._normal_color = kwargs.pop("fg_color")
-        if "hover_color" in kwargs:
-            self._hover_color = kwargs.pop("hover_color")
-        if "text_color" in kwargs:
-            self._icon_color = kwargs.pop("text_color")
-
-        result = ctk.CTkFrame.configure(self, **kwargs) if kwargs else None
-        self._apply_visual_state()
-        return result
-
-    config = configure
-
-    def cget(self, key):
-        if key == "state":
-            return self._state
-        if key == "command":
-            return self._command
-        return ctk.CTkFrame.cget(self, key)
-
-    def invoke(self):
-        if self._state != "disabled" and callable(self._command):
-            return self._command()
-        return None
 
 
 class StatusPanel(ctk.CTkFrame):

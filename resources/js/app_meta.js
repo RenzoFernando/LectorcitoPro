@@ -8,7 +8,7 @@ window.APP_META = {
     "author": "Renzo Fernando Mosquera Daza",
     "companyName": "Renzo Fernando Mosquera Daza",
     "publisherName": "Renzo Fernando Mosquera Daza",
-    "fileDescription": "Herramienta de escritorio profesional para auditoría de código, documentación técnica y consolidación de contextos para Inteligencia Artificial.",
+    "fileDescription": "Lectorcito Pro",
     "repositoryUrl": "https://github.com/RenzoFernando/LectorcitoPro",
     "websiteUrl": "https://renzofernando.github.io/LectorcitoPro/",
     "manualTitle": "Lectorcito Pro",

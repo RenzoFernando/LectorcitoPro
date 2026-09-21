@@ -19,7 +19,7 @@ APP_PUBLISHER_NAME = APP_COMPANY_NAME
 
 APP_PRODUCT_NAME = APP_DISPLAY_NAME
 
-APP_FILE_DESCRIPTION = "Herramienta de escritorio profesional para auditoría de código, documentación técnica y consolidación de contextos para Inteligencia Artificial."
+APP_FILE_DESCRIPTION = APP_DISPLAY_NAME
 
 APP_TRADEMARK = APP_DISPLAY_NAME
 
