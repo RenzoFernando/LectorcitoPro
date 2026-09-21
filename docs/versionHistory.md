@@ -1,19 +1,5 @@
 # Historial de Versiones
 
-## Refactor integral de calidad, compilación y release de Windows
-
-- Se recuperó el pipeline integral de calidad con Ruff, Prettier y ESLint.
-- El release aplica autofix antes de la validación estricta y detiene la compilación si quedan errores.
-- Se eliminó la infraestructura de autofirmado local.
-- Se eliminó Trust Application y cualquier modificación de Microsoft Defender asociada a ese flujo experimental.
-- Windows Portable y Windows Instalable pasan a ser builds independientes.
-- El Portable conserva Nuitka Onefile y el ejecutable instalado se genera con Nuitka Standalone.
-- Inno Setup empaqueta la distribución standalone y utiliza instalación per-user sin elevación.
-- Se preservó sin refactorización funcional el artefacto Linux Onefile.
-- El cambio se centra en hardening, simplificación del runtime, reducción de privilegios, separación de builds y mejora del pipeline.
-
----
-
 ## Versión 0: Funcionalidad Básica
 
 1.  Implementada la lectura recursiva de directorios para archivos de texto (`.txt`, `.py`, etc.).
@@ -287,3 +273,27 @@
 9. Renovados colores, botones, iconografía y consistencia entre los temas claro y oscuro.
 
 10. Refinados paneles, etiquetas, espacios y organización visual general de la aplicación.
+
+---
+
+## Versión 11.6.3: Interfaz Vectorial, Calidad y Estabilidad
+
+1. Migrada la iconografía principal de PNG a SVG vectorial adaptable por tema.
+
+2. Rediseñados botones, paneles, etiquetas y estados para mayor estabilidad visual.
+
+3. Refinados modales, foco y mensajes informativos con transiciones no bloqueantes.
+
+4. Mejorada la cancelación de lecturas evitando saturación de eventos y bloqueos.
+
+5. Suavizada la barra de progreso con avance continuo y curva gaussiana.
+
+6. Optimizada la autodetección de extensiones mediante procesamiento asíncrono.
+
+7. Incorporado Ruff, Prettier y ESLint como pipeline automatizado de calidad.
+
+8. Reestructurado el release con autofix, validación estricta y builds Windows independientes.
+
+9. Eliminados autofirmado local, Trust Application y cambios en Microsoft Defender.
+
+10. Reforzada metadata web, SEO y sincronización centralizada desde `app_meta.py`.

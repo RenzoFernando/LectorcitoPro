@@ -7,7 +7,7 @@ APP_NAME_INTERNAL = "LectorcitoPro"
 
 APP_DISPLAY_NAME = "Lectorcito Pro"
 
-APP_VERSION = "10.7.5"
+APP_VERSION = "11.6.3"
 
 APP_AUTHOR = "Renzo Fernando Mosquera Daza"
 

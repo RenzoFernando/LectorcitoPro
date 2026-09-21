@@ -2,9 +2,9 @@ window.APP_META = {
     "nameInternal": "LectorcitoPro",
     "displayName": "Lectorcito Pro",
     "productName": "Lectorcito Pro",
-    "version": "10.7.5",
-    "fileVersion": "10.7.5.0",
-    "productVersion": "10.7.5.0",
+    "version": "11.6.3",
+    "fileVersion": "11.6.3.0",
+    "productVersion": "11.6.3.0",
     "author": "Renzo Fernando Mosquera Daza",
     "companyName": "Renzo Fernando Mosquera Daza",
     "publisherName": "Renzo Fernando Mosquera Daza",
@@ -22,6 +22,6 @@ window.APP_META = {
     "installerName": "LectorcitoPro-Setup.exe",
     "portableArtifactName": "LectorcitoPro-Portable.exe",
     "linuxArtifactName": "LectorcitoPro-Linux-x86_64",
-    "releaseBasename": "LectorcitoPro-10.7.5",
+    "releaseBasename": "LectorcitoPro-11.6.3",
     "trademark": "Lectorcito Pro"
 };
