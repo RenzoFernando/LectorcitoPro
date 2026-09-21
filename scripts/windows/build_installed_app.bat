@@ -107,40 +107,23 @@ mkdir "%INSTALLED_BUILD_ROOT%"
 
 
 "%PYTHON_CMD%" -m nuitka --mode=standalone ^
-
     --assume-yes-for-downloads ^
-
     --output-filename="%APP_EXE_NAME%" ^
-
     --windows-icon-from-ico="%ICON_FILE%" ^
-
     --windows-console-mode=disable ^
-
     --company-name="%COMPANY_NAME%" ^
-
     --product-name="%PRODUCT_NAME%" ^
-
     --file-description="%FILE_DESCRIPTION%" ^
-
     --file-version="%FILE_VERSION%" ^
-
     --product-version="%PRODUCT_VERSION%" ^
-
     --copyright="%COPYRIGHT_TEXT%" ^
-
     --trademark="%TRADEMARK_TEXT%" ^
-
     --enable-plugin=tk-inter ^
-
     --include-package=customtkinter ^
     --include-package-data=customtkinter ^
-
     --include-data-dir="%RESOURCES_FOLDER%=%RESOURCES_FOLDER%" ^
-
     --output-dir="%INSTALLED_BUILD_ROOT%" ^
-
     --remove-output ^
-
     "%ENTRY_POINT%"
 
 if errorlevel 1 exit /b 1
